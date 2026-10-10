@@ -1,0 +1,1381 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+info:
+  title: Embertrail Hub API
+  version: 1.0.0-draft
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+  description: |
+    The Hub's public contracts: the **Query API** (read side, ADR-0013), the
+    `store` Module, session labels (ADR-0014), and OTLP/HTTP JSON ingest
+    (ADR-0003). Any client may use it; the Dashboard is one such client
+    (ADR-0010). This file is the design-phase source of truth. At runtime the
+    Hub assembles the same document from its Modules' ops and serves it at
+    `/api/v1/openapi.json`.
+
+    ## Conventions
+
+    - **JSON field names** are `snake_case`. Attribute keys inside Signals keep
+      the sender's spelling (`session.id`, `event.name`).
+    - **Time.** Every timestamp is RFC 3339. The Hub stores UTC. A time range is
+      `from` (inclusive) to `to` (exclusive). Queries that bucket carry an IANA
+      `tz`, and the server buckets in that zone: a `day` starts at local
+      midnight, so DST days last 23 or 25 hours, and a `week` starts on Monday.
+      Bucket timestamps are returned with the zone's offset at bucket start.
+      Empty buckets are omitted; clients fill gaps themselves.
+    - **Dimensions.** Filters and `group_by` name an attribute key. Promoted
+      keys (listed under `Dimension`) map to columns and are fast; any other key
+      matching the key pattern is read from the attributes JSONB. Embertrail's
+      own dimensions use the reserved `embertrail.*` namespace.
+    - **Limits.** `group_by` takes at most 3 dimensions. Aggregate results hold
+      at most 10,000 rows; a query that would return more fails with
+      `too-many-rows`. Lists use cursor pagination: `limit` defaults to 100,
+      maximum 1,000; pass `next_cursor` back as `cursor` until it is `null`.
+      Cursors are opaque and only valid with the same query.
+    - **Errors.** Every `/api/v1` error is RFC 9457 `application/problem+json`
+      with a stable `type` URN (`urn:embertrail:problem:<slug>`). Clients
+      branch on `type`, never on `title` or `detail`. OTLP ingest errors follow
+      the OTLP/HTTP spec instead (a JSON `Status` message).
+    - **Evolution.** Additive-only within v1: new endpoints, new optional
+      request fields, new response fields, new enum values in responses.
+      Clients must ignore unknown response fields. Breaking changes go to
+      `/api/v2`; v1 then stays served, marked with a `Deprecation` header, for at
+      least one minor release.
+
+    ## Authentication
+
+    A request authenticates with a Token (`Authorization: Bearer et_<id>_<secret>`)
+    or an Edge Identity (`Cf-Access-Jwt-Assertion`, when the deployment sits
+    behind Cloudflare Access). If both are present and name different Users,
+    the request is rejected with 403. Each operation lists the Scope it needs in
+    `x-embertrail-scope`. Reads cover the caller's own data plus any data a
+    Grant lets them read; every row carries its Owner, and row-level security
+    enforces this on every endpoint, including `/api/v1/sql`.
+
+    Each operation also names the Module that defines it in
+    `x-embertrail-module` (`core` for operations the core serves itself).
+
+servers:
+  - url: '{hub}'
+    description: A running Hub
+    variables:
+      hub:
+        default: http://localhost:8787
+        description: Base URL of the Hub, without a trailing slash.
+
+security:
+  - bearerToken: []
+  - edgeIdentity: []
+
+tags:
+  - name: metrics
+    description: Aggregates over stored Metrics.
+  - name: events
+    description: Raw Events, or aggregates over them.
+  - name: sessions
+    description: Sessions, their links and their labels.
+  - name: catalog
+    description: What exists in the stored data.
+  - name: sql
+    description: Read-only SQL over the caller's visible rows.
+  - name: store
+    description: JSON documents owned by a User or Team, grouped by client namespace.
+  - name: ingest
+    description: OTLP/HTTP JSON ingest. Paths follow the OTLP spec, outside `/api/v1`.
+  - name: meta
+    description: The API's own description.
+
+paths:
+  /api/v1/metrics/query:
+    post:
+      tags: [metrics]
+      operationId: queryMetrics
+      summary: Aggregate one Metric, optionally grouped and bucketed
+      description: |
+        Aggregates the data points of one Metric over a time range. Sums are
+        stored as delta increments (ADR-0003), so `sum` over a range is the
+        total for that range. Without `bucket`, each group yields one row.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MetricsQuery' }
+            example:
+              metric: claude_code.cost.usage
+              aggregation: sum
+              from: '2026-10-01T00:00:00+02:00'
+              to: '2026-10-08T00:00:00+02:00'
+              tz: Europe/Berlin
+              bucket: day
+              group_by: [model]
+      responses:
+        '200':
+          description: Aggregate rows.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AggregateResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/events/query:
+    post:
+      tags: [events]
+      operationId: queryEvents
+      summary: List Events, or aggregate them
+      description: |
+        `mode: list` returns Events one by one, newest first by default, with
+        cursor pagination. `mode: aggregate` counts Events or aggregates a
+        numeric attribute (such as `duration_ms` or `cost_usd`), grouped and
+        bucketed like `/metrics/query`.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventsQuery' }
+            examples:
+              list:
+                summary: One session's timeline
+                value:
+                  mode: list
+                  from: '2026-10-09T00:00:00Z'
+                  to: '2026-10-10T00:00:00Z'
+                  tz: UTC
+                  filter:
+                    - { key: session.id, op: eq, value: 6f1c2b9e-0000-4000-8000-000000000000 }
+                  order: asc
+              aggregate:
+                summary: p95 request latency per model per hour
+                value:
+                  mode: aggregate
+                  from: '2026-10-09T00:00:00Z'
+                  to: '2026-10-10T00:00:00Z'
+                  tz: UTC
+                  filter:
+                    - { key: event.name, op: eq, value: api_request }
+                  aggregation: { fn: p95, key: duration_ms }
+                  bucket: hour
+                  group_by: [model]
+      responses:
+        '200':
+          description: Events (`list`) or aggregate rows (`aggregate`), matching the request's `mode`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/EventList'
+                  - $ref: '#/components/schemas/AggregateResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/sessions:
+    get:
+      tags: [sessions]
+      operationId: listSessions
+      summary: List Sessions
+      description: |
+        Sessions with at least one Signal in the time range, plus Sessions that
+        only have labels when no range is given. Group and tree views are built
+        from `group_id` and `parent_session_id`; totals per group come from
+        `/metrics/query` grouped by `embertrail.group.id`.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:read
+      parameters:
+        - name: from
+          in: query
+          description: Sessions whose last Signal is at or after this time.
+          schema: { $ref: '#/components/schemas/Timestamp' }
+        - name: to
+          in: query
+          description: Sessions whose first Signal is before this time.
+          schema: { $ref: '#/components/schemas/Timestamp' }
+        - name: source_id
+          in: query
+          schema: { $ref: '#/components/schemas/Id' }
+        - name: account_id
+          in: query
+          schema: { $ref: '#/components/schemas/Id' }
+        - name: service_name
+          in: query
+          schema: { type: string }
+        - name: model
+          in: query
+          description: Sessions that used this model at least once.
+          schema: { type: string }
+        - name: group_id
+          in: query
+          description: Sessions in this group (`embertrail.group.id`).
+          schema: { type: string }
+        - name: parent_session_id
+          in: query
+          description: Direct children of this Session.
+          schema: { type: string }
+        - name: label
+          in: query
+          description: '`key=value`; repeat to require several labels.'
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 10
+            items: { type: string, pattern: '^[A-Za-z_][A-Za-z0-9_.\-/]{0,127}=.{0,256}$' }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [-started_at, started_at, -last_seen_at, -cost_usd]
+            default: -started_at
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of Sessions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionSummary' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/sessions/{session_id}:
+    get:
+      tags: [sessions]
+      operationId: getSession
+      summary: Get one Session with its direct children
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:read
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: The Session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/sessions/{session_id}/labels:
+    put:
+      tags: [sessions]
+      operationId: putSessionLabels
+      summary: Replace a Session's labels
+      description: |
+        Replaces the full label set (an empty object clears it). Labels may be
+        written before the Session's first Signal arrives, since exporters
+        often flush only on exit, so an unknown `session_id` is accepted, not
+        404. Labels belong to the caller's Owner.
+
+        The reserved keys `embertrail.group.id`, `embertrail.group.kind`,
+        `embertrail.parent.session_id` and `embertrail.role` link a Session
+        after the fact. Where a reserved label and the same resource attribute
+        disagree, the label wins, in this Session's summary and in every
+        query that filters or groups on that dimension.
+
+        Accepted from Source-bound ingest Tokens, so a Source plugin on the
+        User's machine can label the Session it runs in.
+      x-embertrail-module: core
+      x-embertrail-scope: otel:write
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [labels]
+              additionalProperties: false
+              properties:
+                labels: { $ref: '#/components/schemas/Labels' }
+            example:
+              labels:
+                embertrail.group.id: batch-2026-10-10
+                embertrail.group.kind: orchestrator
+                ticket: ABC-123
+      responses:
+        '200':
+          description: The stored labels.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, labels]
+                properties:
+                  session_id: { type: string }
+                  labels: { $ref: '#/components/schemas/Labels' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/catalog:
+    get:
+      tags: [catalog]
+      operationId: getCatalog
+      summary: List what exists in the visible data
+      description: |
+        Owners, Sources, Accounts, services, models, Metric and Event names,
+        and attribute keys seen in the caller's visible data. Clients use it
+        to fill filter pickers and to label ids. Without a range it covers all
+        stored data.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:read
+      parameters:
+        - name: from
+          in: query
+          schema: { $ref: '#/components/schemas/Timestamp' }
+        - name: to
+          in: query
+          schema: { $ref: '#/components/schemas/Timestamp' }
+      responses:
+        '200':
+          description: The catalogue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Catalog' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/sql:
+    post:
+      tags: [sql]
+      operationId: runSql
+      summary: Run one read-only SQL statement
+      description: |
+        Runs a single `SELECT` as the read-only database role, with the
+        caller's row-level security applied: it sees exactly the rows the
+        caller could read through the other endpoints. 10 s statement
+        timeout; at most 10,000 rows are returned, and `truncated` says
+        whether more existed. Tables are those of every Module, under the
+        Module's schema (`otel.otel_logs`, `store.documents`, …); their
+        columns are documented per Module, not here, and may grow additively.
+      x-embertrail-module: core
+      x-embertrail-scope: sql:read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SqlRequest' }
+            example:
+              sql: select model, sum(value) from otel.otel_metrics_sum where metric_name = $1 group by 1
+              params: [claude_code.cost.usage]
+      responses:
+        '200':
+          description: The result set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SqlResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/store/{namespace}:
+    get:
+      tags: [store]
+      operationId: listStoreDocuments
+      summary: List documents in a namespace
+      description: Every document in the namespace the caller can read, most recently updated first.
+      x-embertrail-module: store
+      x-embertrail-scope: store:read
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/StoreDocument' }
+                  next_cursor: { $ref: '#/components/schemas/NextCursor' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/store/{namespace}/{id}:
+    get:
+      tags: [store]
+      operationId: getStoreDocument
+      summary: Get one document
+      x-embertrail-module: store
+      x-embertrail-scope: store:read
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: The document. `ETag` carries its version.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreDocument' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+    put:
+      tags: [store]
+      operationId: putStoreDocument
+      summary: Create or replace a document
+      description: |
+        Creates the document if `id` is free in this namespace, otherwise
+        replaces its `data`. The client chooses `id`. Send `If-Match` with the
+        last seen `ETag` to replace only an unchanged document, or
+        `If-None-Match: *` to create only. A new document belongs to the
+        caller, or to the Team named in `Embertrail-Owner`; an existing
+        document keeps its Owner.
+      x-embertrail-module: store
+      x-embertrail-scope: store:write
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/OwnerHeader'
+        - name: If-Match
+          in: header
+          schema: { type: string }
+        - name: If-None-Match
+          in: header
+          schema: { type: string, const: '*' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              additionalProperties: false
+              properties:
+                data: { $ref: '#/components/schemas/StoreData' }
+      responses:
+        '200':
+          description: Replaced.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreDocument' }
+        '201':
+          description: Created.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreDocument' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '500': { $ref: '#/components/responses/Internal' }
+    delete:
+      tags: [store]
+      operationId: deleteStoreDocument
+      summary: Delete a document
+      description: Hard delete. `If-Match` is honoured as on `PUT`.
+      x-embertrail-module: store
+      x-embertrail-scope: store:write
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/DocumentId'
+        - name: If-Match
+          in: header
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /v1/logs:
+    post:
+      tags: [ingest]
+      operationId: ingestLogs
+      summary: Ingest Events (OTLP logs)
+      description: |
+        OTLP/HTTP with a JSON-encoded `ExportLogsServiceRequest`. Each log
+        record becomes one Event. The Token must be bound to one Source; the
+        Hub stamps Owner and Source, and ignores any sent in attributes.
+        The body is parsed by the Module (`op.raw`), so `intValue` is accepted
+        as a JSON number or string, and records missing `session.id` or
+        `event.sequence` are de-duplicated on a content hash. A duplicate of
+        a stored record is skipped and not counted as rejected. The response
+        is sent only after the batch is stored, so retries are safe.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:write
+      security:
+        - bearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/ContentEncoding'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtlpExportLogsRequest' }
+      responses:
+        '200':
+          description: Stored. `partialSuccess` is present when some records were rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtlpExportLogsResponse' }
+        '400': { $ref: '#/components/responses/OtlpBadRequest' }
+        '401': { $ref: '#/components/responses/OtlpUnauthorized' }
+        '403': { $ref: '#/components/responses/OtlpForbidden' }
+        '413': { $ref: '#/components/responses/OtlpPayloadTooLarge' }
+        '415': { $ref: '#/components/responses/OtlpUnsupportedMediaType' }
+        '503': { $ref: '#/components/responses/OtlpUnavailable' }
+
+  /v1/metrics:
+    post:
+      tags: [ingest]
+      operationId: ingestMetrics
+      summary: Ingest Metrics (OTLP metrics)
+      description: |
+        OTLP/HTTP with a JSON-encoded `ExportMetricsServiceRequest`. Delta sums
+        and gauges are stored. Cumulative sums, histograms and summaries are
+        rejected through `partialSuccess`, with a message that names the
+        metric and, for cumulative sums, tells the sender to set delta
+        temporality (`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta`).
+        Ownership, de-duplication and retry behaviour are as for `/v1/logs`.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:write
+      security:
+        - bearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/ContentEncoding'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtlpExportMetricsRequest' }
+      responses:
+        '200':
+          description: Stored. `partialSuccess` is present when some data points were rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtlpExportMetricsResponse' }
+        '400': { $ref: '#/components/responses/OtlpBadRequest' }
+        '401': { $ref: '#/components/responses/OtlpUnauthorized' }
+        '403': { $ref: '#/components/responses/OtlpForbidden' }
+        '413': { $ref: '#/components/responses/OtlpPayloadTooLarge' }
+        '415': { $ref: '#/components/responses/OtlpUnsupportedMediaType' }
+        '503': { $ref: '#/components/responses/OtlpUnavailable' }
+
+  /v1/traces:
+    post:
+      tags: [ingest]
+      operationId: ingestTraces
+      summary: Refuse traces politely (out of v1)
+      description: |
+        Traces are not stored in v1. A well-formed request gets 200 with a
+        `partialSuccess` that rejects every span and says why, so exporters
+        don't retry. Nothing is stored.
+      x-embertrail-module: otel
+      x-embertrail-scope: otel:write
+      security:
+        - bearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/ContentEncoding'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtlpExportTraceRequest' }
+      responses:
+        '200':
+          description: Every span rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtlpExportTraceResponse' }
+              example:
+                partialSuccess:
+                  rejectedSpans: '42'
+                  errorMessage: Embertrail v1 does not store traces. Disable the traces exporter for this sender.
+        '400': { $ref: '#/components/responses/OtlpBadRequest' }
+        '401': { $ref: '#/components/responses/OtlpUnauthorized' }
+        '403': { $ref: '#/components/responses/OtlpForbidden' }
+        '413': { $ref: '#/components/responses/OtlpPayloadTooLarge' }
+        '415': { $ref: '#/components/responses/OtlpUnsupportedMediaType' }
+
+  /api/v1/openapi.json:
+    get:
+      tags: [meta]
+      operationId: getOpenApi
+      summary: This document, as assembled from the running Hub's Modules
+      x-embertrail-module: core
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: { type: object }
+
+  /api/v1/docs:
+    get:
+      tags: [meta]
+      operationId: getDocs
+      summary: Human-readable API reference rendered from `openapi.json`
+      x-embertrail-module: core
+      security: []
+      responses:
+        '200':
+          description: HTML page.
+          content:
+            text/html:
+              schema: { type: string }
+
+  /llms.txt:
+    get:
+      tags: [meta]
+      operationId: getLlmsTxt
+      summary: Plain-text pointer to the API for AI agents
+      description: Follows the llms.txt convention; links `openapi.json` and the ingest reference.
+      x-embertrail-module: core
+      security: []
+      responses:
+        '200':
+          description: Markdown text.
+          content:
+            text/markdown:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    bearerToken:
+      type: http
+      scheme: bearer
+      description: |
+        A Token, `et_<id>_<secret>`. Ingest requires a Token bound to exactly
+        one Source; read and management Tokens are not bound to a Source.
+    edgeIdentity:
+      type: apiKey
+      in: header
+      name: Cf-Access-Jwt-Assertion
+      description: |
+        An Edge Identity asserted by Cloudflare Access in front of the Hub.
+        Only honoured when the deployment configures it; never accepted on
+        ingest.
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: '`next_cursor` from the previous page.'
+      schema: { type: string, maxLength: 1024 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      description: The sender's `session.id`.
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    Namespace:
+      name: namespace
+      in: path
+      required: true
+      description: Client namespace, such as `embertrail-dashboard`.
+      schema: { $ref: '#/components/schemas/Slug' }
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      description: Client-chosen document id, unique within the namespace.
+      schema: { $ref: '#/components/schemas/Slug' }
+    OwnerHeader:
+      name: Embertrail-Owner
+      in: header
+      description: |
+        Create the document for a Team instead of the caller: `team:<id>`.
+        The caller must be an editor of that Team. Omit on the solo path.
+      schema: { type: string, pattern: '^team:[A-Za-z0-9_-]{1,64}$' }
+    ContentEncoding:
+      name: Content-Encoding
+      in: header
+      description: '`gzip` is accepted. The 5 MB limit applies to the decoded body.'
+      schema: { type: string, enum: [gzip, identity] }
+
+  headers:
+    ETag:
+      description: Strong validator derived from the document's `version`.
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: The request failed schema validation (`validation`), or a cursor was invalid (`invalid-cursor`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: urn:embertrail:problem:validation
+            title: Request failed validation
+            status: 400
+            detail: group_by takes at most 3 dimensions
+            request_id: 01J9Z6Q4X1
+            errors:
+              - { pointer: /group_by, message: must NOT have more than 3 items }
+    Unauthorized:
+      description: No valid Token or Edge Identity (`unauthenticated`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Missing Scope (`forbidden`), or a Token and an Edge Identity naming different Users (`identity-conflict`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: No such resource, or one the caller may not read (`not-found`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PreconditionFailed:
+      description: '`If-Match` or `If-None-Match` did not hold (`precondition-failed`).'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: Body over the endpoint's limit (`payload-too-large`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unprocessable:
+      description: |
+        Valid shape, but the query can't run: `too-many-rows` (over 10,000
+        aggregate rows), `query-timeout` (over 10 s), `sql-error` (rejected by
+        the database; `sqlstate` set), or `invalid` (any other semantic error,
+        such as an unknown time zone).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Internal:
+      description: Unexpected failure (`internal`). Quote `request_id` when reporting it.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    OtlpBadRequest:
+      description: Body is not valid OTLP JSON. Not retryable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+    OtlpUnauthorized:
+      description: Missing or invalid Token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+    OtlpForbidden:
+      description: Token lacks `otel:write` or is not bound to a Source.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+    OtlpPayloadTooLarge:
+      description: Decoded body over 5 MB. Not retryable; lower the exporter's batch size.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+    OtlpUnsupportedMediaType:
+      description: Anything but `application/json`. `http/protobuf` is not supported in v1.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+    OtlpUnavailable:
+      description: Storage unavailable. Retryable; `Retry-After` may be set.
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/RpcStatus' }
+
+  schemas:
+    # ---------- shared primitives ----------
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC 3339 with an offset or `Z`.
+    Tz:
+      type: string
+      description: IANA time zone name, such as `UTC` or `Europe/Berlin`. An unknown zone is `invalid` (422).
+      minLength: 1
+      maxLength: 64
+      examples: [UTC]
+    Id:
+      type: string
+      description: Opaque Hub id.
+      minLength: 1
+      maxLength: 64
+    Slug:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+    NextCursor:
+      type: [string, 'null']
+      description: Pass back as `cursor` for the next page; `null` on the last page.
+    AttributeKey:
+      type: string
+      pattern: '^[A-Za-z_][A-Za-z0-9_.\-/]{0,127}$'
+      description: An attribute key as the sender spelled it.
+    Dimension:
+      allOf:
+        - $ref: '#/components/schemas/AttributeKey'
+      description: |
+        A key to filter or group on. These are promoted to columns:
+
+        | Key | Signals | Meaning |
+        | --- | --- | --- |
+        | `embertrail.owner_id` | all | Owner of the row |
+        | `embertrail.source_id` | all | Source that sent it |
+        | `embertrail.account_id` | all | Account recognised from the telemetry |
+        | `service.name` | all | Sender, such as `claude-code` |
+        | `session.id` | all | Session |
+        | `embertrail.group.id`, `embertrail.group.kind`, `embertrail.parent.session_id`, `embertrail.role` | all | Session links (ADR-0014); a Session's reserved labels override them |
+        | `model` | all | Model |
+        | `type` | Metrics | Point type, such as `input` or `cacheRead` for token usage |
+        | `unit` | Metrics | Metric unit |
+        | `event.name` | Events | Event name, unprefixed (`api_request`) |
+        | `event.sequence` | Events | Sender's sequence number |
+        | `prompt.id` | Events | Prompt |
+        | `request_id` | Events | Request |
+
+        Any other key is read from the data point's or log record's
+        attributes, falling back to resource attributes.
+    ScalarValue:
+      type: [string, number, boolean]
+    Filter:
+      description: One condition. A query's filters are combined with AND.
+      oneOf:
+        - type: object
+          title: Comparison
+          required: [key, op, value]
+          additionalProperties: false
+          properties:
+            key: { $ref: '#/components/schemas/Dimension' }
+            op: { type: string, enum: [eq, neq, gt, gte, lt, lte] }
+            value: { $ref: '#/components/schemas/ScalarValue' }
+        - type: object
+          title: Membership
+          required: [key, op, value]
+          additionalProperties: false
+          properties:
+            key: { $ref: '#/components/schemas/Dimension' }
+            op: { type: string, enum: [in, not_in] }
+            value:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items: { $ref: '#/components/schemas/ScalarValue' }
+        - type: object
+          title: Presence
+          required: [key, op]
+          additionalProperties: false
+          properties:
+            key: { $ref: '#/components/schemas/Dimension' }
+            op: { type: string, enum: [exists, not_exists] }
+    Bucket:
+      type: string
+      enum: [minute, hour, day, week, month]
+      description: Calendar bucket in the query's `tz`.
+    GroupBy:
+      type: array
+      maxItems: 3
+      uniqueItems: true
+      items: { $ref: '#/components/schemas/Dimension' }
+    AggregateOrder:
+      type: object
+      additionalProperties: false
+      description: Default is `bucket` ascending, then group values.
+      properties:
+        by: { type: string, enum: [bucket, value] }
+        direction: { type: string, enum: [asc, desc], default: asc }
+    QueryWindow:
+      type: object
+      required: [from, to, tz]
+      properties:
+        from: { $ref: '#/components/schemas/Timestamp' }
+        to: { $ref: '#/components/schemas/Timestamp' }
+        tz: { $ref: '#/components/schemas/Tz' }
+        filter:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/Filter' }
+
+    # ---------- metrics ----------
+    MetricsQuery:
+      allOf:
+        - $ref: '#/components/schemas/QueryWindow'
+      type: object
+      required: [metric, aggregation]
+      unevaluatedProperties: false
+      properties:
+        metric:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Metric name, such as `claude_code.token.usage`.
+        aggregation:
+          type: string
+          enum: [sum, avg, min, max, count, last]
+          description: |
+            Applied to data point values per row. `sum` suits delta sums;
+            `avg`, `min`, `max` and `last` suit gauges; `count` counts points.
+        bucket: { $ref: '#/components/schemas/Bucket' }
+        group_by: { $ref: '#/components/schemas/GroupBy' }
+        order: { $ref: '#/components/schemas/AggregateOrder' }
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          description: Return only the first rows in `order`, for top-N queries.
+
+    AggregateResult:
+      type: object
+      required: [rows, meta]
+      properties:
+        rows:
+          type: array
+          maxItems: 10000
+          items: { $ref: '#/components/schemas/AggregateRow' }
+        meta:
+          type: object
+          required: [tz]
+          properties:
+            tz: { $ref: '#/components/schemas/Tz' }
+            bucket: { $ref: '#/components/schemas/Bucket' }
+            unit:
+              type: [string, 'null']
+              description: The Metric's unit, or `null` for Event counts and mixed units.
+    AggregateRow:
+      type: object
+      required: [group, value]
+      properties:
+        bucket:
+          $ref: '#/components/schemas/Timestamp'
+          description: Bucket start, present when the query had `bucket`.
+        group:
+          type: object
+          description: One entry per `group_by` key; `null` where the row lacks the attribute.
+          additionalProperties:
+            type: [string, number, boolean, 'null']
+        value:
+          type: [number, 'null']
+
+    # ---------- events ----------
+    EventsQuery:
+      oneOf:
+        - $ref: '#/components/schemas/EventsListQuery'
+        - $ref: '#/components/schemas/EventsAggregateQuery'
+      discriminator:
+        propertyName: mode
+        mapping:
+          list: '#/components/schemas/EventsListQuery'
+          aggregate: '#/components/schemas/EventsAggregateQuery'
+    EventsListQuery:
+      allOf:
+        - $ref: '#/components/schemas/QueryWindow'
+      type: object
+      required: [mode]
+      unevaluatedProperties: false
+      properties:
+        mode: { const: list }
+        order:
+          type: string
+          enum: [desc, asc]
+          default: desc
+          description: By time, then `event.sequence`.
+        cursor: { type: string, maxLength: 1024 }
+        limit: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    EventsAggregateQuery:
+      allOf:
+        - $ref: '#/components/schemas/QueryWindow'
+      type: object
+      required: [mode, aggregation]
+      unevaluatedProperties: false
+      properties:
+        mode: { const: aggregate }
+        aggregation:
+          type: object
+          required: [fn]
+          additionalProperties: false
+          properties:
+            fn:
+              type: string
+              enum: [count, count_distinct, sum, avg, min, max, p50, p90, p95, p99]
+            key:
+              $ref: '#/components/schemas/Dimension'
+              description: Required for every `fn` except `count`. Numeric for all but `count_distinct`; non-numeric values are ignored.
+          if:
+            properties: { fn: { const: count } }
+          then:
+            not: { required: [key] }
+          else:
+            required: [key]
+        bucket: { $ref: '#/components/schemas/Bucket' }
+        group_by: { $ref: '#/components/schemas/GroupBy' }
+        order: { $ref: '#/components/schemas/AggregateOrder' }
+        limit: { type: integer, minimum: 1, maximum: 10000 }
+    EventList:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Event' }
+        next_cursor: { $ref: '#/components/schemas/NextCursor' }
+    Event:
+      type: object
+      required: [time, event_name, service_name, owner_id, source_id, account_id, attributes, resource]
+      properties:
+        time: { $ref: '#/components/schemas/Timestamp' }
+        event_name:
+          type: string
+          description: Unprefixed (`api_request`).
+        sequence: { type: [integer, 'null'] }
+        session_id: { type: [string, 'null'] }
+        prompt_id: { type: [string, 'null'] }
+        request_id: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        service_name: { type: string }
+        owner_id: { $ref: '#/components/schemas/Id' }
+        source_id: { $ref: '#/components/schemas/Id' }
+        account_id: { $ref: '#/components/schemas/Id' }
+        body:
+          type: [string, 'null']
+          description: The log record body as sent, when it was a string.
+        attributes:
+          type: object
+          description: Log record attributes as sent, with OTLP values unwrapped to plain JSON.
+        resource:
+          type: object
+          description: Resource attributes as sent, unwrapped.
+
+    # ---------- sessions ----------
+    Labels:
+      type: object
+      maxProperties: 32
+      propertyNames: { $ref: '#/components/schemas/AttributeKey' }
+      additionalProperties: { type: string, maxLength: 256 }
+    SessionSummary:
+      type: object
+      required: [id, service_name, owner_id, source_id, account_id, started_at, last_seen_at, models, cost_usd, tokens, event_counts, group, parent_session_id, role, labels]
+      properties:
+        id: { type: string }
+        service_name: { type: [string, 'null'], description: '`null` for a Session known only from labels.' }
+        owner_id: { $ref: '#/components/schemas/Id' }
+        source_id: { type: [string, 'null'] }
+        account_id: { type: [string, 'null'] }
+        started_at: { type: [string, 'null'], format: date-time, description: First Signal. }
+        last_seen_at: { type: [string, 'null'], format: date-time, description: Latest Signal. }
+        models:
+          type: array
+          items: { type: string }
+        cost_usd:
+          type: [number, 'null']
+          description: Sum of `claude_code.cost.usage`; `null` when the sender sends no cost.
+        tokens:
+          type: object
+          description: Sum of `claude_code.token.usage` per `type` (`input`, `output`, `cacheRead`, `cacheCreation`, …); empty when absent.
+          additionalProperties: { type: number }
+        event_counts:
+          type: object
+          description: Number of Events per unprefixed `event.name`.
+          additionalProperties: { type: integer }
+        group:
+          type: [object, 'null']
+          required: [id]
+          properties:
+            id: { type: string }
+            kind: { type: [string, 'null'] }
+        parent_session_id: { type: [string, 'null'] }
+        role: { type: [string, 'null'] }
+        labels: { $ref: '#/components/schemas/Labels' }
+    SessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/SessionSummary'
+      type: object
+      required: [children]
+      properties:
+        children:
+          type: array
+          maxItems: 1000
+          description: Direct children (Sessions whose parent is this one), oldest first. Deeper levels come from fetching each child.
+          items: { $ref: '#/components/schemas/SessionSummary' }
+
+    # ---------- catalog ----------
+    Catalog:
+      type: object
+      required: [owners, sources, accounts, services, models, metrics, events, attributes]
+      properties:
+        owners:
+          type: array
+          description: The caller, and every Owner whose data a Grant lets them read.
+          items:
+            type: object
+            required: [id, kind, name]
+            properties:
+              id: { $ref: '#/components/schemas/Id' }
+              kind: { type: string, enum: [user, team] }
+              name: { type: string }
+        sources:
+          type: array
+          items:
+            type: object
+            required: [id, name, owner_id]
+            properties:
+              id: { $ref: '#/components/schemas/Id' }
+              name: { type: string }
+              owner_id: { $ref: '#/components/schemas/Id' }
+        accounts:
+          type: array
+          items:
+            type: object
+            required: [id, label, owner_id]
+            properties:
+              id: { $ref: '#/components/schemas/Id' }
+              label:
+                type: string
+                description: The User's label, or a suggestion from the email domain, or `Unknown`.
+              owner_id: { $ref: '#/components/schemas/Id' }
+              organization_id: { type: [string, 'null'] }
+              account_uuid: { type: [string, 'null'] }
+              email: { type: [string, 'null'] }
+        services:
+          type: array
+          items: { type: string }
+        models:
+          type: array
+          items: { type: string }
+        metrics:
+          type: array
+          items:
+            type: object
+            required: [name, kind, unit]
+            properties:
+              name: { type: string }
+              kind: { type: string, enum: [sum, gauge] }
+              unit: { type: [string, 'null'] }
+              service_name: { type: string }
+        events:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, description: Unprefixed. }
+              service_name: { type: string }
+        attributes:
+          type: array
+          maxItems: 1000
+          description: Attribute keys seen, for building `group_by` and filter pickers. Capped at 1,000, most frequent first.
+          items:
+            type: object
+            required: [signal, key, promoted]
+            properties:
+              signal: { type: string, enum: [metric, event] }
+              key: { $ref: '#/components/schemas/AttributeKey' }
+              promoted: { type: boolean }
+
+    # ---------- sql ----------
+    SqlRequest:
+      type: object
+      required: [sql]
+      additionalProperties: false
+      properties:
+        sql:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: One statement; read-only. Use `$1`, `$2`… for parameters.
+        params:
+          type: array
+          maxItems: 100
+          items: { type: [string, number, boolean, 'null'] }
+    SqlResult:
+      type: object
+      required: [columns, rows, truncated]
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            required: [name, type]
+            properties:
+              name: { type: string }
+              type: { type: string, description: 'Postgres type name, such as `timestamptz` or `jsonb`.' }
+        rows:
+          type: array
+          maxItems: 10000
+          description: Rows as arrays in column order. `timestamptz` as RFC 3339, `numeric` and `int8` as strings, `jsonb` as JSON.
+          items:
+            type: array
+        truncated: { type: boolean }
+
+    # ---------- store ----------
+    StoreData:
+      description: Any JSON value. At most 1 MiB once serialised (`payload-too-large`).
+    StoreDocument:
+      type: object
+      required: [namespace, id, owner, version, created_at, updated_at, data]
+      properties:
+        namespace: { $ref: '#/components/schemas/Slug' }
+        id: { $ref: '#/components/schemas/Slug' }
+        owner:
+          type: object
+          required: [kind, id]
+          properties:
+            kind: { type: string, enum: [user, team] }
+            id: { $ref: '#/components/schemas/Id' }
+        version:
+          type: integer
+          minimum: 1
+          description: Increments on every replace.
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+        data: { $ref: '#/components/schemas/StoreData' }
+
+    # ---------- errors ----------
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      required: [type, title, status, request_id]
+      properties:
+        type:
+          type: string
+          format: uri
+          enum:
+            - urn:embertrail:problem:validation
+            - urn:embertrail:problem:invalid-cursor
+            - urn:embertrail:problem:unauthenticated
+            - urn:embertrail:problem:forbidden
+            - urn:embertrail:problem:identity-conflict
+            - urn:embertrail:problem:not-found
+            - urn:embertrail:problem:conflict
+            - urn:embertrail:problem:precondition-failed
+            - urn:embertrail:problem:payload-too-large
+            - urn:embertrail:problem:invalid
+            - urn:embertrail:problem:too-many-rows
+            - urn:embertrail:problem:query-timeout
+            - urn:embertrail:problem:sql-error
+            - urn:embertrail:problem:internal
+          description: Stable; new types may be added within v1.
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        request_id: { type: string }
+        module:
+          type: string
+          description: Module that raised the error, on `internal`.
+        errors:
+          type: array
+          description: Field errors, on `validation`.
+          items:
+            type: object
+            required: [pointer, message]
+            properties:
+              pointer: { type: string, description: JSON Pointer into the request. }
+              message: { type: string }
+        sqlstate:
+          type: string
+          description: Postgres SQLSTATE, on `sql-error`.
+
+    # ---------- OTLP (shapes per the OTLP/JSON spec; only what the Hub reads is spelled out) ----------
+    OtlpExportLogsRequest:
+      type: object
+      description: '`ExportLogsServiceRequest` in OTLP/JSON. See opentelemetry-proto `logs/v1`.'
+      properties:
+        resourceLogs:
+          type: array
+          items: { type: object }
+    OtlpExportMetricsRequest:
+      type: object
+      description: '`ExportMetricsServiceRequest` in OTLP/JSON. See opentelemetry-proto `metrics/v1`.'
+      properties:
+        resourceMetrics:
+          type: array
+          items: { type: object }
+    OtlpExportTraceRequest:
+      type: object
+      description: '`ExportTraceServiceRequest` in OTLP/JSON.'
+      properties:
+        resourceSpans:
+          type: array
+          items: { type: object }
+    OtlpInt64:
+      type: string
+      pattern: '^[0-9]+$'
+      description: int64 encoded as a decimal string, per the proto3 JSON mapping.
+    OtlpExportLogsResponse:
+      type: object
+      properties:
+        partialSuccess:
+          type: object
+          properties:
+            rejectedLogRecords: { $ref: '#/components/schemas/OtlpInt64' }
+            errorMessage: { type: string }
+    OtlpExportMetricsResponse:
+      type: object
+      properties:
+        partialSuccess:
+          type: object
+          properties:
+            rejectedDataPoints: { $ref: '#/components/schemas/OtlpInt64' }
+            errorMessage: { type: string }
+    OtlpExportTraceResponse:
+      type: object
+      required: [partialSuccess]
+      properties:
+        partialSuccess:
+          type: object
+          required: [rejectedSpans, errorMessage]
+          properties:
+            rejectedSpans: { $ref: '#/components/schemas/OtlpInt64' }
+            errorMessage: { type: string }
+    RpcStatus:
+      type: object
+      description: '`google.rpc.Status` in JSON, as OTLP/HTTP requires for 4xx and 5xx.'
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: object }
