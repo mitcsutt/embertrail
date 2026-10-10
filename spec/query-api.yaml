@@ -499,6 +499,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '412': { $ref: '#/components/responses/PreconditionFailed' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '500': { $ref: '#/components/responses/Internal' }
@@ -766,6 +767,11 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
     NotFound:
       description: No such resource, or one the caller may not read (`not-found`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: The id is held by a document the caller cannot see (`conflict`).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
