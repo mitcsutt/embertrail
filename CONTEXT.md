@@ -26,10 +26,6 @@ _Avoid_: conversation, chat
 One call from an agent to a model API, identified by its request id; the unit that Backfill and live data are matched on.
 _Avoid_: API call, turn
 
-**Plan Window**:
-A rolling usage-limit period of a Claude subscription plan (the 5-hour window, the week).
-_Avoid_: quota, limit period
-
 **Origin**:
 How a Signal reached Embertrail: `live` (exported as it happened) or `backfill` (reconstructed later).
 _Avoid_: provenance, mode
