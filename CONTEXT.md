@@ -23,20 +23,8 @@ One Claude Code session, identified by its `session.id`.
 _Avoid_: conversation, chat
 
 **Request**:
-One call from an agent to a model API, identified by its request id; the unit that Backfill and live data are matched on.
+One call from an agent to a model API, identified by its request id.
 _Avoid_: API call, turn
-
-**Origin**:
-How a Signal reached Embertrail: `live` (exported as it happened) or `backfill` (reconstructed later).
-_Avoid_: provenance, mode
-
-**Backfill**:
-Importing historical Signals that predate a Source's live export, reconstructed from transcripts or from an older telemetry store.
-_Avoid_: migration, sync, import (on its own)
-
-**Importer**:
-One Backfill reader for one kind of historical data (transcripts, Prometheus, Loki).
-_Avoid_: loader, migrator
 
 ### Who owns what
 
