@@ -86,26 +86,28 @@ _Avoid_: target, cloud, environment
 A User identity asserted by infrastructure in front of the Hub or Dashboard (such as Cloudflare Access), instead of an app login.
 _Avoid_: SSO, auth
 
+### Reading data
+
+**Query API**:
+The Hub's public read contract over stored Signals, specified with OpenAPI and JSON Schema; any client may use it.
+_Avoid_: REST API, endpoints, backend API
+
 ### Dashboard
 
 **Dashboard**:
-The standalone web app that shows Widgets from one or more Data Sources.
+The Embertrail web app that shows the Hub's data as Boards of Widgets, built on the Query API.
 _Avoid_: UI, frontend, console
 
-**Data Source**:
-An endpoint that implements the Widget Data API; the Hub is one, but any can be configured.
-_Avoid_: backend, datasource, connector
-
 **Widget**:
-One self-contained view in a Board, with a kind (stat, series, bars, table, heatmap…) and data from one Data Source.
+One self-contained view in a Board, with a kind (stat, series, bars, table, heatmap…), defined and computed by the Dashboard.
 _Avoid_: panel, tile, card, chart
 
 **Catalogue**:
-The list of Widgets a Data Source offers.
+The list of Widgets the Dashboard offers.
 _Avoid_: registry, library
 
 **Board**:
-A named arrangement of Widgets that a User or Team owns.
+A named arrangement of Widgets.
 _Avoid_: dashboard (that is the app), page, view
 
 **Layout**:
@@ -113,5 +115,5 @@ The grid positions of a Board's Widgets.
 _Avoid_: arrangement, config
 
 **Preset**:
-A built-in, read-only Board such as Overview or Explore; customising it copies it into a new Board.
+A built-in, read-only Board such as Overview; customising it copies it into a new Board.
 _Avoid_: template, default dashboard
