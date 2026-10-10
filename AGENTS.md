@@ -2,6 +2,10 @@
 
 The repo is in its **design phase**: the work is closing gaps in the design, not writing code. Code starts only after the lock check in the design-phase epic passes.
 
+## Public by default
+
+This repo, its issues and its commits are public. Write only generic, reusable content: deployment specifics, personal infrastructure and any one deployment's details belong in that deployment's private repo. A local guard blocks commits and issue writes that match the owner's private pattern list; when it fires, rewrite the content generically.
+
 ## Solo first
 
 The expected deployment is one person on their own Hub. Multi-user capabilities exist, and the solo path stays free of their steps, config and UI.
