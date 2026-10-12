@@ -76,7 +76,7 @@ tags:
     description: Raw Events, or aggregates over them.
   - name: sessions
     description: Sessions, their links and their labels.
-  - name: catalog
+  - name: inventory
     description: What exists in the stored data.
   - name: sql
     description: Read-only SQL over the caller's visible rows.
@@ -330,10 +330,10 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/Internal' }
 
-  /api/v1/catalog:
+  /api/v1/inventory:
     get:
-      tags: [catalog]
-      operationId: getCatalog
+      tags: [inventory]
+      operationId: getInventory
       summary: List what exists in the visible data
       description: |
         Owners, Sources, Accounts, services, models, Metric and Event names,
@@ -351,10 +351,10 @@ paths:
           schema: { $ref: '#/components/schemas/Timestamp' }
       responses:
         '200':
-          description: The catalogue.
+          description: The Inventory.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Catalog' }
+              schema: { $ref: '#/components/schemas/Inventory' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -1146,8 +1146,8 @@ components:
           description: Direct children (Sessions whose parent is this one), oldest first. Deeper levels come from fetching each child.
           items: { $ref: '#/components/schemas/SessionSummary' }
 
-    # ---------- catalog ----------
-    Catalog:
+    # ---------- inventory ----------
+    Inventory:
       type: object
       required: [owners, sources, accounts, services, models, metrics, events, attributes]
       properties:

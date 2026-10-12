@@ -22,6 +22,14 @@ _Avoid_: log, log line
 One Claude Code session, identified by its `session.id`.
 _Avoid_: conversation, chat
 
+**Session Group**:
+A set of Sessions declared to belong together, such as one orchestrator run, through `embertrail.group.*` attributes or Labels; Sessions may also form a tree through a parent Session.
+_Avoid_: group (alone; Team is the group of Users), batch, run
+
+**Label**:
+A key–value pair attached to a Session after the fact; reserved `embertrail.*` Labels link it into a Session Group or tree.
+_Avoid_: tag, annotation
+
 **Request**:
 One call from an agent to a model API, identified by its request id.
 _Avoid_: API call, turn
@@ -91,6 +99,10 @@ _Avoid_: SSO, auth
 **Query API**:
 The Hub's public read contract over stored Signals, specified with OpenAPI and JSON Schema; any client may use it.
 _Avoid_: REST API, endpoints, backend API
+
+**Inventory**:
+What exists in the data a caller can read (Owners, Sources, Accounts, services, models, Metric and Event names, attribute keys), served by the Query API for pickers and labels.
+_Avoid_: catalog, catalogue (that is the Dashboard's list of Widgets)
 
 ### Dashboard
 
