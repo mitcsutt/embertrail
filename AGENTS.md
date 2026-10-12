@@ -1,6 +1,9 @@
 # Embertrail
 
-The repo is in its **design phase**: the work is closing gaps in the design, not writing code. Code starts only after the lock check in the design-phase epic passes.
+The design is **locked** (#24). Build in this order, each spec issue's acceptance criteria being its definition of done:
+
+1. **Kiln first**, in `mitcsutt/kiln`: K1 tokens (mitcsutt/kiln#57), then K2 charts (mitcsutt/kiln#58) and K3 drag-and-drop (mitcsutt/kiln#59). Kiln packages serve other projects too, so they land before Embertrail code.
+2. **Embertrail**: Core (#49, starting with #28), then Cloudflare (#50), Dashboard (#51) and v0.1 (#52).
 
 ## Public by default
 
