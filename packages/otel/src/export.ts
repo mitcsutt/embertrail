@@ -1,6 +1,7 @@
 // The Module's export: OTLP JSON Lines. Each line is one complete OTLP/JSON export request
 // for one stored row, so posting the lines back to /v1/logs and /v1/metrics restores the data
-// (and, through de-duplication, stores nothing twice).
+// (and, through de-duplication, stores nothing twice). Each Session's Labels follow as one
+// `{"sessionLabels": {session_id, labels}}` line, for `PUT /api/v1/sessions/{id}/labels`.
 
 import type { Exporter, ScopedDb } from '@mitcsutt/embertrail-hub'
 import { asc, gt, sql } from 'drizzle-orm'
@@ -8,7 +9,7 @@ import type { AnyColumn } from 'drizzle-orm'
 
 import { keyValues, microsToNanos, wrap } from './otlp'
 import type { Attributes } from './otlp'
-import { logs, metricsGauge, metricsSum } from './schema'
+import { logs, metricsGauge, metricsSum, sessionLabels } from './schema'
 
 const page = 1000
 
@@ -94,9 +95,20 @@ async function* metricLines(db: ScopedDb, kind: 'sum' | 'gauge') {
   }
 }
 
-/** OTLP JSON Lines: Events first, then sums, then gauges. */
+async function* labelLines(db: ScopedDb) {
+  const found = await db
+    .select({ sessionId: sessionLabels.sessionId, labels: sessionLabels.labels })
+    .from(sessionLabels)
+    .orderBy(asc(sessionLabels.sessionId))
+  for (const row of found) {
+    yield JSON.stringify({ sessionLabels: { session_id: row.sessionId, labels: row.labels } })
+  }
+}
+
+/** OTLP JSON Lines: Events first, then sums, then gauges; then the Sessions' Labels. */
 export const exportOtlp: Exporter = async function* exportOtlp({ db }) {
   yield* logLines(db)
   yield* metricLines(db, 'sum')
   yield* metricLines(db, 'gauge')
+  yield* labelLines(db)
 }
