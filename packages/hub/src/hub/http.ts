@@ -82,8 +82,21 @@ export function problem(error: HubError, requestId: string, module?: string): Re
   })
 }
 
-/** An op's result: JSON, or 204 when it returns nothing. */
-export function result(output: unknown): Response {
-  if (output === undefined) return new Response(null, { status: 204 })
-  return Response.json(output)
+/** A typed op returned a value its output schema rejects: the Module's bug, so a 500. */
+export class OutputError extends Error {
+  override readonly name = 'OutputError'
+
+  constructor(
+    readonly op: string,
+    readonly issues: readonly StandardSchemaV1.Issue[],
+  ) {
+    super(`op "${op}" returned output that fails its schema`)
+  }
+}
+
+/** An op's output, parsed by its schema so undeclared keys never leave the Hub. */
+export async function parseOutput(schema: StandardSchemaV1, value: unknown, op: string) {
+  const result = await schema['~standard'].validate(value)
+  if (result.issues !== undefined) throw new OutputError(op, result.issues)
+  return result.value
 }

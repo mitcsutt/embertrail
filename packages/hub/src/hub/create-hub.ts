@@ -12,7 +12,7 @@ import type { Caller, Ctx, Exporter, Module, Op, Scope } from '../module/define'
 import { HubError } from '../module/errors'
 import { checkModules, parseConfig } from './boot'
 import type { HubConfig } from './boot'
-import { knownError, problem, readInput, result, validate } from './http'
+import { knownError, OutputError, parseOutput, problem, readInput, validate } from './http'
 import { buildOpenApi } from './openapi'
 import type { OpenApiDocument } from './openapi'
 import { Router } from './router'
@@ -56,7 +56,8 @@ export interface Hub {
   readonly scopes: readonly Scope[]
 }
 
-type Target = { kind: 'core'; respond: () => Response } | { kind: 'op'; module: Module; op: Op }
+type Target =
+  { kind: 'core'; respond: () => Response } | { kind: 'op'; module: Module; key: string; op: Op }
 
 /** JSON Lines of every row the Owner owns, one `{ table, row }` object per line. */
 function defaultExporter(module: Module): Exporter {
@@ -92,8 +93,8 @@ export function createHub(options: HubOptions): Hub {
   const router = new Router<Target>()
   router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
   for (const module of modules) {
-    for (const op of Object.values(module.ops))
-      router.add(op.method, op.path, { kind: 'op', module, op })
+    for (const [key, op] of Object.entries(module.ops))
+      router.add(op.method, op.path, { kind: 'op', module, key, op })
   }
 
   let booted: Promise<void> | undefined
@@ -106,7 +107,13 @@ export function createHub(options: HubOptions): Hub {
   }
 
   /** Resolves the caller, checks the Scope and validates the input; returns the op's run. */
-  async function prepare(request: Request, module: Module, op: Op, params: Record<string, string>) {
+  async function prepare(
+    request: Request,
+    module: Module,
+    key: string,
+    op: Op,
+    params: Record<string, string>,
+  ) {
     const caller = await resolveCaller(request, edgeIdentity, directory)
     const scope = opScope(module.name, op)
     if (!caller.scopes.includes(scope)) throw HubError.forbidden(`Needs Scope ${scope}`)
@@ -126,7 +133,12 @@ export function createHub(options: HubOptions): Hub {
       return () => db.transaction(session, (scoped) => op.run(request, ctx(scoped)))
     }
     const input = await validate(op.input, await readInput(request, params))
-    return async () => result(await db.transaction(session, (scoped) => op.run(input, ctx(scoped))))
+    return async () =>
+      Response.json(
+        await db.transaction(session, async (scoped) =>
+          parseOutput(op.output, await op.run(input, ctx(scoped)), `${module.name}.${key}`),
+        ),
+      )
   }
 
   async function deleteWhere(column: 'owner_id' | 'source_id', value: string) {
@@ -163,7 +175,7 @@ export function createHub(options: HubOptions): Hub {
         const { target } = found
         if (target.kind === 'core') return target.respond()
         await boot()
-        const run = await prepare(request, target.module, target.op, found.params)
+        const run = await prepare(request, target.module, target.key, target.op, found.params)
         // From here on, an unexpected error is the Module's.
         module = target.module.name
         return await run()
@@ -171,7 +183,8 @@ export function createHub(options: HubOptions): Hub {
         const known = knownError(error)
         if (known !== undefined) return problem(known, requestId)
         onError(error, { requestId, module })
-        return problem(new HubError(500, 'internal'), requestId, module)
+        const detail = error instanceof OutputError ? error.message : undefined
+        return problem(new HubError(500, 'internal', detail), requestId, module)
       }
     },
 

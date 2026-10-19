@@ -17,7 +17,6 @@ export interface TestClient {
   get(path: string): Promise<Response>
   post(path: string, body?: unknown): Promise<Response>
   put(path: string, body?: unknown): Promise<Response>
-  patch(path: string, body?: unknown): Promise<Response>
   delete(path: string): Promise<Response>
 }
 
@@ -63,7 +62,6 @@ function client(hub: Hub, token?: string): TestClient {
     get: (path) => send(path),
     post: withBody('POST'),
     put: withBody('PUT'),
-    patch: withBody('PATCH'),
     delete: (path) => send(path, { method: 'DELETE' }),
   }
 }

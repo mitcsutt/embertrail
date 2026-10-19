@@ -27,7 +27,7 @@ interface DbSession {
 
 Each is `SET LOCAL`, so it ends with the transaction and a pooled connection never carries one caller into the next. One connection per call, released when it ends; a throw rolls back and is rethrown unchanged.
 
-`privileged` runs as the connecting role with no session, outside row-level security. Only the core uses it, for migrations, the policy sync, boot checks, retention and deletes. Modules never see it.
+`privileged` runs as the connecting role with no session, outside row-level security. Only the core uses it, for migrations, the policy sync, boot checks, retention and deletes. Modules never see it. It replaces #26's `migrate(sources)`: the core runs migrations itself through `privileged`, so an Adapter has no migration logic of its own.
 
 `drizzleDbPort(db)` builds the Port from any Drizzle Postgres database whose `transaction` holds one connection for the whole call, so an Adapter is mostly its connection handling:
 
@@ -108,4 +108,4 @@ it.each(dbPortChecks)('$name', async (check) => {
 - `edgeIdentityChecks` (`/contract`): valid, absent and invalid assertions, given a fixture of requests.
 - `hubInvariantChecks` (`/testing`): the Module contract's invariants (forged ownership refused, cross-Owner reads hidden, rollback, foreign keys outside `core.*` refused, and the Module contract suite), given a function that opens a fresh database. The Hub's tests run them on PGLite; [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) runs them on Postgres 17.
 
-A new Adapter passes its Port's suite, and a new Db Adapter also passes `hubInvariantChecks`.
+A new Adapter passes its Port's suite, and a new Db Adapter also passes `hubInvariantChecks`. Today the suites run against the Test and Docker Db Adapters on Node; the Cloudflare Db Adapter and its `workerd` run in CI come with #38.

@@ -84,7 +84,7 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
       withLedger(open, async (t) => {
         const alice = t.as('alice', write)
         const { id } = await json(await alice.post('/api/v1/ledger/entries', { note: 'keep' }))
-        const response = await alice.patch(`/api/v1/ledger/entries/${String(id)}`, {
+        const response = await alice.put(`/api/v1/ledger/entries/${String(id)}`, {
           to: 'mallory',
         })
         await expectInternal(t, response)
@@ -156,6 +156,39 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
       withLedger(open, async (t) => {
         const response = await t.as('alice', write).post('/api/v1/ledger/fail', { note: 'gone' })
         await expectInternal(t, response)
+        assert.equal(await count(t, 'entries'), 0)
+      }),
+  },
+  {
+    name: 'output is parsed by its schema, so a raw row loses owner_id and source_id',
+    run: (open) =>
+      withLedger(open, async (t) => {
+        const alice = t.as('alice', write, { sourceId: 'laptop' })
+        const entry = await alice.post('/api/v1/ledger/bare-entries', { note: 'bare' })
+        assert.equal(entry.status, 200)
+        assert.deepEqual(Object.keys(await json(entry)).sort(), ['id', 'note'])
+        const reading = await alice.post('/api/v1/ledger/bare-readings', { value: 3 })
+        assert.equal(reading.status, 200)
+        assert.deepEqual(Object.keys(await json(reading)).sort(), ['id', 'value'])
+      }),
+  },
+  {
+    name: 'output failing its schema rolls back and answers 500 naming the Module and op',
+    run: (open) =>
+      withLedger(open, async (t) => {
+        const response = await t
+          .as('alice', write)
+          .post('/api/v1/ledger/bad-output', { note: 'gone' })
+        assert.equal(response.status, 500)
+        const body = await json(response)
+        assert.equal(body.type, 'urn:embertrail:problem:internal')
+        assert.equal(body.module, 'ledger')
+        assert.equal(
+          body.detail,
+          'op "ledger.badOutputAfterWrite" returned output that fails its schema',
+        )
+        assert.equal(t.errors.length, 1)
+        assert.ok((t.errors[0] as { issues?: unknown[] }).issues?.length)
         assert.equal(await count(t, 'entries'), 0)
       }),
   },

@@ -42,7 +42,6 @@ function forging(client: TestClient): TestClient {
     get: (path) => client.get(withForgedQuery(path)),
     post: (path, body) => client.post(withForgedQuery(path), withForgedBody(body)),
     put: (path, body) => client.put(withForgedQuery(path), withForgedBody(body)),
-    patch: (path, body) => client.patch(withForgedQuery(path), withForgedBody(body)),
     delete: (path) => client.delete(withForgedQuery(path)),
   }
 }

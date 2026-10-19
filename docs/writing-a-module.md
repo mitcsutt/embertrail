@@ -1,6 +1,6 @@
 # Writing a Module
 
-A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it.
+A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it. `store` (#35) and `otel` (#32) are the first real Modules and are built in their own tasks.
 
 ## What the core does for you
 
@@ -57,10 +57,11 @@ export const notes = defineModule({
 ## Tables
 
 - `moduleSchema(name)` names the Module's Postgres schema. The name is lowercase letters, digits and `_`, starts with a letter, and isn't `core`, `public` or `pg_*`. It is also the Scope prefix (`notes:read`).
+- `ownedTable` hangs off `moduleSchema(name)` rather than being a top-level export as #25 sketched, so each table is tied to its Module's schema.
 - `ownedTable(name, columns)` adds `owner_id`. `ownedTable(name, columns, { signal: true })` adds `source_id` too, for rows a Source sends.
 - **Never write `owner_id` or `source_id`.** Their defaults read the caller's session. A Module that writes any other value is refused by the database, and the caller gets a 500 naming the Module.
 - **Don't filter by Owner.** Row-level security already hides other Owners' rows, so a row you can't see is simply absent: answer `HubError.notFound()`.
-- Every table in the schema must be declared with `ownedTable`, or boot fails (an undeclared table would have no row-level security). Foreign keys may target your own schema or `core.*`, never another Module.
+- Every table in the schema must be declared with `ownedTable`, or boot fails (an undeclared table would have no row-level security). Foreign keys may target your own schema or `core.*`, never another Module. (#25 said `core.*` only; a Module's own tables referencing each other is allowed.)
 
 ## Migrations
 
@@ -75,15 +76,15 @@ export const notes = defineModule({
 
 ## Ops
 
-| Builder     | Methods                  | Default Scope  | Notes                                                                 |
-| ----------- | ------------------------ | -------------- | --------------------------------------------------------------------- |
-| `op.query`  | GET, POST                | `<name>:read`  | Reads.                                                                |
-| `op.mutate` | PUT, POST, PATCH, DELETE | `<name>:write` | Writes.                                                               |
-| `op.ingest` | POST                     | `<name>:write` | Refused unless the Token is bound to a Source.                        |
-| `op.raw`    | any                      | `<name>:write` | Gets the `Request`, returns a `Response`; declares its own `openapi`. |
+| Builder     | Methods           | Default Scope  | Notes                                                                 |
+| ----------- | ----------------- | -------------- | --------------------------------------------------------------------- |
+| `op.query`  | GET, POST         | `<name>:read`  | Reads.                                                                |
+| `op.mutate` | PUT, POST, DELETE | `<name>:write` | Writes.                                                               |
+| `op.ingest` | POST              | `<name>:write` | Refused unless the Token is bound to a Source.                        |
+| `op.raw`    | any               | `<name>:write` | Gets the `Request`, returns a `Response`; declares its own `openapi`. |
 
 - `input` is a [Standard Schema](https://standardschema.dev) that can also produce JSON Schema (Zod 4 does both). The core merges the path parameters, query string and JSON body, removes any `owner_id` and `source_id`, then validates. Query values arrive as strings, so use `z.coerce` for numbers.
-- `output` describes the JSON response for the OpenAPI document. Return `undefined` for a 204.
+- `output` describes the JSON response, in the OpenAPI document and at runtime: the core parses what `run` returns through it inside the transaction and sends the parsed value, so keys it doesn't declare (such as `ownerId` on a raw row) never leave the Hub. Output that fails its schema rolls the op back and is a 500 naming the Module and op. Every typed op answers 200 with a JSON body; there is no 204.
 - `scope` narrows the derived Scope within your prefix (`notes:share`) or to `admin`. Claiming another Module's Scope fails boot.
 - `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`) and `ctx.now()` (the request's time).
 - `op.raw` keeps auth, Scopes and stamping; set `sourceBound: true` for ingest. Use it only when the body isn't JSON, such as OTLP.
@@ -99,6 +100,7 @@ export const notes = defineModule({
 | `HubError.notFound()`                                     | 404 `not-found`                                |
 | `HubError.conflict()` / `HubError.invalid(detail)`        | 409 `conflict` / 422 `invalid`                 |
 | Anything else thrown, including a refused ownership write | 500 `internal`, with `request_id` and `module` |
+| Output that fails its schema                              | 500 `internal`, with the op in `detail`        |
 
 ## Retention and export
 
@@ -129,7 +131,7 @@ await assertModuleContract(notes, {
 })
 ```
 
-It checks that a forged `owner_id` or `source_id` in any request is ignored, that another Owner sees none of the rows (as the app and the read-only role), that export covers every owned row, that delete-by-Source and delete-by-Owner leave nothing behind, and that every op is in the OpenAPI document. Pass `db` to run it on Postgres instead of PGLite, as [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) does.
+It checks that a forged `owner_id` or `source_id` in any request is ignored, that another Owner sees none of the rows (as the app and the read-only role), that export covers every owned row, that delete-by-Source and delete-by-Owner leave nothing behind, and that every op is in the OpenAPI document with its Scope and Module. It does not validate the document against the OpenAPI 3.1 schema. Pass `db` to run it on Postgres instead of PGLite, as [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) does.
 
 ## What fails boot
 

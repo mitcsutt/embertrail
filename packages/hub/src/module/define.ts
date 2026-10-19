@@ -11,7 +11,7 @@ export const contractVersion = 1
 /** A permission naming one Module and one verb, such as `otel:write`, or `admin`. */
 export type Scope = `${string}:${string}` | 'admin'
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 /** Who is calling, resolved by the core before any op runs. */
 export interface Caller {
@@ -106,7 +106,7 @@ export const op = {
     return typed('query', def.method, def)
   },
   /** Writes. Default Scope `<name>:write`. */
-  mutate<I, O>(def: OpDef<I, O> & { method: 'PUT' | 'POST' | 'PATCH' | 'DELETE' }): Op {
+  mutate<I, O>(def: OpDef<I, O> & { method: 'PUT' | 'POST' | 'DELETE' }): Op {
     return typed('mutate', def.method, def)
   },
   /** Writes from a Source: needs a Source-bound Token. Always POST. Default `<name>:write`. */

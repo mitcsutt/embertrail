@@ -91,7 +91,7 @@ create table readings (id serial primary key, value integer not null)`,
       },
     }),
     moveEntry: op.mutate({
-      method: 'PATCH',
+      method: 'PUT',
       path: '/api/v1/ledger/entries/{id}',
       summary: 'Hands an entry to another Owner (the database must refuse)',
       input: z.object({ id: z.coerce.number().int(), to: z.string() }),
@@ -103,6 +103,27 @@ create table readings (id serial primary key, value integer not null)`,
           .where(eq(entries.id, input.id))
           .returning()
         return { moved: moved.length }
+      },
+    }),
+    addBareEntry: op.mutate({
+      method: 'POST',
+      path: '/api/v1/ledger/bare-entries',
+      summary: 'Add an entry, returning the raw row',
+      input: note,
+      output: z.object({ id: z.number(), note: z.string() }),
+      async run(input, { db }) {
+        const [row] = await db.insert(entries).values({ note: input.note }).returning()
+        return row
+      },
+    }),
+    addBareReading: op.ingest({
+      path: '/api/v1/ledger/bare-readings',
+      summary: 'Ingest a reading, returning the raw row',
+      input: z.object({ value: z.number().int() }),
+      output: z.object({ id: z.number(), value: z.number() }),
+      async run(input, { db }) {
+        const [row] = await db.insert(readings).values({ value: input.value }).returning()
+        return row
       },
     }),
     addReading: op.ingest({
@@ -155,6 +176,17 @@ create table readings (id serial primary key, value integer not null)`,
       async run(input, { db }) {
         await db.insert(entries).values({ note: input.note })
         throw new Error('boom')
+      },
+    }),
+    badOutputAfterWrite: op.mutate({
+      method: 'POST',
+      path: '/api/v1/ledger/bad-output',
+      summary: 'Writes, then returns output its schema rejects',
+      input: note,
+      output: entry,
+      async run(input, { db }) {
+        const [row] = await db.insert(entries).values({ note: input.note }).returning()
+        return { ...row, id: String(row?.id) } as unknown as z.infer<typeof entry>
       },
     }),
     conflictAfterWrite: op.mutate({
