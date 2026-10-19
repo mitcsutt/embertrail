@@ -1,0 +1,22 @@
+{
+  "name": "@mitcsutt/embertrail-worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Hub on the Cloudflare Platform: a Worker and its Adapters",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

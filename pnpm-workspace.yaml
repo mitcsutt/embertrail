@@ -1,0 +1,39 @@
+packages:
+  - apps/*
+  - packages/*
+
+# One version of each shared dependency for the whole workspace.
+# Reference these from package.json as "catalog:".
+catalog:
+  '@changesets/cli': ^3.0.3
+  '@cloudflare/vitest-plugin': ^1.4.4
+  '@commitlint/cli': ^21.2.3
+  '@commitlint/config-conventional': ^21.2.3
+  '@mitcsutt/kiln-eslint-config': ^0.4.0
+  '@mitcsutt/kiln-prettier-config': ^0.1.0
+  '@mitcsutt/kiln-tsconfig': ^0.2.0
+  '@secretlint/secretlint-rule-preset-recommend': ^13.0.7
+  '@types/node': ^24.0.0
+  '@types/pg': ^8.23.1
+  eslint: ^10.12.0
+  lefthook: ^2.1.16
+  pg: ^8.23.1
+  prettier: ^3.9.9
+  secretlint: ^13.0.7
+  turbo: ^2.11.9
+  typescript: ~6.0.3
+  vitest: ^5.0.5
+  wrangler: ^4.151.1
+
+# Dependencies allowed to run install scripts (pnpm 11+ name for onlyBuiltDependencies).
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  unrs-resolver: true
+  workerd: true
+
+peerDependencyRules:
+  # eslint-plugin-jsx-a11y (inside kiln-eslint-config) has not declared ESLint 10 support
+  # yet; kiln-eslint-config's own tests run its rules on ESLint 10.
+  allowedVersions:
+    eslint-plugin-jsx-a11y>eslint: '10'

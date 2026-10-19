@@ -1,9 +1,23 @@
 # Embertrail
 
-The design is **locked** (#24). Build in this order, each spec issue's acceptance criteria being its definition of done:
+The design is **locked** (#24). Kiln's prerequisites are released (kiln-ui 0.7.0 with the chart tokens, kiln-charts 0.1.0, kiln-dnd 0.1.0), so build work is here: Core (#49, starting with #28), then Cloudflare (#50), Dashboard (#51) and v0.1 (#52). Each spec issue's acceptance criteria are its definition of done.
 
-1. **Kiln first**, in `mitcsutt/kiln`: K1 tokens (mitcsutt/kiln#57), then K2 charts (mitcsutt/kiln#58) and K3 drag-and-drop (mitcsutt/kiln#59). Kiln packages serve other projects too, so they land before Embertrail code.
-2. **Embertrail**: Core (#49, starting with #28), then Cloudflare (#50), Dashboard (#51) and v0.1 (#52).
+## Commands
+
+From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (ESLint, Prettier check, secret scan), `pnpm typecheck`, `pnpm test`, `pnpm format`. Database tests need `pnpm db:up` and `DATABASE_URL`. Details in [`docs/development.md`](docs/development.md).
+
+## Enforced rules
+
+- Git hooks scan, format and lint staged files and run commitlint (Conventional Commits). Never use `--no-verify`; fix what they report. Commits must use a `@users.noreply.github.com` email.
+- CI runs lint, typecheck and test (Postgres 17, and `workerd` for `apps/worker`) on every pull request; **CI passed** is the one required check.
+- Shared dependency versions live in the `pnpm-workspace.yaml` catalog; ESLint, Prettier and TypeScript configs come from Kiln's published `@mitcsutt/kiln-eslint-config`, `kiln-prettier-config` and `kiln-tsconfig`.
+- If a rule is wrong, change the rule and its docs in their own pull request; don't work around it.
+
+## Where things live
+
+- `apps/server` (Docker), `apps/worker` (Cloudflare), `apps/dashboard`; `packages/hub` (core), `packages/otel`, `packages/store`, `packages/client`, `packages/cli`; `spec/` (Query API); `docs/`.
+- Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module).
+- Decisions: [`docs/adr/README.md`](docs/adr/README.md) indexes the `adr` issues.
 
 ## Public by default
 

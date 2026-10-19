@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "schedule": ["* 0-6 * * 1"],
+  "timezone": "UTC",
+  "rangeStrategy": "bump",
+  "postUpdateOptions": ["pnpmDedupe"],
+  "packageRules": [
+    {
+      "description": "One weekly pull request for every non-major update",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "non-major"
+    },
+    {
+      "description": "Kiln's shared configs move together",
+      "matchPackageNames": ["@mitcsutt/kiln-*"],
+      "groupName": "Kiln"
+    }
+  ]
+}

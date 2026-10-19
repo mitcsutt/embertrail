@@ -1,0 +1,54 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "agentGuidance": false,
+  "globalDependencies": [".nvmrc"],
+  "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "types": {
+      "inputs": ["wrangler.jsonc", "package.json"],
+      "outputs": ["worker-configuration.d.ts"]
+    },
+    "test": {
+      "dependsOn": ["transit", "types"],
+      "env": ["DATABASE_URL"],
+      "passThroughEnv": ["CI"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["transit", "types"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["transit", "types"],
+      "outputs": []
+    },
+    "//#lint:root": {
+      "outputs": []
+    },
+    "//#typecheck:root": {
+      "outputs": []
+    },
+    "//#format:check": {
+      "inputs": [
+        "$TURBO_ROOT$/**",
+        "!$TURBO_ROOT$/**/node_modules/**",
+        "!$TURBO_ROOT$/.turbo/**",
+        "!$TURBO_ROOT$/**/.wrangler/**"
+      ],
+      "outputs": []
+    },
+    "//#secrets": {
+      "inputs": [
+        "$TURBO_ROOT$/**",
+        "!$TURBO_ROOT$/**/node_modules/**",
+        "!$TURBO_ROOT$/.turbo/**",
+        "!$TURBO_ROOT$/**/.wrangler/**"
+      ],
+      "outputs": []
+    }
+  }
+}

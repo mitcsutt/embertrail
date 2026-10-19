@@ -1,0 +1,8 @@
+{
+  "extends": "@mitcsutt/kiln-tsconfig/base",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["src", "*.config.ts"]
+}
