@@ -300,7 +300,7 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
               admin: input.admin ?? false,
             })
             .returning(),
-          { conflict: 'A User with that id or email already exists' },
+          { conflict: 'A User or Team with that id, or a User with that email, already exists' },
         ),
       )
       if (row === undefined) throw new Error('insert into core.users returned no row')
@@ -314,7 +314,7 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
       }
       const [row] = await db.privileged((tx) =>
         guarded(tx.insert(teams).values({ id, name: input.name }).returning(), {
-          conflict: 'A Team with that id or name already exists',
+          conflict: 'A User or Team with that id, or a Team with that name, already exists',
         }),
       )
       if (row === undefined) throw new Error('insert into core.teams returned no row')

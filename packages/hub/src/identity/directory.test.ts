@@ -170,6 +170,19 @@ describe('the core Directory', () => {
         status: 422,
       })
     })
+
+    it('keeps User and Team ids apart, since both are Owner ids', async () => {
+      const alice = await directory().createUser({ name: 'Alice' })
+      expect(await problem(directory().createTeam({ name: 'Crew', id: alice.id }))).toMatchObject({
+        status: 409,
+      })
+      const team = await directory().createTeam({ name: 'Crew' })
+      expect(await problem(directory().createUser({ name: 'Bob', id: team.id }))).toMatchObject({
+        status: 409,
+      })
+      expect(await t.sql(sql`select count(*)::int as n from core.users`)).toEqual([{ n: 1 }])
+      expect(await t.sql(sql`select id from core.teams`)).toEqual([{ id: team.id }])
+    })
   })
 
   describe('Grants', () => {

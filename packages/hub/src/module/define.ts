@@ -51,7 +51,8 @@ export interface Ctx {
    * The Account (#29) that telemetry attributes name, created on first sight, for the
    * caller's User: `organization.id` + `user.account_uuid`, else `user.email`, else the
    * caller's Source's Unknown Account (which needs a Source-bound caller). Store the id in
-   * an `account_id` column so Grants apply to the row.
+   * an `account_id` column so Grants apply to the row. The Account is the caller's User's
+   * even when acting for a Team, so don't store it on Team-owned rows.
    */
   account: (attributes: Readonly<Record<string, unknown>>) => Promise<string>
 }

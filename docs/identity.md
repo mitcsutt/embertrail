@@ -14,15 +14,15 @@ Teams, Grants and `ALLOWED_EMAILS` / `ALLOWED_DOMAINS` only matter once a second
 
 ## The records
 
-| Record      | Table            | Rules                                                                                                                                                 |
-| ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **User**    | `core.users`     | Optional email (lowercased, unique), matched by Edge Identity. `admin` marks an instance admin, who alone may hold the `admin` Scope.                 |
-| **Team**    | `core.teams`     | Id is 1–64 letters, digits, `_` or `-` (it appears as `team:<id>`). Members read; editors also act for the Team.                                      |
-| **Source**  | `core.sources`   | Owned by one User; its name is unique per User. Every Signal it sends belongs to that User.                                                           |
-| **Token**   | `core.tokens`    | One User + Scopes. Kind `ingest` is bound to exactly one of the User's Sources; `read` and `management` never are (a check constraint enforces both). |
-| **Account** | `core.accounts`  | Recognised from telemetry, never created by hand. Belongs to one User, keyed by its recognition key.                                                  |
-| **Grant**   | `core.grants`    | Read access to one Account's rows in one Module, for exactly one User or one Team.                                                                    |
-| Bootstrap   | `core.bootstrap` | One row once a first User was created, so bootstrap never works twice, even after every User is deleted.                                              |
+| Record      | Table            | Rules                                                                                                                                                       |
+| ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **User**    | `core.users`     | Optional email (lowercased, unique), matched by Edge Identity. `admin` marks an instance admin, who alone may hold the `admin` Scope.                       |
+| **Team**    | `core.teams`     | Id is 1–64 letters, digits, `_` or `-` (it appears as `team:<id>`), and never a User's id: both are Owner ids. Members read; editors also act for the Team. |
+| **Source**  | `core.sources`   | Owned by one User; its name is unique per User. Every Signal it sends belongs to that User.                                                                 |
+| **Token**   | `core.tokens`    | One User + Scopes. Kind `ingest` is bound to exactly one of the User's Sources; `read` and `management` never are (a check constraint enforces both).       |
+| **Account** | `core.accounts`  | Recognised from telemetry, never created by hand. Belongs to one User, keyed by its recognition key.                                                        |
+| **Grant**   | `core.grants`    | Read access to one Account's rows in one Module, for exactly one User or one Team.                                                                          |
+| Bootstrap   | `core.bootstrap` | One row once a first User was created, so bootstrap never works twice, even after every User is deleted.                                                    |
 
 One Hub is one community: there is no organisation above Teams.
 
@@ -70,6 +70,8 @@ A Module recognises the Account behind telemetry with `ctx.account(attributes)`,
 Each User's Accounts are their own: two Sources of one User share an Account, and two Users sending the same identity get one each. An email that arrives later is filled in. The label shown is the User's own, else the email's domain, else `Unknown` (`accountLabel`).
 
 Store the id in an `account_id` column: that is what lets Grants apply to the row. `otel` (#32) does this for every Signal.
+
+An Account always belongs to the caller's User, never a Team, so an op acting for a Team must not store `ctx.account` ids on Team-owned rows: row-level security refuses the write.
 
 ## Grants
 

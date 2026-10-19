@@ -95,6 +95,21 @@ export const identityMigration: Migration = {
       name text not null unique,
       created_at timestamptz not null default now()
     )`,
+    // Users and Teams share the Owner id namespace, so neither may take an id the other holds.
+    `create function core.owner_id_disjoint() returns trigger language plpgsql as $$
+    begin
+      perform pg_advisory_xact_lock(hashtext('core.owner_id:' || new.id));
+      if (tg_table_name = 'users' and exists (select 1 from core.teams t where t.id = new.id))
+        or (tg_table_name = 'teams' and exists (select 1 from core.users u where u.id = new.id)) then
+        raise exception 'Owner id % is already taken', new.id using errcode = 'unique_violation';
+      end if;
+      return new;
+    end
+    $$`,
+    `create trigger users_owner_id_disjoint before insert or update of id on core.users
+      for each row execute function core.owner_id_disjoint()`,
+    `create trigger teams_owner_id_disjoint before insert or update of id on core.teams
+      for each row execute function core.owner_id_disjoint()`,
     `create table core.team_members (
       team_id text not null references core.teams (id) on delete cascade,
       user_id text not null references core.users (id) on delete cascade,
