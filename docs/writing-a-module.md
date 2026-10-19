@@ -1,6 +1,6 @@
 # Writing a Module
 
-A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it. [`packages/store`](../packages/store/README.md) (#35) is the first real Module: conditional requests, cursor pagination and a size limit, with no auth, ownership, OpenAPI, export or delete code of its own.
+A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it. [`packages/store`](../packages/store/README.md) (#35) is the first real Module: conditional requests, cursor pagination and a size limit, with no auth, ownership, OpenAPI, export or delete code of its own. [`otel`](otel.md) (#32) is a worked example of `op.raw`, a custom export and Signal tables.
 
 ## What the core does for you
 
@@ -110,7 +110,7 @@ export const notes = defineModule({
 ## Retention and export
 
 - `retention: { column: 'created_at' }` deletes rows older than the Hub's `retentionDays` from every table with that column. Omit it to keep rows forever.
-- The default export is JSON Lines, one `{"table", "row"}` object per owned row. Override it with `export: async function* (ctx) { … }`, yielding one line at a time (`otel` will emit OTLP JSON Lines).
+- The default export is JSON Lines, one `{"table", "row"}` object per owned row. Override it with `export: async function* (ctx) { … }`, yielding one line at a time (`otel` emits OTLP JSON Lines).
 
 ## Testing
 
