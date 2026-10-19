@@ -6,8 +6,8 @@ A Module is a self-contained feature of the Hub with its own storage and routes,
 
 A Module declares tables, migrations and ops. It writes no code for any of this:
 
-- **Identity and Scopes.** The caller is resolved from a Token or an Edge Identity, and each op's Scope is checked before it runs.
-- **Ownership.** Every row is stamped with its Owner (and Source, for Signals) by column defaults, and row-level security rejects any other value. Reads see only rows the caller may read.
+- **Identity and Scopes.** The caller is resolved from a Token or an Edge Identity, and each op's Scope is checked before it runs ([`identity.md`](identity.md)).
+- **Ownership.** Every row is stamped with its Owner (and Source, for Signals) by column defaults, and row-level security rejects any other value. Reads see only rows the caller may read: their own, their Teams', and the Accounts Grants give them.
 - **Transactions.** Each op runs in one transaction. A throw rolls it back.
 - **HTTP.** Input validation, `application/problem+json` errors, and the OpenAPI document at `/api/v1/openapi.json`.
 - **Data lifecycle.** Retention sweeps, hard delete by Source or by Owner, and export.
@@ -61,6 +61,7 @@ export const notes = defineModule({
 - `ownedTable(name, columns)` adds `owner_id`. `ownedTable(name, columns, { signal: true })` adds `source_id` too, for rows a Source sends.
 - **Never write `owner_id` or `source_id`.** Their defaults read the caller's session. A Module that writes any other value is refused by the database, and the caller gets a 500 naming the Module.
 - **Don't filter by Owner.** Row-level security already hides other Owners' rows, so a row you can't see is simply absent: answer `HubError.notFound()`.
+- **Accounts.** A table with an `account_id` column holds an Account's rows: fill it with `ctx.account(attributes)`, and Grants then let other Users or Teams read those rows. A row may only name an Account of its own Owner; the database refuses anything else. Tables without the column are readable only by their Owner and the Owner's Team.
 - Every table in the schema must be declared with `ownedTable`, or boot fails (an undeclared table would have no row-level security). Foreign keys may target your own schema or `core.*`, never another Module. (#25 said `core.*` only; a Module's own tables referencing each other is allowed.)
 
 ## Migrations
@@ -88,7 +89,7 @@ export const notes = defineModule({
 - A typed op answers 200 with its output unless it declares `statuses` (such as `[200, 201]` or `[204]`) and returns `reply(output, { status, etag })` or `reply.noContent()`. A status the op doesn't declare is a 500. `etag: true` documents the `ETag` header that `reply` sets.
 - `headers` maps input keys to request headers (`{ if_match: 'If-Match' }`). Those keys come only from the header, never the body or query, and OpenAPI lists them as header parameters.
 - `scope` narrows the derived Scope within your prefix (`notes:share`) or to `admin`. Claiming another Module's Scope fails boot.
-- `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`), `ctx.now()` (the request's time) and `ctx.ownerOf(ownerId)`, which says whether an `owner_id` you read is a User's or a Team's (`{ kind, id }`).
+- `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`), `ctx.now()` (the request's time), `ctx.ownerOf(ownerId)`, which says whether an `owner_id` you read is a User's or a Team's (`{ kind, id }`), and `ctx.account(attributes)` (the id of the Account that telemetry attributes name, created on first sight; [`identity.md`](identity.md#accounts)).
 - `op.raw` keeps auth, Scopes and stamping; set `sourceBound: true` for ingest. Use it only when the body isn't JSON, such as OTLP.
 - Ops are transport-agnostic: `path` and `method` bind them to HTTP, and the same ops will bind to MCP tools later without changes (`bind` is reserved for that).
 
@@ -118,13 +119,13 @@ export const notes = defineModule({
 import { assertModuleContract, testHub } from '@mitcsutt/embertrail-hub/testing'
 
 const t = await testHub({ modules: [notes] }) // PGLite, real migrations, real row-level security
-const alice = t.as('alice', ['notes:read', 'notes:write']) // a Token; add { sourceId } for ingest
+const alice = t.as('alice', ['notes:read', 'notes:write']) // a real Token; { sourceId } for ingest
 await alice.post('/api/v1/notes', { title: 'First' })
 await t.sql(sql`select owner_id from notes.notes`) // outside row-level security, for assertions
 await t.close()
 ```
 
-`t.errors` holds every unexpected error the Hub answered with a 500.
+`as()` creates the User (and the Source) with the ids you give, so readable ids work. `t.team('crew', { editors: ['alice'] })` and `t.as('alice', scopes, { team: 'crew' })` test Team ownership; `t.hub.directory` creates Grants. `t.errors` holds every unexpected error the Hub answered with a 500.
 
 Every Module also runs the contract suite, which takes a `seed` that writes data through the Module's ops:
 

@@ -37,7 +37,7 @@ function module<N extends string>(name: N, overrides: Partial<ModuleDef<N>> = {}
 describe('boot', () => {
   it('accepts valid Modules and derives their Scopes', () => {
     const hub = boot([module('alpha', { ops: { ping: ping() } })])()
-    expect(hub.scopes).toEqual(['alpha:read', 'admin'])
+    expect(hub.scopes).toEqual(['alpha:read', 'admin', 'self:manage', 'sql:read'])
   })
 
   it('refuses invalid config', () => {
@@ -103,7 +103,7 @@ describe('boot', () => {
         }),
       },
     })
-    expect(boot([narrowed])().scopes).toEqual(['alpha:ping', 'admin'])
+    expect(boot([narrowed])().scopes).toEqual(['alpha:ping', 'admin', 'self:manage', 'sql:read'])
   })
 
   it('refuses an empty verb', () => {

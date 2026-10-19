@@ -41,14 +41,14 @@ Each is `SET LOCAL`, so it ends with the transaction and a pooled connection nev
 
 The policy sync gives every owned table these policies, rewritten after each migrate:
 
-| Command | Who           | Rule                                                                         |
-| ------- | ------------- | ---------------------------------------------------------------------------- |
-| SELECT  | app, readonly | `owner_id` is the caller's User or Owner                                     |
-| INSERT  | app           | `owner_id` is the caller's Owner (and `source_id` their Source, for Signals) |
-| UPDATE  | app           | the row is the caller's Owner's, and stays so                                |
-| DELETE  | app           | the row is the caller's Owner's                                              |
+| Command | Who           | Rule                                                                                                  |
+| ------- | ------------- | ----------------------------------------------------------------------------------------------------- |
+| SELECT  | app, readonly | `owner_id` is the caller's User, Owner or one of their Teams, or the row's Account is granted to them |
+| INSERT  | app           | `owner_id` is the caller's Owner (and `source_id` their Source, for Signals)                          |
+| UPDATE  | app           | the row is the caller's Owner's, and stays so                                                         |
+| DELETE  | app           | the row is the caller's Owner's                                                                       |
 
-Core identity (#29) widens SELECT to Teams and Grants by changing the policy sync; Modules don't change.
+Grants apply only to tables with an `account_id` column, whose writes must also name an Account of the row's Owner. [`identity.md`](identity.md#row-level-security) has the details.
 
 ## The Edge Identity Port
 
@@ -69,9 +69,9 @@ Tokens aren't part of this Port: they are core logic over the `core` tables.
 
 ### Caller resolution
 
-The core resolves the caller before any op runs: a Token decides the User, and an Edge Identity naming a different User is refused (403 `identity-conflict`). With no Token, a verified email maps to a User, created only when allowlisted (403 otherwise). Neither present: 401.
+The core resolves the caller before any op runs: a Token decides the User, and an Edge Identity naming a different User is refused (403 `identity-conflict`). With no Token, a verified email maps to a User, created only when allowlisted (403 otherwise). Neither present: 401. `Embertrail-Owner: team:<id>` then lets a Team's editor act for the Team.
 
-Users and Tokens are looked up through a `Directory`, which core identity (#29) implements over the `core` tables. Until then `createHub` defaults to a Directory that knows nobody, so every op answers 401; `testHub` supplies its own. Its optional `ownerKind(ownerId)` backs `ctx.ownerOf`; without it every Owner is a User.
+Users and Tokens are looked up in the `core` tables (#29), through `hub.directory`; [`identity.md`](identity.md) covers Tokens, Accounts, Grants and bootstrap. `ctx.ownerOf` reads `core.teams` too: an Owner id that names a Team is a Team's, and any other is a User's.
 
 ## The entry-file contract
 
@@ -79,12 +79,13 @@ Each Platform's entry file builds a typed config and the Ports, then hands them 
 
 ```ts
 const hub = createHub({
-  config: { retentionDays: 90 }, // HubConfig, validated at boot
+  config: { retentionDays: 90 }, // HubConfig, validated at boot (identity.md#config)
   ports: { db: dockerDb({ url }), edgeIdentity: noEdgeIdentity() },
   modules: [otel, store],
 })
 // hub.fetch(request), hub.migrate(), hub.boot(), hub.runRetention(),
-// hub.deleteBySource(id), hub.deleteByOwner(id), hub.exportOwner(module, ownerId)
+// hub.deleteBySource(id), hub.deleteByOwner(id), hub.exportOwner(module, ownerId),
+// hub.directory (Users, Teams, Sources, Tokens, Accounts, Grants; createFirstUser)
 ```
 
 - **Docker** (`apps/server`, #37): config from env, `migrate()` then `boot()` in the entrypoint before listening, `fetch` through a Node server, `runRetention()` on an interval.

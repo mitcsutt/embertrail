@@ -10,6 +10,22 @@ import { routeKey } from './router'
 export const hubConfigSchema = z.strictObject({
   /** Days a Module's `retention` column keeps rows. Unset keeps them forever. */
   retentionDays: z.number().int().positive().optional(),
+  /**
+   * `BOOTSTRAP_TOKEN`: a one-time secret that `POST /api/v1/bootstrap` exchanges for the
+   * first User and an admin Token (#29). Unset, that route always answers 401.
+   */
+  bootstrapToken: z.string().min(32, 'bootstrapToken must be at least 32 characters').optional(),
+  /** `ALLOWED_EMAILS`: Edge Identity emails that become a User on first sight. */
+  allowedEmails: z.array(z.email().toLowerCase()).default([]),
+  /** `ALLOWED_DOMAINS`: email domains (exact match, no subdomains) that do the same. */
+  allowedDomains: z
+    .array(
+      z
+        .string()
+        .toLowerCase()
+        .regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/, 'a domain such as example.com'),
+    )
+    .default([]),
 })
 
 export type HubConfig = z.input<typeof hubConfigSchema>
@@ -25,6 +41,7 @@ export function parseConfig(config: HubConfig) {
 /** Routes the core serves itself; no op may take them. */
 export const coreRoutes: readonly { method: HttpMethod; path: string }[] = [
   { method: 'GET', path: '/api/v1/openapi.json' },
+  { method: 'POST', path: '/api/v1/bootstrap' },
 ]
 
 const namePattern = /^[a-z][a-z0-9_]{0,62}$/

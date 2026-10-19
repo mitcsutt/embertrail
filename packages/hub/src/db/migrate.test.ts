@@ -46,6 +46,7 @@ describe('migrate and boot', () => {
     expect(await hub.migrate()).toEqual({
       applied: [
         { schema: 'core', id: '0000_roles' },
+        { schema: 'core', id: '0001_identity' },
         { schema: 'alpha', id: '0000_init' },
       ],
     })
@@ -82,7 +83,7 @@ describe('migrate and boot', () => {
 CREATE INDEX "items_owner_idx" ON "alpha"."items" USING btree ("owner_id");`,
     }
     await expect(hubWith(alpha([kit])).migrate()).resolves.toMatchObject({
-      applied: [{ schema: 'core' }, { schema: 'alpha', id: '0000_init' }],
+      applied: [{ schema: 'core' }, { schema: 'core' }, { schema: 'alpha', id: '0000_init' }],
     })
   })
 
@@ -110,7 +111,7 @@ CREATE INDEX "items_owner_idx" ON "alpha"."items" USING btree ("owner_id");`,
       sql: 'create table items (id serial primary key)\n--> statement-breakpoint\ninsert into core.order_probe values (1)',
     }
     const report = await hubWith(alpha([after], ['zeta']), zeta).migrate()
-    expect(report.applied.map((a) => a.schema)).toEqual(['core', 'zeta', 'alpha'])
+    expect(report.applied.map((a) => a.schema)).toEqual(['core', 'core', 'zeta', 'alpha'])
   })
 
   it('fails boot when migrations are behind', async () => {
@@ -123,7 +124,7 @@ CREATE INDEX "items_owner_idx" ON "alpha"."items" USING btree ("owner_id");`,
 
   it('fails boot on a database that was never migrated', async () => {
     await expect(hubWith(alpha([init])).boot()).rejects.toThrow(
-      'Hub core: migrations behind: 1 migration(s) not applied (0000_roles); run embertrail migrate',
+      'Hub core: migrations behind: 2 migration(s) not applied (0000_roles, 0001_identity); run embertrail migrate',
     )
   })
 
