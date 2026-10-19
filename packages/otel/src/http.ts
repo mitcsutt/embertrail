@@ -67,15 +67,21 @@ async function readLimited(stream: ReadableStream<Uint8Array>, limit: number) {
   return bytes
 }
 
-/** Postgres `text` and `jsonb` refuse U+0000, so it is dropped from every sent string. */
-function withoutNul(_key: string, value: unknown) {
-  return typeof value === 'string' ? value.replaceAll('\0', '') : value
+/** A JSON escape for U+0000 or a UTF-16 surrogate: the only way either reaches a parsed string. */
+const refusedEscape = /\\u(?:0000|[dD][89a-fA-F])/
+
+/** U+0000, or a UTF-16 surrogate without its other half. */
+const refused = /\0|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+/** Postgres `text` and `jsonb` refuse U+0000 and lone surrogates, so both become U+FFFD. */
+function storable(_key: string, value: unknown) {
+  return typeof value === 'string' ? value.replace(refused, '\uFFFD') : value
 }
 
 /**
  * The request's OTLP/JSON body, parsed. Throws `OtlpError`: 415 for anything but
  * `application/json` or an encoding other than gzip, 413 over 5 MB decoded, 400 for a body
- * that isn't gzip or a JSON object. U+0000 is dropped from strings.
+ * that isn't gzip or a JSON object. U+0000 and lone surrogates in strings become U+FFFD.
  */
 export async function readOtlpJson(request: Request): Promise<Record<string, unknown>> {
   if (mediaType(request) !== 'application/json') {
@@ -101,7 +107,7 @@ export async function readOtlpJson(request: Request): Promise<Record<string, unk
   let parsed: unknown
   try {
     const text = new TextDecoder().decode(bytes)
-    parsed = text.includes('\\u0000') ? JSON.parse(text, withoutNul) : JSON.parse(text)
+    parsed = refusedEscape.test(text) ? JSON.parse(text, storable) : JSON.parse(text)
   } catch {
     throw new OtlpError(400, 'Body is not valid JSON.')
   }

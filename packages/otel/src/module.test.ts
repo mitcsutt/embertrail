@@ -295,7 +295,7 @@ describe('the otel Module', () => {
       ).toEqual([{ observed: true }])
     })
 
-    it('drops U+0000 from sent strings rather than failing the batch', async () => {
+    it('replaces U+0000 and lone surrogates rather than failing the batch', async () => {
       const record = {
         ...plainRecord('a\u0000b'),
         attributes: [{ key: 'k\u0000ey', value: { stringValue: 'v\u0000' } }],
@@ -303,15 +303,16 @@ describe('the otel Module', () => {
       const response = await postOtlp(
         sender,
         '/v1/logs',
-        plainLogs([record, plainRecord('clean')], 'nul\u0000-cli'),
+        plainLogs([record, plainRecord('cut \ud83d'), plainRecord('clean')], 'nul\u0000-cli'),
       )
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({})
       expect(
         await t.sql(sql`select service_name, body, attributes from otel.otel_logs order by body`),
       ).toEqual([
-        { service_name: 'nul-cli', body: 'ab', attributes: { key: 'v' } },
-        { service_name: 'nul-cli', body: 'clean', attributes: { component: 'worker' } },
+        { service_name: 'nul\uFFFD-cli', body: 'a\uFFFDb', attributes: { 'k\uFFFDey': 'v\uFFFD' } },
+        { service_name: 'nul\uFFFD-cli', body: 'clean', attributes: { component: 'worker' } },
+        { service_name: 'nul\uFFFD-cli', body: 'cut \uFFFD', attributes: { component: 'worker' } },
       ])
     })
 
