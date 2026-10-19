@@ -6,7 +6,12 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 // own directory and picks this file up, so lint stays cached per package.
 export default defineConfig(
   base,
-  globalIgnores(['**/.wrangler/', '**/worker-configuration.d.ts']),
+  globalIgnores([
+    '**/.wrangler/',
+    '**/worker-configuration.d.ts',
+    // Generated from spec/query-api.yaml; typecheck and the drift test cover them.
+    'packages/client/src/generated/',
+  ]),
   {
     name: 'embertrail/workspace/type-aware',
     languageOptions: {

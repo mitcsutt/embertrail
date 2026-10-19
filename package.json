@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "turbo run test",
-    "lint": "turbo run lint lint:root format:check secrets",
+    "lint": "turbo run lint lint:package lint:root format:check secrets",
     "lint:root": "eslint --max-warnings=0 --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
     "typecheck": "turbo run typecheck typecheck:root",
     "typecheck:root": "tsc --noEmit",

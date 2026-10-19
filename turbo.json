@@ -26,6 +26,9 @@
       "dependsOn": ["transit", "types"],
       "outputs": []
     },
+    "lint:package": {
+      "outputs": []
+    },
     "//#lint:root": {
       "outputs": []
     },

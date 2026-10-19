@@ -1,8 +1,10 @@
 {
   "extends": "@mitcsutt/kiln-tsconfig/base",
   "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
     "noEmit": true,
+    "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["src", "*.config.ts"]
+  "include": ["src", "scripts", "test", "*.config.ts"]
 }
