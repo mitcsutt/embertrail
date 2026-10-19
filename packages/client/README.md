@@ -100,12 +100,6 @@ Every operation under `/api/v1` that answers JSON. OTLP ingest (`/v1/logs`, `/v1
 
 ## Develop
 
-The files in `src/generated/` are written by `scripts/generate.ts`. After changing the spec, regenerate and commit the result:
-
-```sh
-pnpm --filter @mitcsutt/embertrail-client generate
-```
-
-`scripts/generate.test.ts` fails when the committed files differ from a fresh run, so the client can't drift from the spec. `pnpm lint` builds and packs the package and checks the tarball with [publint](https://publint.dev) and [Are the Types Wrong?](https://arethetypeswrong.github.io) (`lint:package`). In the workspace the package exports its TypeScript source; `publishConfig.exports` points the published package at `dist/`.
+The files in `src/generated/` are written by `scripts/generate.ts`; regenerating after a spec change is covered in [Changing the Query API spec](../../docs/development.md#changing-the-query-api-spec). `pnpm lint` builds and packs the package and checks the tarball with [publint](https://publint.dev) and [Are the Types Wrong?](https://arethetypeswrong.github.io) (`lint:package`). In the workspace the package exports its TypeScript source; `publishConfig.exports` points the published package at `dist/`.
 
 The tests run the client against a mock Hub (`test/mock-hub.ts`) with request bodies taken from the spec's examples, one case per operation.
