@@ -41,7 +41,7 @@ A promoted attribute is read from the record's or point's attributes, falling ba
 | `otel_metrics_sum`   | (`source_id`, `metric_name`, `attributes_hash`, `start_time`, `time`), NULLs not distinct |
 | `otel_metrics_gauge` | the same                                                                                  |
 
-`content_hash` is the SHA-256 of the record's time, event name, attributes, body, severity, resource and scope, as canonical JSON: an exact retry collapses and any difference keeps two records apart. `attributes_hash` covers the point's attributes, the resource and the scope name. Each request writes one `INSERT … SELECT FROM unnest(…) ON CONFLICT DO NOTHING` per table.
+`content_hash` is the SHA-256 of the record's time, event name, attributes, body, severity, resource and scope, as canonical JSON: an exact retry collapses and any difference keeps two records apart. A record with no `session.id` and no time at all (no `timeUnixNano`, `observedTimeUnixNano` or `event.timestamp`) is stamped with the request time, so its retries are not collapsed. `attributes_hash` covers the point's attributes, the resource and the scope name. Each request writes one `INSERT … SELECT FROM unnest(…) ON CONFLICT DO NOTHING` per table.
 
 ## Retention and export
 

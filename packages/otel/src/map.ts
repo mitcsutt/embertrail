@@ -77,6 +77,12 @@ function integer(value: Json | undefined): number | null {
   return null
 }
 
+/** OTLP's SeverityNumber runs 0 to 24; anything else is stored as unknown. */
+function severity(value: unknown): number | null {
+  const number = integer(value as Json | undefined)
+  return number !== null && number >= 0 && number <= 24 ? number : null
+}
+
 function string(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null
 }
@@ -194,7 +200,7 @@ export async function mapLogs(request: unknown, now: Date): Promise<Mapped<LogRo
       const base = await promote(own, context, time, account)
       const eventName = text(own, {}, 'event.name') ?? string(record.eventName) ?? ''
       const eventSequence = integer(own['event.sequence'])
-      const severityNumber = integer(record.severityNumber as Json | undefined)
+      const severityNumber = severity(record.severityNumber)
       const severityText = string(record.severityText)
       const body = unwrap(record.body)
       const row: LogRow = {

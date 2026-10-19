@@ -316,6 +316,19 @@ describe('the otel Module', () => {
       ])
     })
 
+    it('stores a severityNumber outside 0 to 24 as null, keeping the batch', async () => {
+      const huge = { ...plainRecord('huge'), severityNumber: 3000000000 }
+      const response = await postOtlp(sender, '/v1/logs', plainLogs([huge, plainRecord('clean')]))
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({})
+      expect(
+        await t.sql(sql`select body, severity_number from otel.otel_logs order by body`),
+      ).toEqual([
+        { body: 'clean', severity_number: 9 },
+        { body: 'huge', severity_number: null },
+      ])
+    })
+
     describe('a non-Claude sender without session.id', () => {
       it('is stored, keyed by service.name', async () => {
         expect((await postOtlp(sender, '/v1/logs', plainLogs([plainRecord('hello')]))).status).toBe(
