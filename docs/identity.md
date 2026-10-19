@@ -77,7 +77,7 @@ A Grant lets a User, or every member of a Team, read one Account's rows in one M
 
 ## Bootstrap
 
-`POST /api/v1/bootstrap` with `Authorization: Bearer <BOOTSTRAP_TOKEN>` and an optional `{ "name", "email" }` creates the first User (an admin) and a management Token holding every Scope, and returns both. It answers 401 when `bootstrapToken` is unset or wrong, and once the Hub has had a first User. Users that Edge Identity signed up before bootstrap ran are not admins, so they don't stop it: bootstrap keeps working until an admin exists, and promotes the User who already has the bootstrap email rather than creating a second one. The Docker zero-config start (#37) calls `hub.directory.createFirstUser()` directly when `BOOTSTRAP_TOKEN` is unset; it is the same one-time path.
+`POST /api/v1/bootstrap` with `Authorization: Bearer <BOOTSTRAP_TOKEN>` and an optional `{ "name", "email" }` creates the first User (an admin) and a management Token holding every Scope, and returns both. It answers 401 when `bootstrapToken` is unset or wrong, and once an admin User exists or bootstrap has been used. Users that Edge Identity signed up before bootstrap ran are not admins, so they don't stop it: bootstrap keeps working until an admin exists, and promotes the User who already has the bootstrap email rather than creating a second one. The Docker zero-config start (#37) calls `hub.directory.createFirstUser()` directly when `BOOTSTRAP_TOKEN` is unset; it is the same one-time path.
 
 ## Config
 

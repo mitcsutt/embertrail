@@ -151,7 +151,7 @@ export function buildOpenApi(modules: readonly Module[]) {
         operationId: 'core.bootstrap',
         summary: 'Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once',
         description:
-          'Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, not a Token. Answers 401 once the Hub has a User, and when BOOTSTRAP_TOKEN is unset or wrong.',
+          'Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, not a Token. Answers 401 once an admin User exists or bootstrap has been used, and when BOOTSTRAP_TOKEN is unset or wrong.',
         security: [{ bearerToken: [] }],
         'x-embertrail-module': 'core',
         requestBody: {
