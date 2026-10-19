@@ -1,2 +1,4 @@
-/** The package name, until the package has real exports. */
-export const packageName = '@mitcsutt/embertrail-store'
+// The store Module: namespaced JSON documents for apps (#35). Platforms list `store` in
+// createHub's modules.
+
+export { documentsTable, maxDataBytes, store } from './store'

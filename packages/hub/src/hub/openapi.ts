@@ -32,7 +32,12 @@ function jsonSchema(
   return Object.fromEntries(Object.entries(converted).filter(([k]) => k !== '$schema'))
 }
 
-/** A typed op's Operation Object: path and (for GET and DELETE) query parameters, or a body. */
+const statusDescriptions = { 200: 'OK', 201: 'Created', 204: 'No Content' } as const
+
+/**
+ * A typed op's Operation Object: path, header and (for GET and DELETE) query parameters, or a
+ * body; one response per status.
+ */
 function typedOperation(
   module: Module,
   key: string,
@@ -49,7 +54,17 @@ function typedOperation(
     required: true,
     schema: properties[name] ?? { type: 'string' },
   }))
-  const rest = Object.keys(properties).filter((name) => !inPath.includes(name))
+  for (const [name, header] of Object.entries(op.headers)) {
+    parameters.push({
+      name: header,
+      in: 'header',
+      required: required.includes(name),
+      schema: properties[name] ?? { type: 'string' },
+    })
+  }
+  const rest = Object.keys(properties).filter(
+    (name) => !inPath.includes(name) && !Object.hasOwn(op.headers, name),
+  )
   let requestBody: Json | undefined
   if (op.method === 'GET' || op.method === 'DELETE') {
     for (const name of rest) {
@@ -79,7 +94,16 @@ function typedOperation(
     ...(parameters.length > 0 ? { parameters } : {}),
     ...(requestBody === undefined ? {} : { requestBody }),
     responses: {
-      '200': { description: 'OK', content: { 'application/json': { schema: output } } },
+      ...Object.fromEntries(
+        op.statuses.map((status) => [
+          String(status),
+          {
+            description: statusDescriptions[status],
+            ...(op.etag ? { headers: { ETag: { $ref: '#/components/headers/ETag' } } } : {}),
+            ...(status === 204 ? {} : { content: { 'application/json': { schema: output } } }),
+          },
+        ]),
+      ),
       default: { $ref: '#/components/responses/Problem' },
     },
   }
@@ -151,6 +175,12 @@ export function buildOpenApi(modules: readonly Module[]) {
         edgeIdentity: { type: 'apiKey', in: 'header', name: 'Cf-Access-Jwt-Assertion' },
       },
       schemas: { Problem: problemSchema },
+      headers: {
+        ETag: {
+          description: 'Strong validator for the returned version; send it back in `If-Match`.',
+          schema: { type: 'string' },
+        },
+      },
       responses: {
         Problem: {
           description: 'An error, as RFC 9457 problem details.',

@@ -1,11 +1,14 @@
 /** Problem `type` slugs: `urn:embertrail:problem:<slug>` (spec/query-api.yaml). */
 export type ProblemSlug =
   | 'validation'
+  | 'invalid-cursor'
   | 'unauthenticated'
   | 'forbidden'
   | 'identity-conflict'
   | 'not-found'
   | 'conflict'
+  | 'precondition-failed'
+  | 'payload-too-large'
   | 'invalid'
   | 'internal'
 
@@ -18,18 +21,22 @@ export interface FieldError {
 
 export const problemTitles: Record<ProblemSlug, string> = {
   validation: 'Request failed validation',
+  'invalid-cursor': 'Invalid cursor',
   unauthenticated: 'Not authenticated',
   forbidden: 'Forbidden',
   'identity-conflict': 'Token and Edge Identity name different Users',
   'not-found': 'Not found',
   conflict: 'Conflict',
+  'precondition-failed': 'Precondition failed',
+  'payload-too-large': 'Payload too large',
   invalid: 'Unprocessable request',
   internal: 'Internal error',
 }
 
 /**
- * An error the core maps to `application/problem+json`. Modules throw `notFound`, `conflict`
- * and `invalid`; the rest are raised by the core itself. Anything else a Module throws
+ * An error the core maps to `application/problem+json`. Modules throw `notFound`, `conflict`,
+ * `invalid`, `invalidCursor`, `preconditionFailed` and `payloadTooLarge`; the rest are raised
+ * by the core itself. Anything else a Module throws
  * becomes a 500 naming the Module.
  */
 export class HubError extends Error {
@@ -52,6 +59,21 @@ export class HubError extends Error {
   /** 409. */
   static conflict(detail?: string) {
     return new HubError(409, 'conflict', detail)
+  }
+
+  /** 400: a `cursor` this list didn't issue, or issued for another query. */
+  static invalidCursor(detail?: string) {
+    return new HubError(400, 'invalid-cursor', detail)
+  }
+
+  /** 412: `If-Match` or `If-None-Match` didn't hold. */
+  static preconditionFailed(detail?: string) {
+    return new HubError(412, 'precondition-failed', detail)
+  }
+
+  /** 413: over the op's size limit. */
+  static payloadTooLarge(detail?: string) {
+    return new HubError(413, 'payload-too-large', detail)
   }
 
   /** 422: a valid shape that can't be carried out. */

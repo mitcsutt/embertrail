@@ -13,6 +13,15 @@ export type Scope = `${string}:${string}` | 'admin'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
+/** A status a typed op answers with. 204 sends no body. */
+export type OpStatus = 200 | 201 | 204
+
+/** Who owns a row: a User, or a Team (#29). */
+export interface OwnerRef {
+  kind: 'user' | 'team'
+  id: string
+}
+
 /** Who is calling, resolved by the core before any op runs. */
 export interface Caller {
   userId: string
@@ -30,6 +39,42 @@ export interface Ctx {
   caller: Caller
   /** The request's time, fixed for the whole op. */
   now: () => Date
+  /** Whether an `owner_id` names a User or a Team. */
+  ownerOf: (ownerId: string) => Promise<OwnerRef>
+}
+
+declare const replyBrand: unique symbol
+
+/** What a typed op returns instead of its bare output to set its status or `ETag`. */
+export interface Reply<O> {
+  readonly [replyBrand]: true
+  readonly status: OpStatus
+  readonly body: O
+  readonly etag?: string | undefined
+}
+
+const replies = new WeakSet<object>()
+
+/**
+ * Answers with `status` (default 200) and an `ETag` header. The status must be one of the
+ * op's `statuses`. `body` is still parsed through the op's output schema.
+ */
+export function reply<O>(body: O, init: { status?: 200 | 201; etag?: string } = {}): Reply<O> {
+  const result = { status: init.status ?? 200, body, etag: init.etag }
+  replies.add(result)
+  return result as unknown as Reply<O>
+}
+
+/** 204 with no body. The op's `statuses` must list 204. */
+reply.noContent = (): Reply<never> => {
+  const result = { status: 204, body: undefined }
+  replies.add(result)
+  return result as unknown as Reply<never>
+}
+
+/** Whether an op's return value came from `reply()`. */
+export function isReply(value: unknown): value is Reply<unknown> {
+  return typeof value === 'object' && value !== null && replies.has(value)
 }
 
 export interface OpDef<I, O> {
@@ -41,9 +86,18 @@ export interface OpDef<I, O> {
   summary: string
   /** Narrows the derived Scope; must stay within `<name>:` or be `admin`. */
   scope?: Scope
+  /**
+   * Input keys read from request headers instead of the body or query, such as
+   * `{ if_match: 'If-Match' }`. OpenAPI lists them as header parameters.
+   */
+  headers?: Record<string, string>
+  /** Every status `run` answers with, through `reply()`. Default `[200]`. */
+  statuses?: readonly [OpStatus, ...OpStatus[]]
+  /** Documents the `ETag` response header that `run` sets through `reply()`. */
+  etag?: boolean
   /** Reserved: the MCP binder arrives later. */
   bind?: { mcp?: { tool: string } | false }
-  run(input: I, ctx: Ctx): Promise<O>
+  run(input: I, ctx: Ctx): Promise<O | Reply<O>>
 }
 
 export interface RawDef {
@@ -71,6 +125,9 @@ export interface TypedOp extends OpBase {
   readonly kind: 'query' | 'mutate' | 'ingest'
   readonly input: StandardSchemaV1
   readonly output: StandardSchemaV1
+  readonly headers: Readonly<Record<string, string>>
+  readonly statuses: readonly OpStatus[]
+  readonly etag: boolean
   readonly run: (input: unknown, ctx: Ctx) => Promise<unknown>
 }
 
@@ -94,6 +151,9 @@ function typed<I, O>(kind: TypedOp['kind'], method: HttpMethod, def: OpDef<I, O>
     bind: def.bind,
     input: def.input,
     output: def.output,
+    headers: def.headers ?? {},
+    statuses: def.statuses ?? [200],
+    etag: def.etag ?? false,
     // The core validates input against `def.input` before calling, so it is an `I`.
     run: (input, ctx) => def.run(input as I, ctx),
   }

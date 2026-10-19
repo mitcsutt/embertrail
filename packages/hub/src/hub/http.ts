@@ -26,16 +26,33 @@ async function readBody(request: Request): Promise<Record<string, unknown>> {
   return parsed
 }
 
-/** An op's input: body, then query, then path parameters, merged; stamped keys removed. */
-export async function readInput(request: Request, params: Record<string, string>) {
+/**
+ * An op's input: body, then query, then path parameters, merged, then the op's `headers`,
+ * which only a header can set. Stamped keys are removed.
+ */
+export async function readInput(
+  request: Request,
+  params: Record<string, string>,
+  headers: Readonly<Record<string, string>> = {},
+) {
   // A Map, so a key such as __proto__ is only ever data.
   const query = new Map<string, string | string[]>()
   for (const [key, value] of new URL(request.url).searchParams) {
     const seen = query.get(key)
     query.set(key, seen === undefined ? value : [...(Array.isArray(seen) ? seen : [seen]), value])
   }
+  const fromHeaders = new Map<string, string>()
+  for (const [key, name] of Object.entries(headers)) {
+    const value = request.headers.get(name)
+    if (value !== null) fromHeaders.set(key, value)
+  }
   const merged = { ...(await readBody(request)), ...Object.fromEntries(query), ...params }
-  return Object.fromEntries(Object.entries(merged).filter(([key]) => !stampedKeys.has(key)))
+  return Object.fromEntries(
+    [
+      ...Object.entries(merged).filter(([key]) => !Object.hasOwn(headers, key)),
+      ...fromHeaders,
+    ].filter(([key]) => !stampedKeys.has(key)),
+  )
 }
 
 function pointer(path: StandardSchemaV1.Issue['path']) {
@@ -89,8 +106,9 @@ export class OutputError extends Error {
   constructor(
     readonly op: string,
     readonly issues: readonly StandardSchemaV1.Issue[],
+    why = 'returned output that fails its schema',
   ) {
-    super(`op "${op}" returned output that fails its schema`)
+    super(`op "${op}" ${why}`)
   }
 }
 

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { integer, serial, text, timestamp } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
-import { defineModule, HubError, moduleSchema, op } from '../index'
+import { defineModule, HubError, moduleSchema, op, reply } from '../index'
 
 // A fixture Module for the invariant checks. Unlike the example Module, it also does what a
 // buggy or hostile Module would: writes another owner_id or source_id, and throws mid-op.
@@ -188,6 +188,46 @@ create table readings (id serial primary key, value integer not null)`,
         const [row] = await db.insert(entries).values({ note: input.note }).returning()
         return { ...row, id: String(row?.id) } as unknown as z.infer<typeof entry>
       },
+    }),
+    stampEntry: op.mutate({
+      method: 'PUT',
+      path: '/api/v1/ledger/stamps/{id}',
+      summary: 'Echoes a header-borne stamp: 201 when the Ledger-Stamp header is sent',
+      input: z.object({ id: z.string(), note: z.string(), stamp: z.string().optional() }),
+      headers: { stamp: 'Ledger-Stamp' },
+      statuses: [200, 201],
+      etag: true,
+      output: z.object({ id: z.string(), note: z.string(), stamp: z.string().nullable() }),
+      run(input) {
+        const body = { id: input.id, note: input.note, stamp: input.stamp ?? null }
+        const status = input.stamp === undefined ? 200 : 201
+        return Promise.resolve(reply(body, { status, etag: '"1"' }))
+      },
+    }),
+    dropStamp: op.mutate({
+      method: 'DELETE',
+      path: '/api/v1/ledger/stamps/{id}',
+      summary: 'Answers 204',
+      input: z.object({ id: z.string() }),
+      statuses: [204],
+      output: z.null(),
+      run: () => Promise.resolve(reply.noContent()),
+    }),
+    undeclaredStatus: op.mutate({
+      method: 'POST',
+      path: '/api/v1/ledger/undeclared-status',
+      summary: 'Answers 201 without declaring it',
+      input: z.object({}),
+      output: z.object({}),
+      run: () => Promise.resolve(reply({}, { status: 201 })),
+    }),
+    whoOwns: op.query({
+      method: 'GET',
+      path: '/api/v1/ledger/owner',
+      summary: 'What kind of Owner the caller acts for',
+      input: z.object({}),
+      output: z.object({ kind: z.enum(['user', 'team']), id: z.string() }),
+      run: (_, { caller, ownerOf }) => ownerOf(caller.ownerId),
     }),
     conflictAfterWrite: op.mutate({
       method: 'POST',

@@ -1,7 +1,7 @@
 // The Hub's core. Modules import only from here; Platforms import the Ports and createHub.
 // Tests use `@mitcsutt/embertrail-hub/testing`; Adapter suites `@mitcsutt/embertrail-hub/contract`.
 
-export { contractVersion, defineModule, moduleSchema, op } from './module/define'
+export { contractVersion, defineModule, moduleSchema, op, reply } from './module/define'
 export type {
   Caller,
   Ctx,
@@ -12,8 +12,11 @@ export type {
   ModuleDef,
   Op,
   OpDef,
+  OpStatus,
   OwnedTable,
+  OwnerRef,
   RawDef,
+  Reply,
   Scope,
 } from './module/define'
 export { HubBootError, HubError } from './module/errors'
