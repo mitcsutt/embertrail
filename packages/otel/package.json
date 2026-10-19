@@ -6,14 +6,21 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
+    "bench": "vitest run src/benchmark.test.ts --silent=false",
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",

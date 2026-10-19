@@ -1,0 +1,6305 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "host.arch",
+            "value": {
+              "stringValue": "arm64"
+            }
+          },
+          {
+            "key": "os.type",
+            "value": {
+              "stringValue": "darwin"
+            }
+          },
+          {
+            "key": "os.version",
+            "value": {
+              "stringValue": "24.6.0"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "claude-code"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "2.1.296"
+            }
+          }
+        ],
+        "droppedAttributesCount": 0
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "com.anthropic.claude_code.events",
+            "version": "2.1.296"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1791795600003000000",
+              "observedTimeUnixNano": "1791795600003000000",
+              "body": {
+                "stringValue": "claude_code.managed_settings_resolved"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "managed_settings_resolved"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.003Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "settings.source_count",
+                  "value": {
+                    "intValue": 3
+                  }
+                },
+                {
+                  "key": "settings.has_managed",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "settings.digest",
+                  "value": {
+                    "stringValue": "ffa93fba4789ac5230feed9adbe9c5cea17bd6a23aedad230298dd9870b1621b"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600017000000",
+              "observedTimeUnixNano": "1791795600017000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.017Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "code-review"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.0.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "c30671f0fce9861b6864f96a90016dbc"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600042000000",
+              "observedTimeUnixNano": "1791795600042000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.042Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "commit-helper"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.1.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "f6d3fcb5e3d57d02431f4120bf8881e3"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600078000000",
+              "observedTimeUnixNano": "1791795600078000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.078Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 3
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "docs-search"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.2.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "8c265ab47571056c64b495b30c2cafda"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600125000000",
+              "observedTimeUnixNano": "1791795600125000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.125Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 4
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "test-runner"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.3.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "618f0f9de510264486fa6035b0dd6165"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 3
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600183000000",
+              "observedTimeUnixNano": "1791795600183000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.183Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 5
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "formatter"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.4.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "05e6cd8e7c3f2dd4982d1bcc787c6149"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 4
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600252000000",
+              "observedTimeUnixNano": "1791795600252000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.252Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 6
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "release-notes"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.5.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "b04b4346f2c9294e4cba80aaba2e016b"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600255000000",
+              "observedTimeUnixNano": "1791795600255000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.255Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 7
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "issue-triage"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.6.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "0d6af509583c0f88e1b31d1beef9c93c"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600269000000",
+              "observedTimeUnixNano": "1791795600269000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.269Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 8
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "dependency-audit"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.7.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "df16e9ecfdea82e9a07d6ebbf56a0e85"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600294000000",
+              "observedTimeUnixNano": "1791795600294000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.294Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 9
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "changelog"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.8.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "beb13d0a64adc9e854dff5b415aeae29"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 3
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600330000000",
+              "observedTimeUnixNano": "1791795600330000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.330Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 10
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "pr-writer"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.9.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "14cd7a88b2b9a72308403e03c1e5434e"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 4
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600377000000",
+              "observedTimeUnixNano": "1791795600377000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.377Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 11
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "lint-fixer"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.10.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "c0748b42c777061945bb6ab214f528d6"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600435000000",
+              "observedTimeUnixNano": "1791795600435000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.435Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 12
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "migration-helper"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.11.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "12d0827cb93d1a3310046c16c16db051"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600504000000",
+              "observedTimeUnixNano": "1791795600504000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.504Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 13
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "api-explorer"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.12.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "a92b059253cd5abe1874ef74f395c33d"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600507000000",
+              "observedTimeUnixNano": "1791795600507000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.507Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 14
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "snippet-library"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.13.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "ad5876e4bf3085e5c3cd3eb484266996"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 3
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600521000000",
+              "observedTimeUnixNano": "1791795600521000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.521Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 15
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "workflow-runner"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.14.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "eba0399909626e8bdae08b07235e510d"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 4
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 2
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600546000000",
+              "observedTimeUnixNano": "1791795600546000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.546Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 16
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "style-guide"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.15.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "official"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "b65b8a5f0ae8580479308b12bbbce0af"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600582000000",
+              "observedTimeUnixNano": "1791795600582000000",
+              "body": {
+                "stringValue": "claude_code.plugin_loaded"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "plugin_loaded"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.582Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 17
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "onboarding"
+                  }
+                },
+                {
+                  "key": "marketplace.name",
+                  "value": {
+                    "stringValue": "community-plugins"
+                  }
+                },
+                {
+                  "key": "plugin.version",
+                  "value": {
+                    "stringValue": "1.16.0"
+                  }
+                },
+                {
+                  "key": "plugin.scope",
+                  "value": {
+                    "stringValue": "community"
+                  }
+                },
+                {
+                  "key": "enabled_via",
+                  "value": {
+                    "stringValue": "user-install"
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "64140bc8f006cea683f6f7644f35665e"
+                  }
+                },
+                {
+                  "key": "has_hooks",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "has_mcp",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "host_owned_mcp",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "skill_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "command_path_count",
+                  "value": {
+                    "intValue": 1
+                  }
+                },
+                {
+                  "key": "agent_path_count",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "safe_mode",
+                  "value": {
+                    "boolValue": false
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600629000000",
+              "observedTimeUnixNano": "1791795600629000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.629Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 18
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 40
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "3cceb390f056554a61a664f774ddd551"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "docs"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600687000000",
+              "observedTimeUnixNano": "1791795600687000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.687Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 19
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 57
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "273b424c522be5430d999295ffbfe725"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "issues"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600756000000",
+              "observedTimeUnixNano": "1791795600756000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.756Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 20
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 74
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "a72146acd743f0f80c3d7d2dc8626a91"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "browser"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600759000000",
+              "observedTimeUnixNano": "1791795600759000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.759Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 21
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 91
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "0b64439324b6f1bf289906201ca51c2e"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "filesystem"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600773000000",
+              "observedTimeUnixNano": "1791795600773000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.773Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 22
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 108
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "a380737dd487c2c2182825f0671c43e5"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "memory"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600798000000",
+              "observedTimeUnixNano": "1791795600798000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.798Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 23
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 125
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "765d7351d65ecca132498971350d9faf"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "search"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600834000000",
+              "observedTimeUnixNano": "1791795600834000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.834Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 24
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 142
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "38d1bf943b6925a2fa56bf87ae35373b"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "calendar"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600881000000",
+              "observedTimeUnixNano": "1791795600881000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.881Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 25
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "failed"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 159
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "6806ae8dd0d631929f2db44876471ea4"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "notes"
+                  }
+                },
+                {
+                  "key": "error_code",
+                  "value": {
+                    "stringValue": "ECONNREFUSED"
+                  }
+                },
+                {
+                  "key": "error",
+                  "value": {
+                    "stringValue": "connect ECONNREFUSED"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795600939000000",
+              "observedTimeUnixNano": "1791795600939000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:00.939Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 26
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 176
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "40918d2be2abc3b542a8e0d7f6bdf08f"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "tickets"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601008000000",
+              "observedTimeUnixNano": "1791795601008000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.008Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 27
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 193
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "2325f1c71e4cafdcc85edd8b503286d0"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "design"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601011000000",
+              "observedTimeUnixNano": "1791795601011000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.011Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 28
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "user"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 210
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "696f89970abcf41d137bcb5228321df0"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "database"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601025000000",
+              "observedTimeUnixNano": "1791795601025000000",
+              "body": {
+                "stringValue": "claude_code.mcp_server_connection"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "mcp_server_connection"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.025Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 29
+                  }
+                },
+                {
+                  "key": "status",
+                  "value": {
+                    "stringValue": "connected"
+                  }
+                },
+                {
+                  "key": "transport_type",
+                  "value": {
+                    "stringValue": "stdio"
+                  }
+                },
+                {
+                  "key": "server_scope",
+                  "value": {
+                    "stringValue": "project"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 227
+                  }
+                },
+                {
+                  "key": "is_plugin",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "plugin_id_hash",
+                  "value": {
+                    "stringValue": "034479190553df45b7515fcbd62cf7d0"
+                  }
+                },
+                {
+                  "key": "server_name",
+                  "value": {
+                    "stringValue": "metrics"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601050000000",
+              "observedTimeUnixNano": "1791795601050000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.050Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 30
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "code-review:run"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "code-review"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601086000000",
+              "observedTimeUnixNano": "1791795601086000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.086Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 31
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "commit-helper:explain"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "commit-helper"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601133000000",
+              "observedTimeUnixNano": "1791795601133000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.133Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 32
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "docs-search:run"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "docs-search"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601191000000",
+              "observedTimeUnixNano": "1791795601191000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.191Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 33
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "test-runner:explain"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "test-runner"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601260000000",
+              "observedTimeUnixNano": "1791795601260000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.260Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 34
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "formatter:run"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "formatter"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601263000000",
+              "observedTimeUnixNano": "1791795601263000000",
+              "body": {
+                "stringValue": "claude_code.skill_activated"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "skill_activated"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.263Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 35
+                  }
+                },
+                {
+                  "key": "skill.name",
+                  "value": {
+                    "stringValue": "release-notes:explain"
+                  }
+                },
+                {
+                  "key": "plugin.name",
+                  "value": {
+                    "stringValue": "release-notes"
+                  }
+                },
+                {
+                  "key": "skill.source",
+                  "value": {
+                    "stringValue": "plugin"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601277000000",
+              "observedTimeUnixNano": "1791795601277000000",
+              "body": {
+                "stringValue": "claude_code.user_prompt"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "user_prompt"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.277Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 36
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "prompt_length",
+                  "value": {
+                    "intValue": 572
+                  }
+                },
+                {
+                  "key": "prompt",
+                  "value": {
+                    "stringValue": "<REDACTED>"
+                  }
+                },
+                {
+                  "key": "message.uuid",
+                  "value": {
+                    "stringValue": "46cb9d67-e037-4437-af53-c69f01782aee"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601302000000",
+              "observedTimeUnixNano": "1791795601302000000",
+              "body": {
+                "stringValue": "claude_code.api_request"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "api_request"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.302Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 37
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "model",
+                  "value": {
+                    "stringValue": "claude-opus-4-7"
+                  }
+                },
+                {
+                  "key": "cost_usd",
+                  "value": {
+                    "doubleValue": 0.0421537
+                  }
+                },
+                {
+                  "key": "cost_usd_micros",
+                  "value": {
+                    "intValue": 42154
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 5120
+                  }
+                },
+                {
+                  "key": "ttft_ms",
+                  "value": {
+                    "intValue": 1210
+                  }
+                },
+                {
+                  "key": "input_tokens",
+                  "value": {
+                    "intValue": 6
+                  }
+                },
+                {
+                  "key": "output_tokens",
+                  "value": {
+                    "intValue": 412
+                  }
+                },
+                {
+                  "key": "cache_read_tokens",
+                  "value": {
+                    "intValue": 31877
+                  }
+                },
+                {
+                  "key": "cache_creation_tokens",
+                  "value": {
+                    "intValue": 2210
+                  }
+                },
+                {
+                  "key": "request_id",
+                  "value": {
+                    "stringValue": "req_LHBu3bew2-iz2hQp"
+                  }
+                },
+                {
+                  "key": "client_request_id",
+                  "value": {
+                    "stringValue": "02324a96-0f1a-47c3-9f7c-f3a9f41b6a38"
+                  }
+                },
+                {
+                  "key": "speed",
+                  "value": {
+                    "stringValue": "normal"
+                  }
+                },
+                {
+                  "key": "effort",
+                  "value": {
+                    "stringValue": "high"
+                  }
+                },
+                {
+                  "key": "query_source",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601338000000",
+              "observedTimeUnixNano": "1791795601338000000",
+              "body": {
+                "stringValue": "claude_code.api_request"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "api_request"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.338Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 38
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "model",
+                  "value": {
+                    "stringValue": "claude-opus-4-7"
+                  }
+                },
+                {
+                  "key": "cost_usd",
+                  "value": {
+                    "doubleValue": 0.0183412
+                  }
+                },
+                {
+                  "key": "cost_usd_micros",
+                  "value": {
+                    "intValue": 18341
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 3381
+                  }
+                },
+                {
+                  "key": "ttft_ms",
+                  "value": {
+                    "intValue": 904
+                  }
+                },
+                {
+                  "key": "input_tokens",
+                  "value": {
+                    "intValue": 4
+                  }
+                },
+                {
+                  "key": "output_tokens",
+                  "value": {
+                    "intValue": 233
+                  }
+                },
+                {
+                  "key": "cache_read_tokens",
+                  "value": {
+                    "intValue": 32301
+                  }
+                },
+                {
+                  "key": "cache_creation_tokens",
+                  "value": {
+                    "intValue": 410
+                  }
+                },
+                {
+                  "key": "request_id",
+                  "value": {
+                    "stringValue": "req_lSDNOWtP-PAzYHYc"
+                  }
+                },
+                {
+                  "key": "client_request_id",
+                  "value": {
+                    "stringValue": "b6816b7d-b595-467c-973e-7d737f3fa730"
+                  }
+                },
+                {
+                  "key": "speed",
+                  "value": {
+                    "stringValue": "normal"
+                  }
+                },
+                {
+                  "key": "effort",
+                  "value": {
+                    "stringValue": "high"
+                  }
+                },
+                {
+                  "key": "query_source",
+                  "value": {
+                    "stringValue": "main"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601385000000",
+              "observedTimeUnixNano": "1791795601385000000",
+              "body": {
+                "stringValue": "claude_code.api_request"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "api_request"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.385Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 39
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "model",
+                  "value": {
+                    "stringValue": "claude-haiku-4-5"
+                  }
+                },
+                {
+                  "key": "cost_usd",
+                  "value": {
+                    "doubleValue": 0.0009321
+                  }
+                },
+                {
+                  "key": "cost_usd_micros",
+                  "value": {
+                    "intValue": 932
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 640
+                  }
+                },
+                {
+                  "key": "ttft_ms",
+                  "value": {
+                    "intValue": 211
+                  }
+                },
+                {
+                  "key": "input_tokens",
+                  "value": {
+                    "intValue": 812
+                  }
+                },
+                {
+                  "key": "output_tokens",
+                  "value": {
+                    "intValue": 64
+                  }
+                },
+                {
+                  "key": "cache_read_tokens",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "cache_creation_tokens",
+                  "value": {
+                    "intValue": 0
+                  }
+                },
+                {
+                  "key": "request_id",
+                  "value": {
+                    "stringValue": "req_qcDJMWmb8EMk24kb"
+                  }
+                },
+                {
+                  "key": "client_request_id",
+                  "value": {
+                    "stringValue": "24a54bf3-5504-4b99-8997-803910893418"
+                  }
+                },
+                {
+                  "key": "speed",
+                  "value": {
+                    "stringValue": "normal"
+                  }
+                },
+                {
+                  "key": "effort",
+                  "value": {
+                    "stringValue": "high"
+                  }
+                },
+                {
+                  "key": "query_source",
+                  "value": {
+                    "stringValue": "auxiliary"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601443000000",
+              "observedTimeUnixNano": "1791795601443000000",
+              "body": {
+                "stringValue": "claude_code.tool_decision"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_decision"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.443Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 40
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Read"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_CrZdLxUHTWsg5zU4"
+                  }
+                },
+                {
+                  "key": "decision",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "tool_source",
+                  "value": {
+                    "stringValue": "builtin"
+                  }
+                },
+                {
+                  "key": "source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601512000000",
+              "observedTimeUnixNano": "1791795601512000000",
+              "body": {
+                "stringValue": "claude_code.tool_result"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_result"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.512Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 41
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Read"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_CrZdLxUHTWsg5zU4"
+                  }
+                },
+                {
+                  "key": "success",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 12
+                  }
+                },
+                {
+                  "key": "decision_type",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "decision_source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                },
+                {
+                  "key": "tool_input_size_bytes",
+                  "value": {
+                    "intValue": 120
+                  }
+                },
+                {
+                  "key": "tool_result_size_bytes",
+                  "value": {
+                    "intValue": 2048
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "{\"file_path\":\"src/module-0.ts\"}"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601515000000",
+              "observedTimeUnixNano": "1791795601515000000",
+              "body": {
+                "stringValue": "claude_code.tool_decision"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_decision"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.515Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 42
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Grep"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_bFKo-QLCftAD_Mb8"
+                  }
+                },
+                {
+                  "key": "decision",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "tool_source",
+                  "value": {
+                    "stringValue": "builtin"
+                  }
+                },
+                {
+                  "key": "source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601529000000",
+              "observedTimeUnixNano": "1791795601529000000",
+              "body": {
+                "stringValue": "claude_code.tool_result"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_result"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.529Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 43
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Grep"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_bFKo-QLCftAD_Mb8"
+                  }
+                },
+                {
+                  "key": "success",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 43
+                  }
+                },
+                {
+                  "key": "decision_type",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "decision_source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                },
+                {
+                  "key": "tool_input_size_bytes",
+                  "value": {
+                    "intValue": 160
+                  }
+                },
+                {
+                  "key": "tool_result_size_bytes",
+                  "value": {
+                    "intValue": 2560
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "{\"file_path\":\"src/module-1.ts\"}"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601554000000",
+              "observedTimeUnixNano": "1791795601554000000",
+              "body": {
+                "stringValue": "claude_code.tool_decision"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_decision"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.554Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 44
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Bash"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_TmTmsHnvz0ea8NwF"
+                  }
+                },
+                {
+                  "key": "decision",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "tool_source",
+                  "value": {
+                    "stringValue": "builtin"
+                  }
+                },
+                {
+                  "key": "source",
+                  "value": {
+                    "stringValue": "user_temporary"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601590000000",
+              "observedTimeUnixNano": "1791795601590000000",
+              "body": {
+                "stringValue": "claude_code.tool_result"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_result"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.590Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 45
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Bash"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_TmTmsHnvz0ea8NwF"
+                  }
+                },
+                {
+                  "key": "success",
+                  "value": {
+                    "boolValue": false
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 74
+                  }
+                },
+                {
+                  "key": "decision_type",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "decision_source",
+                  "value": {
+                    "stringValue": "user_temporary"
+                  }
+                },
+                {
+                  "key": "tool_input_size_bytes",
+                  "value": {
+                    "intValue": 200
+                  }
+                },
+                {
+                  "key": "tool_result_size_bytes",
+                  "value": {
+                    "intValue": 3072
+                  }
+                },
+                {
+                  "key": "error_type",
+                  "value": {
+                    "stringValue": "exit_code"
+                  }
+                },
+                {
+                  "key": "error",
+                  "value": {
+                    "stringValue": "Command exited with code 1"
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "{\"bash_command\":\"npm\",\"full_command\":\"npm test\",\"description\":\"Run the tests\"}"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601637000000",
+              "observedTimeUnixNano": "1791795601637000000",
+              "body": {
+                "stringValue": "claude_code.tool_decision"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_decision"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.637Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 46
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Read"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_MfXI7jBSWnXuX8HC"
+                  }
+                },
+                {
+                  "key": "decision",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "tool_source",
+                  "value": {
+                    "stringValue": "builtin"
+                  }
+                },
+                {
+                  "key": "source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601695000000",
+              "observedTimeUnixNano": "1791795601695000000",
+              "body": {
+                "stringValue": "claude_code.tool_result"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_result"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.695Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 47
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Read"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_MfXI7jBSWnXuX8HC"
+                  }
+                },
+                {
+                  "key": "success",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 105
+                  }
+                },
+                {
+                  "key": "decision_type",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "decision_source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                },
+                {
+                  "key": "tool_input_size_bytes",
+                  "value": {
+                    "intValue": 240
+                  }
+                },
+                {
+                  "key": "tool_result_size_bytes",
+                  "value": {
+                    "intValue": 3584
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "{\"file_path\":\"src/module-3.ts\"}"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601764000000",
+              "observedTimeUnixNano": "1791795601764000000",
+              "body": {
+                "stringValue": "claude_code.tool_decision"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_decision"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.764Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 48
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Edit"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_5XIlr4Z7Kfc-SOF6"
+                  }
+                },
+                {
+                  "key": "decision",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "tool_source",
+                  "value": {
+                    "stringValue": "builtin"
+                  }
+                },
+                {
+                  "key": "source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            },
+            {
+              "timeUnixNano": "1791795601767000000",
+              "observedTimeUnixNano": "1791795601767000000",
+              "body": {
+                "stringValue": "claude_code.tool_result"
+              },
+              "attributes": [
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "0d10f12b-8af0-4d75-86a6-b896d3793411"
+                  }
+                },
+                {
+                  "key": "user.id",
+                  "value": {
+                    "stringValue": "d727930b07618a1b03d941d5909f4a270acebb38a58ea7151be5e3ee3538be73"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "dev@example.com"
+                  }
+                },
+                {
+                  "key": "user.account_uuid",
+                  "value": {
+                    "stringValue": "ca72921b-07ef-418f-967c-8534a7d0eb40"
+                  }
+                },
+                {
+                  "key": "user.account_id",
+                  "value": {
+                    "stringValue": "user_GptQKcwOzEM9HfA4"
+                  }
+                },
+                {
+                  "key": "organization.id",
+                  "value": {
+                    "stringValue": "c70d49da-cfef-4261-a7b4-5735221d55b0"
+                  }
+                },
+                {
+                  "key": "terminal.type",
+                  "value": {
+                    "stringValue": "vscode"
+                  }
+                },
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "tool_result"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-12T09:00:01.767Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": 49
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "b8481280-62aa-4095-9624-c76d32eba74a"
+                  }
+                },
+                {
+                  "key": "tool_name",
+                  "value": {
+                    "stringValue": "Edit"
+                  }
+                },
+                {
+                  "key": "tool_use_id",
+                  "value": {
+                    "stringValue": "toolu_5XIlr4Z7Kfc-SOF6"
+                  }
+                },
+                {
+                  "key": "success",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": 136
+                  }
+                },
+                {
+                  "key": "decision_type",
+                  "value": {
+                    "stringValue": "accept"
+                  }
+                },
+                {
+                  "key": "decision_source",
+                  "value": {
+                    "stringValue": "config"
+                  }
+                },
+                {
+                  "key": "tool_input_size_bytes",
+                  "value": {
+                    "intValue": 280
+                  }
+                },
+                {
+                  "key": "tool_result_size_bytes",
+                  "value": {
+                    "intValue": 4096
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "{\"file_path\":\"src/module-4.ts\"}"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
