@@ -10,25 +10,43 @@
   },
   "bugs": "https://github.com/mitcsutt/embertrail/issues",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "generate": "node scripts/generate.ts",
     "lint": "eslint --max-warnings=0 .",
+    "lint:package": "node scripts/check-package.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "openapi-typescript": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "yaml": "catalog:"
   },
   "engines": {
     "node": ">=24.11.0"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   }
 }

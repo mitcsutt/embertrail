@@ -5,6 +5,7 @@ packages:
 # One version of each shared dependency for the whole workspace.
 # Reference these from package.json as "catalog:".
 catalog:
+  '@arethetypeswrong/cli': ^0.18.5
   '@changesets/cli': ^3.0.3
   '@cloudflare/vitest-plugin': ^1.4.4
   '@commitlint/cli': ^21.2.3
@@ -17,13 +18,16 @@ catalog:
   '@types/pg': ^8.23.1
   eslint: ^10.12.0
   lefthook: ^2.1.16
+  openapi-typescript: ^7.13.0
   pg: ^8.23.1
   prettier: ^3.9.9
+  publint: ^0.3.25
   secretlint: ^13.0.7
   turbo: ^2.11.9
   typescript: ~6.0.3
   vitest: ^5.0.5
   wrangler: ^4.151.1
+  yaml: ^2.9.1
 
 # Dependencies allowed to run install scripts (pnpm 11+ name for onlyBuiltDependencies).
 allowBuilds:
@@ -37,3 +41,5 @@ peerDependencyRules:
   # yet; kiln-eslint-config's own tests run its rules on ESLint 10.
   allowedVersions:
     eslint-plugin-jsx-a11y>eslint: '10'
+    # openapi-typescript 7 declares TypeScript 5; the client's generator check runs it on 6.
+    openapi-typescript>typescript: '6'

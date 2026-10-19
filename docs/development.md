@@ -17,14 +17,14 @@ pnpm db:up         # Postgres 17 on localhost:54317, for the database tests
 
 Run these from the repo root. Turborepo runs each one across the workspace and caches the results per package.
 
-| Command          | What it does                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, and the secret scan (`secretlint`) |
-| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                   |
-| `pnpm test`      | Vitest in every package: on Node, and in `workerd` for `apps/worker`                              |
-| `pnpm format`    | Prettier over the whole repo                                                                      |
-| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                        |
-| `pnpm changeset` | Adds a release note for a change that should reach a release                                      |
+| Command          | What it does                                                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, the secret scan (`secretlint`), and publint and attw on the packed client |
+| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                                                          |
+| `pnpm test`      | Vitest in every package: on Node, and in `workerd` for `apps/worker`                                                                     |
+| `pnpm format`    | Prettier over the whole repo                                                                                                             |
+| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                                                               |
+| `pnpm changeset` | Adds a release note for a change that should reach a release                                                                             |
 
 To run one package's task, filter it: `pnpm turbo run test --filter=@mitcsutt/embertrail-server`.
 
@@ -86,6 +86,16 @@ Core, Modules and Adapters stay private workspace packages; only the client and 
 5. Run `pnpm install`, then `pnpm lint`, `pnpm typecheck` and `pnpm test`.
 
 A Module is a package under `packages/` that plugs into the Hub through the Module contract (#25). The contract arrives with the Hub's core; until then, follow its spec issue.
+
+## Changing the Query API spec
+
+[`spec/query-api.yaml`](../spec/query-api.yaml) is the source of the client's types and methods. After editing it, regenerate the client and commit both together:
+
+```sh
+pnpm --filter @mitcsutt/embertrail-client generate
+```
+
+`packages/client/scripts/generate.test.ts` fails when the committed files in `packages/client/src/generated/` differ from a fresh run, and the client's test task hashes the spec, so a spec-only change re-runs it. A new operation also needs a case in `packages/client/src/client.test.ts`: the case table is typed over every operation, so typecheck fails until it has one. Usage is in the [client README](../packages/client/README.md).
 
 ## Turborepo
 

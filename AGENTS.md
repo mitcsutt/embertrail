@@ -16,6 +16,7 @@ From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (E
 ## Where things live
 
 - `apps/server` (Docker), `apps/worker` (Cloudflare), `apps/dashboard`; `packages/hub` (core), `packages/otel`, `packages/store`, `packages/client`, `packages/cli`; `spec/` (Query API); `docs/`.
+- `packages/client` is generated from `spec/query-api.yaml`: after changing the spec, run `pnpm --filter @mitcsutt/embertrail-client generate` ([details](docs/development.md#changing-the-query-api-spec)).
 - Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module).
 - Decisions: [`docs/adr/README.md`](docs/adr/README.md) indexes the `adr` issues.
 
