@@ -10,6 +10,7 @@ export type ProblemSlug =
   | 'precondition-failed'
   | 'payload-too-large'
   | 'invalid'
+  | 'too-many-rows'
   | 'internal'
 
 /** One field error on a `validation` problem. */
@@ -30,12 +31,13 @@ export const problemTitles: Record<ProblemSlug, string> = {
   'precondition-failed': 'Precondition failed',
   'payload-too-large': 'Payload too large',
   invalid: 'Unprocessable request',
+  'too-many-rows': 'Too many rows',
   internal: 'Internal error',
 }
 
 /**
  * An error the core maps to `application/problem+json`. Modules throw `notFound`, `conflict`,
- * `invalid`, `invalidCursor`, `preconditionFailed` and `payloadTooLarge`; the rest are raised
+ * `invalid`, `tooManyRows`, `invalidCursor`, `preconditionFailed` and `payloadTooLarge`; the rest are raised
  * by the core itself. Anything else a Module throws
  * becomes a 500 naming the Module.
  */
@@ -79,6 +81,11 @@ export class HubError extends Error {
   /** 422: a valid shape that can't be carried out. */
   static invalid(detail: string) {
     return new HubError(422, 'invalid', detail)
+  }
+
+  /** 422: an aggregate that would return more rows than the Query API's limit. */
+  static tooManyRows(detail: string) {
+    return new HubError(422, 'too-many-rows', detail)
   }
 
   static validation(errors: readonly FieldError[]) {

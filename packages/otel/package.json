@@ -17,14 +17,17 @@
   },
   "dependencies": {
     "@mitcsutt/embertrail-hub": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
+    "ajv": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "yaml": "catalog:"
   }
 }
