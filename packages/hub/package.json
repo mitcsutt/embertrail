@@ -6,14 +6,23 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./contract": "./src/contract/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@standard-schema/spec": "catalog:",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:",
+    "zod": "catalog:"
+  },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",

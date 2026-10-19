@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "drizzle-orm": "catalog:",
     "pg": "catalog:"
   },
   "devDependencies": {
@@ -22,6 +24,7 @@
     "@types/pg": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@electric-sql/pglite": "catalog:"
   }
 }

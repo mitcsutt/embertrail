@@ -1,0 +1,112 @@
+/** Problem `type` slugs: `urn:embertrail:problem:<slug>` (spec/query-api.yaml). */
+export type ProblemSlug =
+  | 'validation'
+  | 'unauthenticated'
+  | 'forbidden'
+  | 'identity-conflict'
+  | 'not-found'
+  | 'conflict'
+  | 'invalid'
+  | 'internal'
+
+/** One field error on a `validation` problem. */
+export interface FieldError {
+  /** JSON Pointer into the merged input. */
+  pointer: string
+  message: string
+}
+
+export const problemTitles: Record<ProblemSlug, string> = {
+  validation: 'Request failed validation',
+  unauthenticated: 'Not authenticated',
+  forbidden: 'Forbidden',
+  'identity-conflict': 'Token and Edge Identity name different Users',
+  'not-found': 'Not found',
+  conflict: 'Conflict',
+  invalid: 'Unprocessable request',
+  internal: 'Internal error',
+}
+
+/**
+ * An error the core maps to `application/problem+json`. Modules throw `notFound`, `conflict`
+ * and `invalid`; the rest are raised by the core itself. Anything else a Module throws
+ * becomes a 500 naming the Module.
+ */
+export class HubError extends Error {
+  override readonly name = 'HubError'
+
+  constructor(
+    readonly status: number,
+    readonly slug: ProblemSlug,
+    readonly detail?: string,
+    readonly errors?: readonly FieldError[],
+  ) {
+    super(detail ?? problemTitles[slug])
+  }
+
+  /** 404. Also what a row hidden by row-level security looks like. */
+  static notFound(detail?: string) {
+    return new HubError(404, 'not-found', detail)
+  }
+
+  /** 409. */
+  static conflict(detail?: string) {
+    return new HubError(409, 'conflict', detail)
+  }
+
+  /** 422: a valid shape that can't be carried out. */
+  static invalid(detail: string) {
+    return new HubError(422, 'invalid', detail)
+  }
+
+  static validation(errors: readonly FieldError[]) {
+    return new HubError(400, 'validation', errors[0]?.message, errors)
+  }
+
+  static unauthenticated(detail?: string) {
+    return new HubError(401, 'unauthenticated', detail)
+  }
+
+  static forbidden(detail?: string) {
+    return new HubError(403, 'forbidden', detail)
+  }
+
+  static identityConflict() {
+    return new HubError(403, 'identity-conflict')
+  }
+}
+
+/** Boot refused: a Module or the config breaks a contract rule. The message names both. */
+export class HubBootError extends Error {
+  override readonly name = 'HubBootError'
+
+  constructor(
+    /** `Module "<name>"`, or `Hub config`. */
+    readonly subject: string,
+    readonly rule: BootRule,
+    detail: string,
+  ) {
+    super(`${subject}: ${rule}: ${detail}`)
+  }
+}
+
+/** Every rule boot enforces. Each has a test with its message. */
+export type BootRule =
+  | 'invalid config'
+  | 'unknown contract'
+  | 'invalid name'
+  | 'duplicate name'
+  | 'not an owned table'
+  | 'table outside schema'
+  | 'scope outside prefix'
+  | 'invalid path'
+  | 'duplicate path'
+  | 'no JSON Schema'
+  | 'unknown dependency'
+  | 'dependsOn cycle'
+  | 'retention column'
+  | 'foreign key outside core'
+  | 'undeclared table'
+  | 'missing table'
+  | 'migrations behind'
+  | 'migrations ahead'
