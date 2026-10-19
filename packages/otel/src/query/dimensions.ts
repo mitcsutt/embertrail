@@ -101,6 +101,12 @@ export type Filter =
   | { key: string; op: 'in' | 'not_in'; value: Scalar[] }
   | { key: string; op: 'exists' | 'not_exists' }
 
+const list = (values: readonly Scalar[]) =>
+  sql.join(
+    values.map((v) => sql`${String(v)}`),
+    sql`, `,
+  )
+
 const comparisons = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const
 
 /**
@@ -121,9 +127,9 @@ export function condition(signal: Signal, filter: Filter): { where: SQL; labels:
       case 'neq':
         return sql`${d.text} is distinct from ${String(filter.value)}`
       case 'in':
-        return sql`${d.text} = any(${filter.value.map(String)}::text[])`
+        return sql`${d.text} in (${list(filter.value)})`
       case 'not_in':
-        return sql`not coalesce(${d.text} = any(${filter.value.map(String)}::text[]), false)`
+        return sql`not coalesce(${d.text} in (${list(filter.value)}), false)`
       default: {
         const op = sql.raw(comparisons[filter.op])
         return typeof filter.value === 'number'

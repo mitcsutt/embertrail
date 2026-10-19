@@ -285,7 +285,8 @@ paths:
         Replaces the full label set (an empty object clears it). Labels may be
         written before the Session's first Signal arrives, since exporters
         often flush only on exit, so an unknown `session_id` is accepted, not
-        404. Labels belong to the caller's Owner.
+        404. Labels belong to the caller's Owner, so another Owner's Labels on
+        the same `session_id` never affect them.
 
         The reserved keys `embertrail.group.id`, `embertrail.group.kind`,
         `embertrail.parent.session_id` and `embertrail.role` link a Session
@@ -295,7 +296,7 @@ paths:
 
         Accepted from Source-bound ingest Tokens, so a Source plugin on the
         User's machine can label the Session it runs in.
-      x-embertrail-module: core
+      x-embertrail-module: otel
       x-embertrail-scope: otel:write
       parameters:
         - $ref: '#/components/parameters/SessionId'
@@ -1084,7 +1085,9 @@ components:
         service_name: { type: string }
         owner_id: { $ref: '#/components/schemas/Id' }
         source_id: { $ref: '#/components/schemas/Id' }
-        account_id: { $ref: '#/components/schemas/Id' }
+        account_id:
+          type: [string, 'null']
+          description: The Account recognised from the telemetry; `null` when it carries none.
         body:
           type: [string, 'null']
           description: The log record body as sent, when it was a string.

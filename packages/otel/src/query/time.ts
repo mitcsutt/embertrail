@@ -45,8 +45,9 @@ export function inZone(instant: Date, tz: string) {
       .map((p) => [p.type, p.value]),
   )
   const parts = (type: Intl.DateTimeFormatPartTypes) => found.get(type) ?? ''
-  // `longOffset` is `GMT+02:00`, or plain `GMT` at UTC.
-  const offset = parts('timeZoneName').replace('GMT', '') || 'Z'
+  // `longOffset` is `GMT+02:00`, or `GMT` at UTC; a zero offset is written `Z`.
+  const offset = parts('timeZoneName').replace('GMT', '')
+  const zone = offset === '' || offset === '+00:00' ? 'Z' : offset
   const date = `${parts('year')}-${parts('month')}-${parts('day')}`
-  return `${date}T${parts('hour')}:${parts('minute')}:${parts('second')}${offset}`
+  return `${date}T${parts('hour')}:${parts('minute')}:${parts('second')}${zone}`
 }
