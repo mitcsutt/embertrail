@@ -36,7 +36,9 @@ Tests that talk to a database read `DATABASE_URL`. Locally, with `pnpm db:up` ru
 DATABASE_URL=postgres://postgres:postgres@localhost:54317/embertrail pnpm test
 ```
 
-Without `DATABASE_URL` they are skipped locally. In CI (`CI` is set) they always run, against a Postgres 17 service container, so a missing database fails the run rather than skipping it. A new database test follows the same pattern as `apps/server/src/postgres.test.ts`.
+Without `DATABASE_URL` they are skipped locally. In CI (`CI` is set) they always run, against a Postgres 17 service container, so a missing database fails the run rather than skipping it. A new database test follows the same pattern as `apps/server/src/postgres.test.ts`; `apps/server/src/db.test.ts` gives each check a fresh database on that server.
+
+The Hub's own tests (`packages/hub`) need no server: they run on PGLite, in-process, with real migrations and row-level security.
 
 ### Tests in workerd
 
@@ -85,7 +87,7 @@ Core, Modules and Adapters stay private workspace packages; only the client and 
 4. Put tests next to the code as `*.test.ts`.
 5. Run `pnpm install`, then `pnpm lint`, `pnpm typecheck` and `pnpm test`.
 
-A Module is a package under `packages/` that plugs into the Hub through the Module contract (#25). The contract arrives with the Hub's core; until then, follow its spec issue.
+A Module is a package under `packages/` that plugs into the Hub through the Module contract (#25). [`writing-a-module.md`](writing-a-module.md) covers how to write and test one, and [`ports-and-adapters.md`](ports-and-adapters.md) how the core reaches its database and edge.
 
 ## Changing the Query API spec
 

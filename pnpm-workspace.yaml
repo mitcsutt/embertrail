@@ -10,13 +10,17 @@ catalog:
   '@cloudflare/vitest-plugin': ^1.4.4
   '@commitlint/cli': ^21.2.3
   '@commitlint/config-conventional': ^21.2.3
+  '@electric-sql/pglite': ^0.5.10
   '@mitcsutt/kiln-eslint-config': ^0.4.0
   '@mitcsutt/kiln-prettier-config': ^0.1.0
   '@mitcsutt/kiln-tsconfig': ^0.2.0
   '@secretlint/secretlint-rule-preset-recommend': ^13.0.7
+  '@standard-schema/spec': ^1.1.0
   '@types/node': ^24.0.0
   '@types/pg': ^8.23.1
+  drizzle-orm: ^0.45.4
   eslint: ^10.12.0
+  jose: ^6.2.12
   lefthook: ^2.1.16
   openapi-typescript: ^7.13.0
   pg: ^8.23.1
@@ -28,6 +32,7 @@ catalog:
   vitest: ^5.0.5
   wrangler: ^4.151.1
   yaml: ^2.9.1
+  zod: ^4.6.7
 
 # Dependencies allowed to run install scripts (pnpm 11+ name for onlyBuiltDependencies).
 allowBuilds:

@@ -4,7 +4,7 @@ The design is **locked** (#24). Kiln's prerequisites are released (kiln-ui 0.7.0
 
 ## Commands
 
-From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (ESLint, Prettier check, secret scan), `pnpm typecheck`, `pnpm test`, `pnpm format`. Database tests need `pnpm db:up` and `DATABASE_URL`. Details in [`docs/development.md`](docs/development.md).
+From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (ESLint, Prettier check, secret scan), `pnpm typecheck`, `pnpm test`, `pnpm format`. Database tests need `pnpm db:up` and `DATABASE_URL`; the Hub's own tests run on PGLite. Details in [`docs/development.md`](docs/development.md).
 
 ## Enforced rules
 
@@ -17,7 +17,7 @@ From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (E
 
 - `apps/server` (Docker), `apps/worker` (Cloudflare), `apps/dashboard`; `packages/hub` (core), `packages/otel`, `packages/store`, `packages/client`, `packages/cli`; `spec/` (Query API); `docs/`.
 - `packages/client` is generated from `spec/query-api.yaml`: after changing the spec, run `pnpm --filter @mitcsutt/embertrail-client generate` ([details](docs/development.md#changing-the-query-api-spec)).
-- Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module).
+- Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module). Writing a Module: [`docs/writing-a-module.md`](docs/writing-a-module.md). Ports, Adapters and `createHub`: [`docs/ports-and-adapters.md`](docs/ports-and-adapters.md).
 - Decisions: [`docs/adr/README.md`](docs/adr/README.md) indexes the `adr` issues.
 
 ## Public by default
