@@ -1,6 +1,31 @@
-node_modules/
-dist/
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Tooling caches
+.turbo
+.eslintcache
+coverage
+*.tsbuildinfo
+.wrangler
+# Written by `wrangler types` (the `types` task)
+worker-configuration.d.ts
+
+# Environment
 .env
 .env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS and editor
 .DS_Store
-.wrangler/
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Local agent settings
+.claude/settings.local.json

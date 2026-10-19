@@ -1,0 +1,27 @@
+{
+  "name": "@mitcsutt/embertrail-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Hub on the Docker Platform: a Node server and its Adapters",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

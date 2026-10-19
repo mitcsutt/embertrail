@@ -1,0 +1,34 @@
+{
+  "name": "@mitcsutt/embertrail-cli",
+  "version": "0.0.0",
+  "description": "The embertrail command-line tool",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mitcsutt/embertrail.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/mitcsutt/embertrail/issues",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

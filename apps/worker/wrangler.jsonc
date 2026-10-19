@@ -1,0 +1,8 @@
+// The Hub on the Cloudflare Platform. Bindings arrive with the Cloudflare Adapters (#38).
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "embertrail",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+}

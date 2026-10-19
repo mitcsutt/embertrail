@@ -1,0 +1,40 @@
+{
+  "name": "embertrail",
+  "private": true,
+  "description": "Self-hostable telemetry hub for AI coding agents",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "turbo run test",
+    "lint": "turbo run lint lint:root format:check secrets",
+    "lint:root": "eslint --max-warnings=0 --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
+    "typecheck": "turbo run typecheck typecheck:root",
+    "typecheck:root": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "secrets": "secretlint --secretlintignore .gitignore '**/*'",
+    "db:up": "docker compose -f compose.dev.yaml up -d --wait",
+    "db:down": "docker compose -f compose.dev.yaml down"
+  },
+  "prettier": "@mitcsutt/kiln-prettier-config",
+  "devDependencies": {
+    "@changesets/cli": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@mitcsutt/kiln-eslint-config": "catalog:",
+    "@mitcsutt/kiln-prettier-config": "catalog:",
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@secretlint/secretlint-rule-preset-recommend": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "lefthook": "catalog:",
+    "prettier": "catalog:",
+    "secretlint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24.11.0"
+  }
+}

@@ -1,0 +1,36 @@
+# Git hooks, installed by the lefthook package on `pnpm install`.
+# See https://lefthook.dev/configuration/ and docs/development.md.
+
+pre-commit:
+  parallel: false
+  jobs:
+    - name: secrets
+      run: pnpm exec secretlint --secretlintignore .gitignore {staged_files}
+
+    - name: format
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+    - name: lint
+      glob: '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'
+      run: pnpm exec eslint --fix --max-warnings=0 --no-warn-ignored {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    # The repository is public: commits carry the GitHub noreply address, never a personal one.
+    - name: noreply-email
+      run: |
+        for ident in "$(git var GIT_AUTHOR_IDENT)" "$(git var GIT_COMMITTER_IDENT)"; do
+          email=$(printf '%s' "$ident" | sed -n 's/.*<\(.*\)>.*/\1/p')
+          case "$email" in
+            *@users.noreply.github.com) ;;
+            *)
+              echo "Commit email '$email' is not a GitHub noreply address (docs/development.md)." >&2
+              exit 1
+              ;;
+          esac
+        done
+
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}

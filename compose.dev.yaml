@@ -1,0 +1,16 @@
+# Local Postgres for `pnpm test`, matching CI's service container (docs/development.md).
+# Not the Docker Platform's compose file: that ships with apps/server (#37).
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: embertrail
+    ports:
+      - '54317:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d embertrail']
+      interval: 2s
+      timeout: 5s
+      retries: 15

@@ -1,0 +1,23 @@
+{
+  "name": "@mitcsutt/embertrail-hub",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Hub's core: Ports, the Module contract and identity",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

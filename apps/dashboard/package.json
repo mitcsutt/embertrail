@@ -1,0 +1,23 @@
+{
+  "name": "@mitcsutt/embertrail-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Dashboard: a Kiln app that reads the Query API",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

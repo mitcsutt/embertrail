@@ -1069,7 +1069,8 @@ components:
         next_cursor: { $ref: '#/components/schemas/NextCursor' }
     Event:
       type: object
-      required: [time, event_name, service_name, owner_id, source_id, account_id, attributes, resource]
+      required:
+        [time, event_name, service_name, owner_id, source_id, account_id, attributes, resource]
       properties:
         time: { $ref: '#/components/schemas/Timestamp' }
         event_name:
@@ -1102,10 +1103,28 @@ components:
       additionalProperties: { type: string, maxLength: 256 }
     SessionSummary:
       type: object
-      required: [id, service_name, owner_id, source_id, account_id, started_at, last_seen_at, models, cost_usd, tokens, event_counts, group, parent_session_id, role, labels]
+      required:
+        [
+          id,
+          service_name,
+          owner_id,
+          source_id,
+          account_id,
+          started_at,
+          last_seen_at,
+          models,
+          cost_usd,
+          tokens,
+          event_counts,
+          group,
+          parent_session_id,
+          role,
+          labels,
+        ]
       properties:
         id: { type: string }
-        service_name: { type: [string, 'null'], description: '`null` for a Session known only from labels.' }
+        service_name:
+          { type: [string, 'null'], description: '`null` for a Session known only from labels.' }
         owner_id: { $ref: '#/components/schemas/Id' }
         source_id: { type: [string, 'null'] }
         account_id: { type: [string, 'null'] }
@@ -1246,7 +1265,11 @@ components:
             required: [name, type]
             properties:
               name: { type: string }
-              type: { type: string, description: 'Postgres type name, such as `timestamptz` or `jsonb`.' }
+              type:
+                {
+                  type: string,
+                  description: 'Postgres type name, such as `timestamptz` or `jsonb`.',
+                }
         rows:
           type: array
           maxItems: 10000
