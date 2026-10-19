@@ -333,6 +333,17 @@ describe('the store Module', () => {
   // identity, not built yet. Write these once the core offers them; the Module needs no change
   // beyond reporting the Team as `owner` (ctx.ownerOf already asks the Directory).
   describe('Team documents', () => {
+    it('answers 422 to Embertrail-Owner until Teams exist, and stores nothing', async () => {
+      const t = await testHub({ modules: [store] })
+      try {
+        const alice = t.as('alice', scopes)
+        const response = await put(alice, doc, 1, { 'embertrail-owner': 'team:x' })
+        expect(response.status).toBe(422)
+        expect((await alice.get(doc)).status).toBe(404)
+      } finally {
+        await t.close()
+      }
+    })
     it.todo('lets an editor create a Team document with Embertrail-Owner: team:<id>')
     it.todo('lets an editor replace a Team document, which keeps its Team Owner')
     it.todo('lets a member read a Team document but not write it (403)')

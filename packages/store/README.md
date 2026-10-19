@@ -26,4 +26,4 @@ The Scopes are `store:read` and `store:write`. The contract is in [`spec/query-a
 
 ## Not built yet: Teams (#29)
 
-Team documents need core identity: Teams with member and editor roles, `Embertrail-Owner: team:<id>` on `PUT`, and row-level security that lets members read and editors write. The Module itself should need no change for them. If row-level security lets a caller read a document but not write it, `PUT` and `DELETE` already answer 403. The Team tests are `it.todo` in `src/store.test.ts`.
+Team documents need core identity: Teams with member and editor roles, `Embertrail-Owner: team:<id>` on `PUT`, and row-level security that lets members read and editors write. The Module itself should need no change for them. If row-level security lets a caller read a document but not write it, `PUT` and `DELETE` already answer 403. Until then a `PUT` carrying `Embertrail-Owner` answers 422 and writes nothing, so it never quietly becomes a personal document. The Team tests are `it.todo` in `src/store.test.ts`.

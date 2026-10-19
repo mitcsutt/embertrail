@@ -212,12 +212,16 @@ create index documents_recent_idx on documents (namespace, updated_at desc, id d
         data: z.json(),
         if_match: ifMatch,
         if_none_match: z.literal('*').optional(),
+        owner: z.string().max(1024).optional(),
       }),
-      headers: { if_match: 'If-Match', if_none_match: 'If-None-Match' },
+      headers: { if_match: 'If-Match', if_none_match: 'If-None-Match', owner: 'Embertrail-Owner' },
       statuses: [200, 201],
       etag: true,
       output: storeDocument,
       async run(input, { db, now, ownerOf }) {
+        if (input.owner !== undefined) {
+          throw HubError.invalid('Team Owners arrive with core identity (#29)')
+        }
         const { namespace, id } = input
         const serialised = JSON.stringify(input.data)
         if (new TextEncoder().encode(serialised).byteLength > maxDataBytes) {
