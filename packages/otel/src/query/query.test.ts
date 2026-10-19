@@ -119,8 +119,9 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  expect(t.errors).toEqual([])
+  const { errors } = t
   await t.close()
+  if (errors.length > 0) throw new Error(`The Hub answered with a 500: ${String(errors[0])}`)
 })
 
 const metrics = (client: TestClient, query: Record<string, unknown>) =>
