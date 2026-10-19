@@ -10,12 +10,18 @@ import { otel } from './module'
 
 const tables = ['otel_logs', 'otel_metrics_sum', 'otel_metrics_gauge']
 
-/** Every stored row but its id, in a stable order, as the database sees it. */
+/**
+ * Every stored row but its id, in a stable order, as the database sees it. The Account is
+ * compared by its recognition key: each Hub gives its Accounts their own ids.
+ */
 async function stored(t: TestHub) {
   const out: Record<string, unknown[]> = {}
   for (const table of tables) {
     out[table] = await t.sql(
-      sql.raw(`select to_jsonb(r) - 'id' as row from otel.${table} r order by to_jsonb(r) - 'id'`),
+      sql.raw(
+        `select to_jsonb(r) - 'id' - 'account_id' || jsonb_build_object('account', a.key) as row
+          from otel.${table} r left join core.accounts a on a.id = r.account_id order by row`,
+      ),
     )
   }
   return out

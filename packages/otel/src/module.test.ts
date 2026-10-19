@@ -128,9 +128,12 @@ describe('the otel Module', () => {
       expect(request?.request_id).toMatch(/^req_/)
       expect(request?.prompt_id).toEqual(expect.any(String))
       expect(request?.session_id).toEqual(expect.any(String))
-      expect(request?.account_id).toMatch(/^[0-9a-f]{32}$/)
       expect(request?.event_sequence).toEqual(expect.any(Number))
       expect((request?.attributes as Record<string, unknown>).cost_usd).toBe(0.0421537)
+      const [account] = await t.sql<Record<string, unknown>>(
+        sql`select owner_id from core.accounts where id = ${request?.account_id}`,
+      )
+      expect(account).toMatchObject({ owner_id: 'alice' })
     })
 
     it('stores delta sums with their promoted columns', async () => {
