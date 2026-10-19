@@ -282,6 +282,39 @@ describe('the otel Module', () => {
       expect(await count('otel_logs')).toBe(50)
     })
 
+    it('falls back to the observed time for a timestamp after 9999', async () => {
+      const record = {
+        ...plainRecord('late', '99999999999999999999999'),
+        observedTimeUnixNano: '1792396800000000000',
+      }
+      expect((await postOtlp(sender, '/v1/logs', plainLogs([record]))).status).toBe(200)
+      expect(
+        await t.sql(
+          sql`select time = '2026-10-19T08:00:00Z'::timestamptz as observed from otel.otel_logs`,
+        ),
+      ).toEqual([{ observed: true }])
+    })
+
+    it('drops U+0000 from sent strings rather than failing the batch', async () => {
+      const record = {
+        ...plainRecord('a\u0000b'),
+        attributes: [{ key: 'k\u0000ey', value: { stringValue: 'v\u0000' } }],
+      }
+      const response = await postOtlp(
+        sender,
+        '/v1/logs',
+        plainLogs([record, plainRecord('clean')], 'nul\u0000-cli'),
+      )
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({})
+      expect(
+        await t.sql(sql`select service_name, body, attributes from otel.otel_logs order by body`),
+      ).toEqual([
+        { service_name: 'nul-cli', body: 'ab', attributes: { key: 'v' } },
+        { service_name: 'nul-cli', body: 'clean', attributes: { component: 'worker' } },
+      ])
+    })
+
     describe('a non-Claude sender without session.id', () => {
       it('is stored, keyed by service.name', async () => {
         expect((await postOtlp(sender, '/v1/logs', plainLogs([plainRecord('hello')]))).status).toBe(

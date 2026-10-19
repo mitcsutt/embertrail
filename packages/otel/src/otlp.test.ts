@@ -44,6 +44,10 @@ describe('OTLP/JSON values', () => {
     expect(nanosToIso('0')).toBeNull()
     expect(nanosToIso(undefined)).toBeNull()
     expect(nanosToIso('soon')).toBeNull()
+    expect(nanosToIso('253402300799999999999')).toBe('9999-12-31T23:59:59.999999Z')
+    expect(nanosToIso('253402300800000000000')).toBeNull()
+    expect(nanosToIso('99999999999999999999999')).toBeNull()
+    expect(nanosToIso(1e30)).toBeNull()
     expect(microsToNanos('1792396800123456')).toBe('1792396800123456000')
   })
 

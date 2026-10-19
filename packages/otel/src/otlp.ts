@@ -81,9 +81,13 @@ export function keyValues(object: Attributes): Record<string, unknown>[] {
   return Object.entries(object).map(([key, value]) => ({ key, value: wrap(value) }))
 }
 
+/** 9999-12-31T23:59:59.999Z: later instants have no four-digit year, which `timestamptz` needs. */
+const lastMillis = 253402300799999n
+
 /**
  * A `fixed64` nanosecond timestamp (decimal string, or a JSON number from lenient senders) as
- * an ISO string with microseconds, Postgres's precision. `0`, absent and malformed are `null`.
+ * an ISO string with microseconds, Postgres's precision. `0`, absent, malformed and after
+ * 9999 are `null`.
  */
 export function nanosToIso(value: unknown): string | null {
   let nanos: bigint
@@ -91,10 +95,10 @@ export function nanosToIso(value: unknown): string | null {
   else if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     nanos = BigInt(Math.trunc(value))
   } else return null
-  if (nanos === 0n) return null
   const micros = nanos / 1000n
-  const iso = new Date(Number(micros / 1000n)).toISOString()
-  if (iso === 'Invalid Date') return null
+  const millis = micros / 1000n
+  if (nanos === 0n || millis > lastMillis) return null
+  const iso = new Date(Number(millis)).toISOString()
   return `${iso.slice(0, -1)}${String(micros % 1000n).padStart(3, '0')}Z`
 }
 

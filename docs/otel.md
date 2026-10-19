@@ -47,6 +47,7 @@ A promoted attribute is read from the record's or point's attributes, falling ba
 
 - `retention: { column: 'time' }`: rows are kept forever unless the Hub sets `RETENTION_DAYS`; no rollups.
 - The export is **OTLP JSON Lines**: one complete `ExportLogsServiceRequest` or `ExportMetricsServiceRequest` per stored row, Events first. Posting each line back to `/v1/logs` or `/v1/metrics` (by its top-level key) restores the same rows, and into the same Hub stores nothing twice.
+- Known limitation (a follow-up): the export carries no `source_id`. A replay goes through one Source-bound Token, so an Owner's Signals from several Sources all land under that one Source, and rows that differed only by Source collapse under the de-duplication keys.
 
 ## Tests and the benchmark
 

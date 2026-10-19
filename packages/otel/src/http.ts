@@ -67,10 +67,15 @@ async function readLimited(stream: ReadableStream<Uint8Array>, limit: number) {
   return bytes
 }
 
+/** Postgres `text` and `jsonb` refuse U+0000, so it is dropped from every sent string. */
+function withoutNul(_key: string, value: unknown) {
+  return typeof value === 'string' ? value.replaceAll('\0', '') : value
+}
+
 /**
  * The request's OTLP/JSON body, parsed. Throws `OtlpError`: 415 for anything but
  * `application/json` or an encoding other than gzip, 413 over 5 MB decoded, 400 for a body
- * that isn't gzip or a JSON object.
+ * that isn't gzip or a JSON object. U+0000 is dropped from strings.
  */
 export async function readOtlpJson(request: Request): Promise<Record<string, unknown>> {
   if (mediaType(request) !== 'application/json') {
@@ -95,7 +100,8 @@ export async function readOtlpJson(request: Request): Promise<Record<string, unk
   }
   let parsed: unknown
   try {
-    parsed = JSON.parse(new TextDecoder().decode(bytes))
+    const text = new TextDecoder().decode(bytes)
+    parsed = text.includes('\\u0000') ? JSON.parse(text, withoutNul) : JSON.parse(text)
   } catch {
     throw new OtlpError(400, 'Body is not valid JSON.')
   }
