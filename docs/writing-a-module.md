@@ -101,6 +101,7 @@ export const notes = defineModule({
 | Missing Scope, or ingest without a Source-bound Token     | 403 `forbidden`                                |
 | `HubError.notFound()`                                     | 404 `not-found`                                |
 | `HubError.conflict()` / `HubError.invalid(detail)`        | 409 `conflict` / 422 `invalid`                 |
+| `HubError.tooManyRows(detail)`                            | 422 `too-many-rows`                            |
 | `HubError.invalidCursor()`                                | 400 `invalid-cursor`                           |
 | `HubError.preconditionFailed()`                           | 412 `precondition-failed`                      |
 | `HubError.payloadTooLarge()`                              | 413 `payload-too-large`                        |
