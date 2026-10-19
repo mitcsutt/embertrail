@@ -1,5 +1,6 @@
-// Test support for the otel Module and whatever reads its data: the Claude Code fixtures
-// and a way to post OTLP to a test Hub. Imported as `@mitcsutt/embertrail-otel/testing`.
+// Test support for the otel Module and whatever reads its data: the Claude Code fixtures,
+// a way to post OTLP to a test Hub, seeded Sessions and the Query API spec validator.
+// Imported as `@mitcsutt/embertrail-otel/testing`.
 
 import { readFileSync } from 'node:fs'
 
@@ -49,3 +50,6 @@ export function postOtlp(
     headers: { 'content-type': 'application/json', ...headers },
   })
 }
+
+export { assertProblem, assertSpecResponse, seedSession } from './query/testing/support'
+export type { SessionSeed } from './query/testing/support'
