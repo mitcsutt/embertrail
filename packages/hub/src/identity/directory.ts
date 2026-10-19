@@ -121,8 +121,9 @@ export interface Directory {
   revokeGrant(grantId: string): Promise<void>
   /**
    * Creates the first User, an instance admin, with a management Token holding every Scope.
-   * Null once any User exists or a first User was ever created: `BOOTSTRAP_TOKEN` and the
-   * Docker zero-config start both go through here, and each works once.
+   * Null once any admin User exists or a first User was ever created: `BOOTSTRAP_TOKEN` and
+   * the Docker zero-config start both go through here, and each works once. A non-admin User
+   * who already has `email` (signed up by Edge Identity) is promoted instead of duplicated.
    */
   createFirstUser(input?: {
     name?: string | undefined
@@ -437,20 +438,33 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
 
     createFirstUser: (input = {}) =>
       db.privileged(async (tx) => {
-        // Two first starts at once: the second waits, then sees the first User.
+        // Two first starts at once: the second waits, then sees the first admin.
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext('embertrail.bootstrap'))`)
         const [used] = await tx.select({ id: bootstrap.id }).from(bootstrap)
-        const [someone] = await tx.select({ id: users.id }).from(users).limit(1)
-        if (used !== undefined || someone !== undefined) return null
-        const [row] = await tx
-          .insert(users)
-          .values({
-            id: crypto.randomUUID(),
-            name: input.name ?? 'admin',
-            email: input.email === undefined ? null : normaliseEmail(input.email),
-            admin: true,
-          })
-          .returning()
+        const [admin] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.admin, true))
+          .limit(1)
+        if (used !== undefined || admin !== undefined) return null
+        const email = input.email === undefined ? null : normaliseEmail(input.email)
+        // An Edge Identity may have signed this person up before bootstrap ran.
+        const [promoted] =
+          email === null
+            ? []
+            : await tx.update(users).set({ admin: true }).where(eq(users.email, email)).returning()
+        const [row] =
+          promoted === undefined
+            ? await tx
+                .insert(users)
+                .values({
+                  id: crypto.randomUUID(),
+                  name: input.name ?? 'admin',
+                  email,
+                  admin: true,
+                })
+                .returning()
+            : [promoted]
         if (row === undefined) throw new Error('insert into core.users returned no row')
         await tx.insert(bootstrap).values({ id: true, userId: row.id })
         const issued = await issue(tx, row.id, {

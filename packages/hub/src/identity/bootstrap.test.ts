@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { DbPort } from '../db/port'
 import type { HubConfig } from '../hub/boot'
 import { createHub } from '../hub/create-hub'
-import { pgliteDb } from '../testing/pglite'
+import { fakeEdgeIdentity, pgliteDb } from '../testing/pglite'
 import { probe } from '../testing/probe'
 import { testHub } from '../testing/test-hub'
 import type { TestHub } from '../testing/test-hub'
@@ -112,6 +112,38 @@ describe('bootstrap', () => {
         modules: [],
       }),
     ).toThrow(/^Hub config: invalid config: .*at least 32 characters/s)
+  })
+
+  it('Edge sign-ups before bootstrap leave it usable, and the bootstrap email is promoted', async () => {
+    const hub = await testHub({
+      modules: [alpha],
+      edgeIdentity: fakeEdgeIdentity({ ada: 'ada@example.com', bob: 'bob@example.com' }),
+      config: { bootstrapToken, allowedDomains: ['example.com'] },
+    })
+    t = hub
+    const signUp = async (who: string) => {
+      const response = await hub.anonymous.fetch('/api/v1/alpha/whoami', {
+        headers: { 'x-test-edge-identity': who },
+      })
+      return ((await response.json()) as { userId: string }).userId
+    }
+    const ada = await signUp('ada')
+    const bob = await signUp('bob')
+
+    const first = await exchange(hub, bootstrapToken, { email: 'Ada@Example.com' })
+    expect(first.status).toBe(200)
+    const { user, token } = (await first.json()) as Bootstrapped
+    expect(user).toMatchObject({ id: ada, email: 'ada@example.com', admin: true })
+    const whoami = await hub.anonymous.fetch('/api/v1/alpha/whoami', { headers: bearer(token) })
+    const caller = (await whoami.json()) as { userId: string; scopes: string[] }
+    expect(caller.userId).toBe(ada)
+    expect(caller.scopes).toContain('admin')
+
+    expect((await exchange(hub, bootstrapToken)).status).toBe(401)
+    expect(await hub.sql(sql`select id, admin from core.users order by email`)).toEqual([
+      { id: ada, admin: true },
+      { id: bob, admin: false },
+    ])
   })
 
   it('the zero-config start goes through the same one-time path', async () => {
