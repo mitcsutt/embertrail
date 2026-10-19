@@ -319,7 +319,7 @@ describe('metrics', () => {
 })
 
 describe('events', () => {
-  const records = [
+  const records: { time: string; attributes: Record<string, Value> }[] = [
     {
       time: '2026-10-02T10:00:00Z',
       attributes: {

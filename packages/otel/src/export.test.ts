@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { claudeCode, fixtureText, pathOf, postOtlp } from './testing'
 import { otel } from './module'
 
-const tables = ['otel_logs', 'otel_metrics_sum', 'otel_metrics_gauge']
+const tables = ['otel_logs', 'otel_metrics_sum', 'otel_metrics_gauge', 'session_labels']
 
 /**
  * Every stored row but its id, in a stable order, as the database sees it. The Account is
@@ -19,8 +19,8 @@ async function stored(t: TestHub) {
   for (const table of tables) {
     out[table] = await t.sql(
       sql.raw(
-        `select to_jsonb(r) - 'id' - 'account_id' || jsonb_build_object('account', a.key) as row
-          from otel.${table} r left join core.accounts a on a.id = r.account_id order by row`,
+        `select to_jsonb(r) - 'id' - 'updated_at' - 'account_id' || jsonb_build_object('account', a.key) as row
+          from otel.${table} r left join core.accounts a on a.id = to_jsonb(r) ->> 'account_id' order by row`,
       ),
     )
   }
@@ -30,7 +30,16 @@ async function stored(t: TestHub) {
 /** Posts each line of an OTLP JSON Lines export to the endpoint its payload belongs to. */
 async function replay(client: TestClient, jsonLines: string) {
   for (const line of jsonLines.split('\n').filter(Boolean)) {
-    const path = 'resourceLogs' in (JSON.parse(line) as object) ? '/v1/logs' : '/v1/metrics'
+    const parsed = JSON.parse(line) as {
+      sessionLabels?: { session_id: string; labels: Record<string, string> }
+    }
+    if (parsed.sessionLabels !== undefined) {
+      const { session_id: id, labels } = parsed.sessionLabels
+      const put = await client.put(`/api/v1/sessions/${encodeURIComponent(id)}/labels`, { labels })
+      expect(put.status).toBe(200)
+      continue
+    }
+    const path = 'resourceLogs' in parsed ? '/v1/logs' : '/v1/metrics'
     const response = await postOtlp(client, path, line)
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({})
@@ -111,10 +120,11 @@ describe('the OTLP JSON Lines export', () => {
     }
     await postOtlp(first.sender, '/v1/metrics', gauge)
     await postOtlp(first.sender, '/v1/logs', plain)
+    await first.sender.put('/api/v1/sessions/later/labels', { labels: { ticket: 'A-1' } })
 
     const exported = await first.t.hub.exportOwner('otel', 'alice')
     const lines = exported.split('\n').filter(Boolean)
-    expect(lines).toHaveLength(56 + 1 + 20 + 1)
+    expect(lines).toHaveLength(56 + 1 + 20 + 1 + 1)
 
     const second = await open()
     await replay(second.sender, exported)
