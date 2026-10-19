@@ -1,6 +1,6 @@
 # Writing a Module
 
-A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it. `store` (#35) and `otel` (#32) are the first real Modules and are built in their own tasks.
+A Module is a self-contained feature of the Hub with its own storage and routes, such as `otel` or `store`. Every Module plugs in through one contract ([#25](https://github.com/mitcsutt/embertrail/issues/25), ADR-0008), exported by `@mitcsutt/embertrail-hub`. The example to copy is [`packages/hub/src/example/notes.ts`](../packages/hub/src/example/notes.ts), with its tests beside it. [`packages/store`](../packages/store/README.md) (#35) is the first real Module: conditional requests, cursor pagination and a size limit, with no auth, ownership, OpenAPI, export or delete code of its own.
 
 ## What the core does for you
 
@@ -84,9 +84,11 @@ export const notes = defineModule({
 | `op.raw`    | any               | `<name>:write` | Gets the `Request`, returns a `Response`; declares its own `openapi`. |
 
 - `input` is a [Standard Schema](https://standardschema.dev) that can also produce JSON Schema (Zod 4 does both). The core merges the path parameters, query string and JSON body, removes any `owner_id` and `source_id`, then validates. Query values arrive as strings, so use `z.coerce` for numbers.
-- `output` describes the JSON response, in the OpenAPI document and at runtime: the core parses what `run` returns through it inside the transaction and sends the parsed value, so keys it doesn't declare (such as `ownerId` on a raw row) never leave the Hub. Output that fails its schema rolls the op back and is a 500 naming the Module and op. Every typed op answers 200 with a JSON body; there is no 204.
+- `output` describes the JSON response, in the OpenAPI document and at runtime: the core parses what `run` returns through it inside the transaction and sends the parsed value, so keys it doesn't declare (such as `ownerId` on a raw row) never leave the Hub. Output that fails its schema rolls the op back and is a 500 naming the Module and op.
+- A typed op answers 200 with its output unless it declares `statuses` (such as `[200, 201]` or `[204]`) and returns `reply(output, { status, etag })` or `reply.noContent()`. A status the op doesn't declare is a 500. `etag: true` documents the `ETag` header that `reply` sets.
+- `headers` maps input keys to request headers (`{ if_match: 'If-Match' }`). Those keys come only from the header, never the body or query, and OpenAPI lists them as header parameters.
 - `scope` narrows the derived Scope within your prefix (`notes:share`) or to `admin`. Claiming another Module's Scope fails boot.
-- `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`) and `ctx.now()` (the request's time).
+- `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`), `ctx.now()` (the request's time) and `ctx.ownerOf(ownerId)`, which says whether an `owner_id` you read is a User's or a Team's (`{ kind, id }`).
 - `op.raw` keeps auth, Scopes and stamping; set `sourceBound: true` for ingest. Use it only when the body isn't JSON, such as OTLP.
 - Ops are transport-agnostic: `path` and `method` bind them to HTTP, and the same ops will bind to MCP tools later without changes (`bind` is reserved for that).
 
@@ -99,6 +101,9 @@ export const notes = defineModule({
 | Missing Scope, or ingest without a Source-bound Token     | 403 `forbidden`                                |
 | `HubError.notFound()`                                     | 404 `not-found`                                |
 | `HubError.conflict()` / `HubError.invalid(detail)`        | 409 `conflict` / 422 `invalid`                 |
+| `HubError.invalidCursor()`                                | 400 `invalid-cursor`                           |
+| `HubError.preconditionFailed()`                           | 412 `precondition-failed`                      |
+| `HubError.payloadTooLarge()`                              | 413 `payload-too-large`                        |
 | Anything else thrown, including a refused ownership write | 500 `internal`, with `request_id` and `module` |
 | Output that fails its schema                              | 500 `internal`, with the op in `detail`        |
 
