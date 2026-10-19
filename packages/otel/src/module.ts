@@ -1,5 +1,5 @@
 // The otel Module (#32): stores Signals in the OpenTelemetry data model (ADR-0002) and takes
-// OTLP/HTTP JSON straight from agents (ADR-0003). Its Query API is #33.
+// OTLP/HTTP JSON straight from agents (ADR-0003), and serves the Query API over them (#33).
 
 import { defineModule, op } from '@mitcsutt/embertrail-hub'
 import type { Ctx } from '@mitcsutt/embertrail-hub'
@@ -7,7 +7,8 @@ import type { Ctx } from '@mitcsutt/embertrail-hub'
 import { exportOtlp } from './export'
 import { exportResponse, OtlpError, readOtlpJson, statusResponse } from './http'
 import { countSpans, mapLogs, mapMetrics } from './map'
-import { logs, metricsGauge, metricsSum, migrations } from './schema'
+import { queryOps } from './query/ops'
+import { logs, metricsGauge, metricsSum, migrations, sessionLabels } from './schema'
 import { storeLogs, storeMetrics } from './store'
 
 /** Turns a refused body into its OTLP status response; anything else is the Hub's 500. */
@@ -74,12 +75,13 @@ function operation(operationId: string, description: string, rejectedKey: string
 export const otel = defineModule({
   contract: 1,
   name: 'otel',
-  tables: { logs, metricsSum, metricsGauge },
+  tables: { logs, metricsSum, metricsGauge, sessionLabels },
   migrations,
   // Kept forever unless the Hub sets RETENTION_DAYS; no rollups.
   retention: { column: 'time' },
   export: exportOtlp,
   ops: {
+    ...queryOps,
     logs: op.raw({
       method: 'POST',
       path: '/v1/logs',

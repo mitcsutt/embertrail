@@ -83,6 +83,16 @@ export const metricsSum = schema.ownedTable(
 
 export const metricsGauge = schema.ownedTable('otel_metrics_gauge', metric(), { signal: true })
 
+/**
+ * A Session's Labels (ADR-0014), one row per Owner and Session. Written by the caller, not a
+ * Source, so it isn't a Signal table, and it may exist before the Session's first Signal.
+ */
+export const sessionLabels = schema.ownedTable('session_labels', {
+  sessionId: text('session_id').notNull(),
+  labels: jsonb('labels').$type<Record<string, string>>().notNull(),
+  updatedAt: time('updated_at').notNull(),
+})
+
 const promotedSql = `time timestamptz not null,
   service_name text not null,
   session_id text,
@@ -153,5 +163,18 @@ export const migrations: readonly Migration[] = [
       'create index otel_metrics_gauge_name_idx on otel_metrics_gauge (metric_name, time)',
       'create index otel_metrics_gauge_session_idx on otel_metrics_gauge (session_id, time)',
     ].join('\n--> statement-breakpoint\n'),
+  },
+  {
+    id: '0001_session_labels',
+    // owner_id is declared so the key can include it; the core fixes its default.
+    sql: `create table session_labels (
+  session_id text not null,
+  labels jsonb not null,
+  updated_at timestamptz not null,
+  owner_id text not null,
+  primary key (owner_id, session_id)
+)
+--> statement-breakpoint
+create index session_labels_session_idx on session_labels (session_id)`,
   },
 ]

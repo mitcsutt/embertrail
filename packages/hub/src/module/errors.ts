@@ -12,6 +12,7 @@ export type ProblemSlug =
   | 'invalid'
   | 'query-timeout'
   | 'sql-error'
+  | 'too-many-rows'
   | 'internal'
 
 /** One field error on a `validation` problem. */
@@ -34,12 +35,13 @@ export const problemTitles: Record<ProblemSlug, string> = {
   invalid: 'Unprocessable request',
   'query-timeout': 'Query timed out',
   'sql-error': 'The database rejected the SQL',
+  'too-many-rows': 'Too many rows',
   internal: 'Internal error',
 }
 
 /**
  * An error the core maps to `application/problem+json`. Modules throw `notFound`, `conflict`,
- * `invalid`, `invalidCursor`, `preconditionFailed` and `payloadTooLarge`; the rest are raised
+ * `invalid`, `tooManyRows`, `invalidCursor`, `preconditionFailed` and `payloadTooLarge`; the rest are raised
  * by the core itself. Anything else a Module throws
  * becomes a 500 naming the Module.
  */
@@ -95,6 +97,11 @@ export class HubError extends Error {
   /** 422: Postgres refused the caller's SQL, with its SQLSTATE. */
   static sqlError(sqlstate: string, detail: string) {
     return new HubError(422, 'sql-error', detail, undefined, sqlstate)
+  }
+
+  /** 422: an aggregate that would return more rows than the Query API's limit. */
+  static tooManyRows(detail: string) {
+    return new HubError(422, 'too-many-rows', detail)
   }
 
   static validation(errors: readonly FieldError[]) {
