@@ -147,4 +147,94 @@ describe('createHub', () => {
       await db.close()
     }
   })
+
+  describe('typed op replies', () => {
+    it('reads a header into the input, and only from the header', async () => {
+      const client = (await start()).as('alice', write)
+      const sent = await client.fetch('/api/v1/ledger/stamps/a?stamp=query', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', 'ledger-stamp': 'header' },
+        body: JSON.stringify({ note: 'n', stamp: 'body' }),
+      })
+      expect(sent.status).toBe(201)
+      expect(sent.headers.get('etag')).toBe('"1"')
+      expect(await sent.json()).toEqual({ id: 'a', note: 'n', stamp: 'header' })
+
+      const unsent = await client.put('/api/v1/ledger/stamps/a?stamp=query', {
+        note: 'n',
+        stamp: 'body',
+      })
+      expect(unsent.status).toBe(200)
+      expect(await unsent.json()).toEqual({ id: 'a', note: 'n', stamp: null })
+    })
+
+    it('answers 204 with no body', async () => {
+      const response = await (await start()).as('alice', write).delete('/api/v1/ledger/stamps/a')
+      expect(response.status).toBe(204)
+      expect(await response.text()).toBe('')
+    })
+
+    it('refuses a status the op does not declare, as the Module’s error', async () => {
+      const hub = await start()
+      const response = await hub.as('alice', write).post('/api/v1/ledger/undeclared-status', {})
+      expect(response.status).toBe(500)
+      expect(await response.json()).toMatchObject({
+        module: 'ledger',
+        detail: 'op "ledger.undeclaredStatus" answered 201, not in its statuses',
+      })
+    })
+
+    it('documents header parameters, each status and the ETag', async () => {
+      const { hub } = await start()
+      const paths = hub.openapi.paths as Record<string, Record<string, Record<string, unknown>>>
+      const put = paths['/api/v1/ledger/stamps/{id}']?.put
+      expect(put?.parameters).toEqual([
+        { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+        { name: 'Ledger-Stamp', in: 'header', required: false, schema: { type: 'string' } },
+      ])
+      expect(put?.requestBody).toMatchObject({
+        content: { 'application/json': { schema: { properties: { note: {} } } } },
+      })
+      expect(Object.keys(put?.responses ?? {})).toEqual(['200', '201', 'default'])
+      expect(put?.responses).toMatchObject({
+        '201': { headers: { ETag: { $ref: '#/components/headers/ETag' } } },
+      })
+      expect(paths['/api/v1/ledger/stamps/{id}']?.delete?.responses).toEqual({
+        '204': { description: 'No Content' },
+        default: { $ref: '#/components/responses/Problem' },
+      })
+    })
+  })
+
+  describe('ctx.ownerOf', () => {
+    it('calls every Owner a User when the Directory knows no Teams', async () => {
+      const response = await (await start()).as('alice', write).get('/api/v1/ledger/owner')
+      expect(await response.json()).toEqual({ kind: 'user', id: 'alice' })
+    })
+
+    it('asks the Directory when it knows Teams', async () => {
+      const db = pgliteDb()
+      try {
+        const hub = createHub({
+          config: {},
+          ports: { db, edgeIdentity: noEdgeIdentity() },
+          modules: [ledger],
+          directory: {
+            token: () => Promise.resolve({ userId: 'crew', scopes: write }),
+            edgeUser: () => Promise.resolve(null),
+            ownerKind: (id) => Promise.resolve(id === 'crew' ? 'team' : 'user'),
+          },
+        })
+        await hub.migrate()
+        const response = await hub.fetch(
+          new Request('http://hub.test/api/v1/ledger/owner', {
+            headers: { authorization: 'Bearer any' },
+          }),
+        )
+        expect(await response.json()).toEqual({ kind: 'team', id: 'crew' })
+      } finally {
+        await db.close()
+      }
+    })
+  })
 })

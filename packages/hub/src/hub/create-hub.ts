@@ -7,8 +7,8 @@ import type { DbPort, DbSession, ScopedDb } from '../db/port'
 import type { EdgeIdentityPort } from '../identity/edge'
 import { emptyDirectory, resolveCaller } from '../identity/resolve'
 import type { Directory } from '../identity/resolve'
-import { opScope } from '../module/define'
-import type { Caller, Ctx, Exporter, Module, Op, Scope } from '../module/define'
+import { isReply, opScope } from '../module/define'
+import type { Caller, Ctx, Exporter, Module, Op, OwnerRef, Scope } from '../module/define'
 import { HubError } from '../module/errors'
 import { checkModules, parseConfig } from './boot'
 import type { HubConfig } from './boot'
@@ -89,6 +89,10 @@ export function createHub(options: HubOptions): Hub {
     ((error, context) => {
       console.error(`[embertrail] ${context.requestId} in ${context.module}:`, error)
     })
+  const ownerOf = async (ownerId: string): Promise<OwnerRef> => ({
+    kind: (await directory.ownerKind?.(ownerId)) ?? 'user',
+    id: ownerId,
+  })
 
   const router = new Router<Target>()
   router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
@@ -128,17 +132,35 @@ export function createHub(options: HubOptions): Hub {
       sourceId: caller.sourceId,
     }
     const now = clock()
-    const ctx = (scoped: ScopedDb): Ctx => ({ db: scoped, caller, now: () => new Date(now) })
+    const ctx = (scoped: ScopedDb): Ctx => ({
+      db: scoped,
+      caller,
+      now: () => new Date(now),
+      ownerOf,
+    })
     if (op.kind === 'raw') {
       return () => db.transaction(session, (scoped) => op.run(request, ctx(scoped)))
     }
-    const input = await validate(op.input, await readInput(request, params))
-    return async () =>
-      Response.json(
-        await db.transaction(session, async (scoped) =>
-          parseOutput(op.output, await op.run(input, ctx(scoped)), `${module.name}.${key}`),
-        ),
-      )
+    const input = await validate(op.input, await readInput(request, params, op.headers))
+    const name = `${module.name}.${key}`
+    return async () => {
+      const { status, etag, body } = await db.transaction(session, async (scoped) => {
+        const result = await op.run(input, ctx(scoped))
+        const replied = isReply(result) ? result : { status: 200 as const, body: result }
+        if (!op.statuses.includes(replied.status)) {
+          throw new OutputError(name, [], `answered ${String(replied.status)}, not in its statuses`)
+        }
+        return {
+          status: replied.status,
+          etag: 'etag' in replied ? replied.etag : undefined,
+          body: replied.status === 204 ? null : await parseOutput(op.output, replied.body, name),
+        }
+      })
+      const headers = etag === undefined ? undefined : { etag }
+      return status === 204
+        ? new Response(null, { status, headers })
+        : Response.json(body, { status, headers })
+    }
   }
 
   async function deleteWhere(column: 'owner_id' | 'source_id', value: string) {
@@ -231,7 +253,12 @@ export function createHub(options: HubOptions): Hub {
       const now = clock()
       return db.transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
         const lines: string[] = []
-        for await (const line of exporter({ db: scoped, caller, now: () => new Date(now) })) {
+        for await (const line of exporter({
+          db: scoped,
+          caller,
+          now: () => new Date(now),
+          ownerOf,
+        })) {
           lines.push(`${line}\n`)
         }
         return lines.join('')

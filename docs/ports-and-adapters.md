@@ -71,7 +71,7 @@ Tokens aren't part of this Port: they are core logic over the `core` tables.
 
 The core resolves the caller before any op runs: a Token decides the User, and an Edge Identity naming a different User is refused (403 `identity-conflict`). With no Token, a verified email maps to a User, created only when allowlisted (403 otherwise). Neither present: 401.
 
-Users and Tokens are looked up through a `Directory`, which core identity (#29) implements over the `core` tables. Until then `createHub` defaults to a Directory that knows nobody, so every op answers 401; `testHub` supplies its own.
+Users and Tokens are looked up through a `Directory`, which core identity (#29) implements over the `core` tables. Until then `createHub` defaults to a Directory that knows nobody, so every op answers 401; `testHub` supplies its own. Its optional `ownerKind(ownerId)` backs `ctx.ownerOf`; without it every Owner is a User.
 
 ## The entry-file contract
 

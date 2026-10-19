@@ -22,6 +22,8 @@ export interface Directory {
    * allowlisted. Null when there is no such User (or it may not be created).
    */
   edgeUser(email: string, options: { provision: boolean }): Promise<Principal | null>
+  /** Whether an Owner id is a User's or a Team's. Omitted: every Owner is a User (no Teams). */
+  ownerKind?(ownerId: string): Promise<'user' | 'team'>
 }
 
 /** Knows nobody: every request is 401. The default until core identity (#29) lands. */
