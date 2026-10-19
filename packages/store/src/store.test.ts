@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 
 import { assertModuleContract, testHub } from '@mitcsutt/embertrail-hub/testing'
 import type { TestClient, TestHub } from '@mitcsutt/embertrail-hub/testing'
@@ -51,7 +50,9 @@ describe('the store Module', () => {
     })
   })
 
-  it('is written only against the Module contract', async () => {
+  // No raw ops, Scope overrides or exporter: the core derives OpenAPI, Scopes, export and
+  // delete from the declaration, and the contract suite above proves the ownership side.
+  it('leaves OpenAPI, Scopes and export to the core', () => {
     expect(store.export).toBeUndefined()
     expect(store.retention).toBeUndefined()
     expect(store.scopes).toEqual(['store:read', 'store:write'])
@@ -59,11 +60,6 @@ describe('the store Module', () => {
       expect(op.kind).not.toBe('raw')
       expect(op.scope).toBeUndefined()
     }
-    const source = (await readFile(new URL('store.ts', import.meta.url), 'utf8')).replaceAll(
-      /\/\*[\s\S]*?\*\/|\/\/.*$/gm,
-      '',
-    )
-    expect(source).not.toMatch(/owner_id|source_id|openapi|authorization|caller|deleteBy/i)
   })
 
   describe('through HTTP', () => {

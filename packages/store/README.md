@@ -2,7 +2,7 @@
 
 The `store` Module (#35): namespaced JSON documents that apps keep on the Hub. The Dashboard uses the namespace `embertrail-dashboard`. The Hub knows nothing about what a document means.
 
-It is written only against the Module contract ([`docs/writing-a-module.md`](../../docs/writing-a-module.md)). The core handles auth, Scopes, ownership, row-level security, OpenAPI, export and delete-by-Owner, and a test fails if `src/store.ts` takes any of them on.
+It is written only against the Module contract ([`docs/writing-a-module.md`](../../docs/writing-a-module.md)). The core handles auth, Scopes, ownership, row-level security, OpenAPI, export and delete-by-Owner; the Module declares no raw ops, Scope overrides or exporter.
 
 ## Routes
 
