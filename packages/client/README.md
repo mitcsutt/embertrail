@@ -1,6 +1,6 @@
 # @mitcsutt/embertrail-client
 
-A typed client for an Embertrail Hub's Query API, its `store` documents and session Labels. Its types and operations are generated from [`spec/query-api.yaml`](../../spec/query-api.yaml), so they follow the spec exactly. It runs in browsers and on Node 24, and its only runtime dependency is `fetch`.
+A typed client for an Embertrail Hub's Query API, its `store` documents, session Labels, and the Admin and self-management API. Its types and operations are generated from [`spec/query-api.yaml`](../../spec/query-api.yaml), so they follow the spec exactly. It runs in browsers and on Node 24, and its only runtime dependency is `fetch`.
 
 ## Use
 
@@ -25,7 +25,7 @@ const cost = await hub.queryMetrics({
 })
 ```
 
-There is one method per operation, named by its `operationId`: `queryMetrics`, `queryEvents`, `listSessions`, `getSession`, `putSessionLabels`, `getInventory`, `runSql`, `listStoreDocuments`, `getStoreDocument`, `putStoreDocument`, `deleteStoreDocument` and `getOpenApi`. Each takes one object whose keys follow where the spec puts each input:
+There is one method per operation, named by its `operationId`: `queryMetrics`, `queryEvents`, `listSessions`, `getSession`, `putSessionLabels`, `getInventory`, `runSql`, `listStoreDocuments`, `getStoreDocument`, `putStoreDocument`, `deleteStoreDocument`, `getOpenApi`, and the Admin and self-management operations (`bootstrap`, `listUsers`, `createSource`, `issueToken`, … as the spec's `admin` and `self` tags list them; the JSON Lines export is left to plain `fetch`). Each takes one object whose keys follow where the spec puts each input:
 
 | Key      | What goes in it                                           |
 | -------- | --------------------------------------------------------- |

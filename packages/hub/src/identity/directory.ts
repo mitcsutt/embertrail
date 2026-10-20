@@ -28,6 +28,11 @@ export interface Team {
   name: string
 }
 
+export interface TeamMember {
+  userId: string
+  role: TeamRole
+}
+
 export interface Source {
   id: string
   /** The User who owns the Source and every Signal it sends. */
@@ -129,6 +134,17 @@ export interface Directory {
     name?: string | undefined
     email?: string | undefined
   }): Promise<{ user: User; token: string } | null>
+  /** Every User, oldest first. */
+  users(): Promise<User[]>
+  /** Every Team with its members, oldest first. */
+  teams(): Promise<(Team & { members: TeamMember[] })[]>
+  /** One User's Sources, or every Source when `userId` is omitted, oldest first. */
+  sources(userId?: string): Promise<Source[]>
+  renameSource(sourceId: string, name: string): Promise<Source>
+  /** A User's Tokens, revoked and expired ones included, oldest first. Never the secrets. */
+  tokens(userId: string): Promise<TokenRecord[]>
+  /** The Grants on a User's Accounts: the access that User gave, not the access they hold. */
+  grants(userId: string): Promise<Grant[]>
 }
 
 /** A User as caller resolution sees them. */
@@ -225,6 +241,10 @@ function toToken(row: typeof tokens.$inferSelect): TokenRecord {
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
   }
+}
+
+function toSource(row: typeof sources.$inferSelect): Source {
+  return { id: row.id, ownerId: row.ownerId, name: row.name }
 }
 
 function toGrant(row: typeof grants.$inferSelect): Grant {
@@ -358,7 +378,7 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
         ),
       )
       if (row === undefined) throw new Error('insert into core.sources returned no row')
-      return { id: row.id, ownerId: row.ownerId, name: row.name }
+      return toSource(row)
     },
 
     issueToken: (userId, input) => db.privileged((tx) => issue(tx, userId, input)),
@@ -474,6 +494,74 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
         })
         return { user: toUser(row), token: issued.token }
       }),
+
+    async users() {
+      const found = await db.privileged((tx) =>
+        tx.select().from(users).orderBy(asc(users.createdAt), asc(users.id)),
+      )
+      return found.map(toUser)
+    },
+
+    async teams() {
+      return db.privileged(async (tx) => {
+        const found = await tx.select().from(teams).orderBy(asc(teams.createdAt), asc(teams.id))
+        const members = await tx
+          .select()
+          .from(teamMembers)
+          .orderBy(asc(teamMembers.teamId), asc(teamMembers.userId))
+        return found.map((team) => ({
+          id: team.id,
+          name: team.name,
+          members: members
+            .filter((m) => m.teamId === team.id)
+            .map((m) => ({ userId: m.userId, role: m.role })),
+        }))
+      })
+    },
+
+    async sources(userId) {
+      const found = await db.privileged((tx) =>
+        tx
+          .select()
+          .from(sources)
+          .where(userId === undefined ? undefined : eq(sources.ownerId, userId))
+          .orderBy(asc(sources.createdAt), asc(sources.id)),
+      )
+      return found.map(toSource)
+    },
+
+    async renameSource(sourceId, name) {
+      const [row] = await db.privileged((tx) =>
+        guarded(tx.update(sources).set({ name }).where(eq(sources.id, sourceId)).returning(), {
+          conflict: `A Source named "${name}" already exists`,
+        }),
+      )
+      if (row === undefined) throw HubError.notFound(`No Source ${sourceId}`)
+      return toSource(row)
+    },
+
+    async tokens(userId) {
+      const found = await db.privileged((tx) =>
+        tx
+          .select()
+          .from(tokens)
+          .where(eq(tokens.userId, userId))
+          .orderBy(asc(tokens.createdAt), asc(tokens.id)),
+      )
+      return found.map(toToken)
+    },
+
+    async grants(userId) {
+      const found = await db.privileged((tx) =>
+        tx
+          .select({ grant: grants })
+          .from(grants)
+          .innerJoin(accounts, eq(accounts.id, grants.accountId))
+          .where(eq(accounts.ownerId, userId))
+          .orderBy(asc(grants.createdAt), asc(grants.id)),
+      )
+      return found.map(({ grant }) => toGrant(grant))
+    },
 
     async token(parsed) {
       const hash = await hashSecret(parsed.secret)

@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
 
+import type { CoreCtx, CoreOp } from '../admin/core-op'
+import { coreOps } from '../admin/ops'
 import { checkDatabase, declaredTables, ident, migrate } from '../db/migrate'
 import type { MigrationReport } from '../db/migrate'
 import { rows } from '../db/port'
@@ -64,6 +66,7 @@ export interface Hub {
 
 type Target =
   | { kind: 'core'; respond: (request: Request) => Response | Promise<Response> }
+  | { kind: 'coreOp'; op: CoreOp }
   | { kind: 'op'; module: Module; key: string; op: Op }
 
 /** `POST /api/v1/bootstrap`'s optional body: who the first User is. */
@@ -93,7 +96,7 @@ function defaultExporter(module: Module): Exporter {
 export function createHub(options: HubOptions): Hub {
   const config = parseConfig(options.config)
   const modules = checkModules(options.modules)
-  const openapi = buildOpenApi(modules)
+  const openapi = buildOpenApi(modules, coreOps)
   const { db, edgeIdentity } = options.ports
   const clock = options.clock ?? (() => new Date())
   const scopes = [...new Set<Scope>([...modules.flatMap((m) => m.scopes), ...coreScopes])]
@@ -175,6 +178,7 @@ export function createHub(options: HubOptions): Hub {
   })
   router.add('POST', '/api/v1/bootstrap', { kind: 'core', respond: bootstrap })
   router.add('POST', '/api/v1/sql', { kind: 'core', respond: sqlEndpoint })
+  for (const op of coreOps) router.add(op.method, op.path, { kind: 'coreOp', op })
   for (const module of modules) {
     for (const [key, op] of Object.entries(module.ops))
       router.add(op.method, op.path, { kind: 'op', module, key, op })
@@ -234,21 +238,94 @@ export function createHub(options: HubOptions): Hub {
     }
   }
 
-  async function deleteWhere(column: 'owner_id' | 'source_id', value: string) {
-    return db.privileged(async (tx) => {
-      let deleted = 0
-      for (const module of modules) {
-        for (const table of declaredTables(module)) {
-          if (column === 'source_id' && !table.signal) continue
-          const [count] = await rows<{ count: number }>(
-            tx,
-            sql`with d as (delete from ${sql.raw(`${ident(module.name)}.${ident(table.name)}`)}
-              where ${sql.raw(column)} = ${value} returning 1) select count(*)::int as count from d`,
-          )
-          deleted += count?.count ?? 0
-        }
+  async function deleteRows(tx: ScopedDb, column: 'owner_id' | 'source_id', value: string) {
+    let deleted = 0
+    for (const module of modules) {
+      for (const table of declaredTables(module)) {
+        if (column === 'source_id' && !table.signal) continue
+        const [count] = await rows<{ count: number }>(
+          tx,
+          sql`with d as (delete from ${sql.raw(`${ident(module.name)}.${ident(table.name)}`)}
+            where ${sql.raw(column)} = ${value} returning 1) select count(*)::int as count from d`,
+        )
+        deleted += count?.count ?? 0
       }
-      return deleted
+    }
+    return deleted
+  }
+
+  const deleteWhere = (column: 'owner_id' | 'source_id', value: string) =>
+    db.privileged((tx) => deleteRows(tx, column, value))
+
+  /**
+   * Hard-deletes a `core` record with every Module row it owns (a User or Team) or sent (a
+   * Source), in one transaction; the `core` foreign keys cascade to its Tokens, Accounts,
+   * Grants and memberships. False when there is no such record.
+   */
+  const removeRecord =
+    (table: 'users' | 'teams' | 'sources', column: 'owner_id' | 'source_id') => (id: string) =>
+      db.privileged(async (tx) => {
+        const [found] = await rows(
+          tx,
+          sql`select 1 from ${sql.raw(`core.${table}`)} where id = ${id} for update`,
+        )
+        if (found === undefined) return false
+        await deleteRows(tx, column, id)
+        await tx.execute(sql`delete from ${sql.raw(`core.${table}`)} where id = ${id}`)
+        return true
+      })
+  const remove: CoreCtx['remove'] = {
+    user: removeRecord('users', 'owner_id'),
+    team: removeRecord('teams', 'owner_id'),
+    source: removeRecord('sources', 'source_id'),
+  }
+
+  /** Runs one of the core's own ops (#30): caller, Scope and input checked as for a Module's. */
+  async function serveCoreOp(request: Request, op: CoreOp, params: Record<string, string>) {
+    const caller = await resolveCaller(request, edgeIdentity, directory)
+    if (!caller.scopes.includes(op.scope)) throw HubError.forbidden(`Needs Scope ${op.scope}`)
+    const input = await validate(op.input, await readInput(request, params, {}, 'keep'))
+    const now = clock()
+    const result = await op.run(input, {
+      caller,
+      directory,
+      now: () => new Date(now),
+      scopes,
+      modules: modules.map((m) => m.name),
+      remove,
+      exportOwner,
+    })
+    if (result instanceof Response) return result
+    const name = `core.${op.key}`
+    const replied = isReply(result) ? result : { status: 200 as const, body: result }
+    if (!op.statuses.includes(replied.status)) {
+      throw new OutputError(name, [], `answered ${String(replied.status)}, not in its statuses`)
+    }
+    if (replied.status === 204) return new Response(null, { status: 204 })
+    return Response.json(await parseOutput(op.output, replied.body, name), {
+      status: replied.status,
+    })
+  }
+
+  async function exportOwner(name: string, ownerId: string) {
+    const module = modules.find((m) => m.name === name)
+    if (module === undefined) throw HubError.notFound(`No Module "${name}"`)
+    const caller: Caller = { userId: ownerId, ownerId, scopes: [] }
+    const exporter = module.export ?? defaultExporter(module)
+    const now = clock()
+    return db.transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
+      const lines: string[] = []
+      const ctx: Ctx = {
+        db: scoped,
+        caller,
+        now: () => new Date(now),
+        ownerOf: ownerOf(scoped),
+        account: accountRecogniser(scoped),
+      }
+      for await (const line of exporter(ctx)) {
+        lines.push(`${line}\n`)
+      }
+      return lines.join('')
     })
   }
 
@@ -269,6 +346,7 @@ export function createHub(options: HubOptions): Hub {
         const { target } = found
         if (target.kind === 'core') return await target.respond(request)
         await boot()
+        if (target.kind === 'coreOp') return await serveCoreOp(request, target.op, found.params)
         const run = await prepare(request, target.module, target.key, target.op, found.params)
         // From here on, an unexpected error is the Module's.
         module = target.module.name
@@ -317,26 +395,6 @@ export function createHub(options: HubOptions): Hub {
     deleteBySource: (sourceId) => deleteWhere('source_id', sourceId),
     deleteByOwner: (ownerId) => deleteWhere('owner_id', ownerId),
 
-    async exportOwner(name, ownerId) {
-      const module = modules.find((m) => m.name === name)
-      if (module === undefined) throw HubError.notFound(`No Module "${name}"`)
-      const caller: Caller = { userId: ownerId, ownerId, scopes: [] }
-      const exporter = module.export ?? defaultExporter(module)
-      const now = clock()
-      return db.transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
-        const lines: string[] = []
-        const ctx: Ctx = {
-          db: scoped,
-          caller,
-          now: () => new Date(now),
-          ownerOf: ownerOf(scoped),
-          account: accountRecogniser(scoped),
-        }
-        for await (const line of exporter(ctx)) {
-          lines.push(`${line}\n`)
-        }
-        return lines.join('')
-      })
-    },
+    exportOwner,
   }
 }

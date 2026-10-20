@@ -142,6 +142,33 @@ describe('the OTLP JSON Lines export', () => {
     expect(await stored(t)).toEqual(before)
   })
 
+  it('exports only the Owner’s rows, never rows a Grant lets them read', async () => {
+    const { t, sender } = await open()
+    await postOtlp(sender, '/v1/logs', fixtureText(claudeCode.logsTurn))
+    await postOtlp(t.as('bob', ['otel:write'], { sourceId: 'desktop' }), '/v1/logs', plain)
+    const [account] = await t.sql<{ id: string }>(
+      sql`select id from core.accounts where owner_id = 'bob'`,
+    )
+    await t.hub.directory.grant({ module: 'otel', accountId: account?.id ?? '', userId: 'alice' })
+    await t.team('crew', { editors: ['alice'] })
+
+    expect((await t.hub.exportOwner('otel', 'alice')).split('\n').filter(Boolean)).toHaveLength(6)
+  })
+
+  it('round trips through GET /api/v1/self/export/otel and ingest', async () => {
+    const first = await open()
+    for (const name of Object.values(claudeCode)) {
+      await postOtlp(first.sender, pathOf(name), fixtureText(name))
+    }
+    const response = await first.t.as('alice', ['self:manage']).get('/api/v1/self/export/otel')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/jsonl; charset=utf-8')
+
+    const second = await open()
+    await replay(second.sender, await response.text())
+    expect(await stored(second.t)).toEqual(await stored(first.t))
+  })
+
   it('exports only the Owner’s rows', async () => {
     const { t, sender } = await open()
     await postOtlp(sender, '/v1/logs', fixtureText(claudeCode.logsTurn))

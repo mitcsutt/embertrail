@@ -9,8 +9,9 @@ info:
     identifier: Apache-2.0
   description: |
     The Hub's public contracts: the **Query API** (read side, ADR-0013), the
-    `store` Module, session labels (ADR-0014), and OTLP/HTTP JSON ingest
-    (ADR-0003). Any client may use it; the Dashboard is one such client
+    `store` Module, session labels (ADR-0014), OTLP/HTTP JSON ingest
+    (ADR-0003), and the Admin and self-management API (#30). Any client may
+    use it; the Dashboard is one such client
     (ADR-0010). This file is the design-phase source of truth. At runtime the
     Hub assembles the same document from its Modules' ops and serves it at
     `/api/v1/openapi.json`.
@@ -33,7 +34,9 @@ info:
       at most 10,000 rows; a query that would return more fails with
       `too-many-rows`. Lists use cursor pagination: `limit` defaults to 100,
       maximum 1,000; pass `next_cursor` back as `cursor` until it is `null`.
-      Cursors are opaque and only valid with the same query.
+      Cursors are opaque and only valid with the same query. The Admin and
+      self-management lists (Users, Teams, Sources, Tokens, Accounts, Grants)
+      stay small, so they answer every item at once, oldest first.
     - **Errors.** Every `/api/v1` error is RFC 9457 `application/problem+json`
       with a stable `type` URN (`urn:embertrail:problem:<slug>`). Clients
       branch on `type`, never on `title` or `detail`. OTLP ingest errors follow
@@ -82,6 +85,15 @@ tags:
     description: Read-only SQL over the caller's visible rows.
   - name: store
     description: JSON documents owned by a User or Team, grouped by client namespace.
+  - name: admin
+    description: |
+      The instance admin's Users, Teams and Sources (`admin` Scope), and the
+      one-time bootstrap. The `embertrail` CLI is its client.
+  - name: self
+    description: |
+      Your own Sources, Tokens, Accounts and Grants, and the export of your
+      data (`self:manage` Scope). Every User has it; nobody reaches another
+      User's records through it.
   - name: ingest
     description: OTLP/HTTP JSON ingest. Paths follow the OTLP spec, outside `/api/v1`.
   - name: meta
@@ -528,6 +540,673 @@ paths:
         '412': { $ref: '#/components/responses/PreconditionFailed' }
         '500': { $ref: '#/components/responses/Internal' }
 
+  /api/v1/bootstrap:
+    post:
+      tags: [admin]
+      operationId: bootstrap
+      summary: Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once
+      description: |
+        Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, the
+        deployment's one-time secret, not a Token. Creates the first User, an
+        instance admin, and a management Token holding every Scope, shown once.
+        Answers 401 when `BOOTSTRAP_TOKEN` is unset or wrong, and once an admin
+        User exists or bootstrap has been used. The Docker zero-config start
+        does the same without a request.
+      x-embertrail-module: core
+      security:
+        - bearerToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+                email: { type: string, format: email }
+            example: { name: Ada, email: ada@example.com }
+      responses:
+        '200':
+          description: The first User and its management Token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user, token]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  token: { $ref: '#/components/schemas/TokenSecret' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/users:
+    get:
+      tags: [admin]
+      operationId: listUsers
+      summary: List every User
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      responses:
+        '200':
+          description: Every User, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+    post:
+      tags: [admin]
+      operationId: createUser
+      summary: Create a User
+      description: |
+        With `token` (the default), also issues the User a management Token
+        holding every Scope (`admin` only for an admin), shown once. A User
+        with an `email` can sign in through Edge Identity instead, so pass
+        `token: false` for them.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { $ref: '#/components/schemas/Name' }
+                email: { type: string, format: email }
+                admin: { type: boolean, default: false }
+                token: { type: boolean, default: true }
+            example: { name: Bob }
+      responses:
+        '201':
+          description: The User, and their management Token unless `token` was false.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user, token]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  token:
+                    oneOf:
+                      - $ref: '#/components/schemas/TokenSecret'
+                      - type: 'null'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/users/{user_id}:
+    delete:
+      tags: [admin]
+      operationId: deleteUser
+      summary: Delete a User and everything they own
+      description: |
+        Hard delete: the User, their Sources, Tokens, Accounts, Grants and
+        Team memberships, and every row they own in every Module. Team-owned
+        rows stay with the Team. An admin cannot delete their own User
+        (`invalid`), so a Hub always keeps one.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/teams:
+    get:
+      tags: [admin]
+      operationId: listTeams
+      summary: List every Team with its members
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      responses:
+        '200':
+          description: Every Team, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Team'
+                        - type: object
+                          required: [members]
+                          properties:
+                            members:
+                              type: array
+                              items:
+                                type: object
+                                required: [user_id, role]
+                                properties:
+                                  user_id: { $ref: '#/components/schemas/Id' }
+                                  role: { $ref: '#/components/schemas/TeamRole' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+    post:
+      tags: [admin]
+      operationId: createTeam
+      summary: Create a Team
+      description: |
+        `id` is 1 to 64 letters, digits, `_` or `-` (callers name the Team in
+        `Embertrail-Owner: team:<id>`) and never a User's id; omitted, it is
+        generated. Names are unique.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                id: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' }
+                name: { $ref: '#/components/schemas/Name' }
+            example: { id: crew, name: The Crew }
+      responses:
+        '201':
+          description: The Team.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/teams/{team_id}:
+    delete:
+      tags: [admin]
+      operationId: deleteTeam
+      summary: Delete a Team and everything it owns
+      description: Hard delete. The Team, its memberships and Grants, and every row it owns in every Module.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/teams/{team_id}/members/{user_id}:
+    put:
+      tags: [admin]
+      operationId: setTeamMember
+      summary: Add a User to a Team, or change their role
+      description: Members read the Team's data; editors also act for the Team.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              additionalProperties: false
+              properties:
+                role: { $ref: '#/components/schemas/TeamRole' }
+            example: { role: editor }
+      responses:
+        '200':
+          description: The membership.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [team_id, user_id, role]
+                properties:
+                  team_id: { $ref: '#/components/schemas/Id' }
+                  user_id: { $ref: '#/components/schemas/Id' }
+                  role: { $ref: '#/components/schemas/TeamRole' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+    delete:
+      tags: [admin]
+      operationId: removeTeamMember
+      summary: Remove a User from a Team
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/sources:
+    get:
+      tags: [admin]
+      operationId: listAllSources
+      summary: List every User's Sources
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      responses:
+        '200':
+          description: Every Source, oldest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/admin/sources/{source_id}:
+    delete:
+      tags: [admin]
+      operationId: deleteAnySource
+      summary: Delete any Source and every Signal it sent
+      description: Hard delete. The Source, its ingest Tokens, and its Signals in every Module.
+      x-embertrail-module: core
+      x-embertrail-scope: admin
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/sources:
+    get:
+      tags: [self]
+      operationId: listSources
+      summary: List your Sources
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      responses:
+        '200':
+          description: Your Sources, oldest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+    post:
+      tags: [self]
+      operationId: createSource
+      summary: Create a Source and its ingest Token
+      description: |
+        Connects a machine: the Source, and an ingest Token bound to it, shown
+        once. `scopes` defaults to every Module `:write` Scope the caller
+        holds, which is what ingest needs. Each Scope must be one the caller
+        holds (`forbidden` otherwise).
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { $ref: '#/components/schemas/Name' }
+                scopes:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/Scope' }
+                expires_at: { $ref: '#/components/schemas/Timestamp' }
+            example: { name: laptop }
+      responses:
+        '201':
+          description: The Source and its ingest Token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [source, token]
+                properties:
+                  source: { $ref: '#/components/schemas/Source' }
+                  token: { $ref: '#/components/schemas/IssuedToken' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/sources/{source_id}:
+    put:
+      tags: [self]
+      operationId: renameSource
+      summary: Rename one of your Sources
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { $ref: '#/components/schemas/Name' }
+            example: { name: work laptop }
+      responses:
+        '200':
+          description: The renamed Source.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/Internal' }
+    delete:
+      tags: [self]
+      operationId: deleteSource
+      summary: Delete one of your Sources and every Signal it sent
+      description: Hard delete. The Source, its ingest Tokens, and its Signals in every Module.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/tokens:
+    get:
+      tags: [self]
+      operationId: listTokens
+      summary: List your Tokens
+      description: Revoked and expired Tokens included. Secrets are never shown again.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      responses:
+        '200':
+          description: Your Tokens, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/TokenRecord' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+    post:
+      tags: [self]
+      operationId: issueToken
+      summary: Issue yourself a Token
+      description: |
+        An `ingest` Token needs `source_id`, one of your Sources; `read` and
+        `management` Tokens take none. Each Scope must be one the caller holds
+        (`forbidden` otherwise), so a Token never widens access. No expiry
+        unless `expires_at` is set. Rotate by issuing a new Token and revoking
+        the old one.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, scopes]
+              additionalProperties: false
+              properties:
+                kind: { $ref: '#/components/schemas/TokenKind' }
+                scopes:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/Scope' }
+                name: { type: string, maxLength: 200 }
+                source_id: { $ref: '#/components/schemas/Id' }
+                expires_at: { $ref: '#/components/schemas/Timestamp' }
+            example:
+              kind: read
+              scopes: [otel:read]
+              name: dashboard
+              expires_at: '2027-01-01T00:00:00Z'
+      responses:
+        '201':
+          description: The Token, shown once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuedToken' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/tokens/{token_id}:
+    delete:
+      tags: [self]
+      operationId: revokeToken
+      summary: Revoke one of your Tokens
+      description: Permanent, and effective on the next request. Revoking a revoked Token changes nothing.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - $ref: '#/components/parameters/TokenId'
+      responses:
+        '204': { description: Revoked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/accounts:
+    get:
+      tags: [self]
+      operationId: listAccounts
+      summary: List your Accounts
+      description: Recognised from your telemetry; they are never created by hand.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      responses:
+        '200':
+          description: Your Accounts, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/accounts/{account_id}:
+    put:
+      tags: [self]
+      operationId: setAccountLabel
+      summary: Label one of your Accounts
+      description: '`null` or an empty label goes back to the suggestion from the email domain.'
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              additionalProperties: false
+              properties:
+                label: { type: [string, 'null'], maxLength: 200 }
+            example: { label: Work }
+      responses:
+        '200':
+          description: The Account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/grants:
+    get:
+      tags: [self]
+      operationId: listGrants
+      summary: List the Grants on your Accounts
+      description: The access you gave, not the access you hold.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      responses:
+        '200':
+          description: The Grants, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Grant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+    post:
+      tags: [self]
+      operationId: createGrant
+      summary: Let a User or a Team read one of your Accounts in one Module
+      description: |
+        Read access only, to exactly one User (`user_id`) or one Team
+        (`team_id`); naming both or neither, or a Module the Hub doesn't load,
+        is `invalid`.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [module, account_id]
+              additionalProperties: false
+              properties:
+                module: { $ref: '#/components/schemas/ModuleName' }
+                account_id: { $ref: '#/components/schemas/Id' }
+                user_id: { $ref: '#/components/schemas/Id' }
+                team_id: { $ref: '#/components/schemas/Id' }
+            example:
+              { module: otel, account_id: 3f2a9c1e-0000-4000-8000-000000000000, team_id: crew }
+      responses:
+        '201':
+          description: The Grant.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Grant' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/grants/{grant_id}:
+    delete:
+      tags: [self]
+      operationId: revokeGrant
+      summary: Revoke a Grant on one of your Accounts
+      description: Takes effect on the next request.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - $ref: '#/components/parameters/GrantId'
+      responses:
+        '204': { description: Revoked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self/export/{module}:
+    get:
+      tags: [self]
+      operationId: exportModule
+      summary: Export your data in one Module, as JSON Lines
+      description: |
+        Every row you own in the Module, in its native format, one entry per
+        line: `otel` answers OTLP JSON Lines, each line a complete OTLP/JSON
+        export request that replays through `/v1/logs` or `/v1/metrics`; a
+        Module without its own format answers one `{"table", "row"}` object
+        per row.
+      x-embertrail-module: core
+      x-embertrail-scope: self:manage
+      parameters:
+        - name: module
+          in: path
+          required: true
+          description: A Module the Hub loads, such as `otel`.
+          schema: { $ref: '#/components/schemas/ModuleName' }
+      responses:
+        '200':
+          description: JSON Lines.
+          content:
+            application/jsonl:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
   /v1/logs:
     post:
       tags: [ingest]
@@ -738,6 +1417,36 @@ components:
       in: header
       description: '`gzip` is accepted. The 5 MB limit applies to the decoded body.'
       schema: { type: string, enum: [gzip, identity] }
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    TeamId:
+      name: team_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    SourceId:
+      name: source_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    TokenId:
+      name: token_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    AccountId:
+      name: account_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    GrantId:
+      name: grant_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
 
   headers:
     ETag:
@@ -774,7 +1483,10 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
     Conflict:
-      description: The id is held by a document the caller cannot see (`conflict`).
+      description: |
+        The id or name is taken (`conflict`): a `store` document's id held by a
+        document the caller cannot see, or a User's email, a Team's id or name,
+        a Source's name, or a Grant that already exists.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -1320,6 +2032,120 @@ components:
         created_at: { $ref: '#/components/schemas/Timestamp' }
         updated_at: { $ref: '#/components/schemas/Timestamp' }
         data: { $ref: '#/components/schemas/StoreData' }
+
+    # ---------- admin and self-management ----------
+    Name:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Trimmed before it is stored.
+    ModuleName:
+      type: string
+      pattern: '^[a-z][a-z0-9_]{0,62}$'
+    Scope:
+      type: string
+      pattern: '^([a-z][a-z0-9_]*:[a-z][a-z0-9_]*|admin)$'
+      description: "`<module>:<verb>` (such as `otel:read`), or one of the core's `admin`, `self:manage` and `sql:read`."
+      examples: [otel:write]
+    User:
+      type: object
+      required: [id, name, email, admin]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        email:
+          type: [string, 'null']
+          description: Lowercased; what an Edge Identity is matched on.
+        admin:
+          type: boolean
+          description: An instance admin, who alone may hold the `admin` Scope.
+    Team:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+    TeamRole:
+      type: string
+      enum: [member, editor]
+      description: Members read the Team's data; editors also act for the Team.
+    Source:
+      type: object
+      required: [id, owner_id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        owner_id:
+          $ref: '#/components/schemas/Id'
+          description: The User who owns the Source and every Signal it sends.
+        name: { type: string }
+    SourceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Source' }
+    TokenKind:
+      type: string
+      enum: [ingest, read, management]
+      description: An `ingest` Token is bound to exactly one Source; `read` and `management` Tokens never are.
+    TokenSecret:
+      type: string
+      pattern: '^et_[a-z0-9]{16}_[A-Za-z0-9]{40}$'
+      description: '`et_<id>_<secret>`. Shown once: the Hub keeps only its hash.'
+    TokenRecord:
+      type: object
+      required: [id, kind, source_id, scopes, name, created_at, expires_at, revoked_at]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        kind: { $ref: '#/components/schemas/TokenKind' }
+        source_id: { type: [string, 'null'] }
+        scopes:
+          type: array
+          items: { $ref: '#/components/schemas/Scope' }
+        name: { type: string }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        expires_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        revoked_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+    IssuedToken:
+      type: object
+      required: [token, record]
+      properties:
+        token: { $ref: '#/components/schemas/TokenSecret' }
+        record: { $ref: '#/components/schemas/TokenRecord' }
+    Account:
+      type: object
+      required: [id, label, labelled, organization_id, account_uuid, email, source_id]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        label:
+          type: string
+          description: Your label, else the email's domain, else `Unknown`.
+        labelled:
+          type: boolean
+          description: True once you have set a label.
+        organization_id: { type: [string, 'null'] }
+        account_uuid: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        source_id:
+          type: [string, 'null']
+          description: Set only on a Source's Unknown Account.
+    Grant:
+      type: object
+      required: [id, module, account_id, user_id, team_id]
+      description: Read access to one Account's rows in one Module, for exactly one User or one Team.
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        module: { $ref: '#/components/schemas/ModuleName' }
+        account_id: { $ref: '#/components/schemas/Id' }
+        user_id: { type: [string, 'null'] }
+        team_id: { type: [string, 'null'] }
 
     # ---------- errors ----------
     Problem:

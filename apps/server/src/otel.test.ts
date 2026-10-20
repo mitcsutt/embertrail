@@ -31,7 +31,12 @@ describe.skipIf(skipWithoutPostgres)('the otel Module on Postgres', () => {
     })
   })
 
-  it('stores each fixture once when it is posted twice, and round trips the export', async () => {
+  // Two temporary databases and 152 posts: over Vitest's 5 s default while every package's
+  // tests run at once.
+  it(
+    'stores each fixture once when it is posted twice, and round trips the export',
+    { timeout: 30_000 },
+    async () => {
     const first = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
     const second = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
     try {

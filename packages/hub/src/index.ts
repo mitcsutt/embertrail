@@ -41,6 +41,7 @@ export type {
   IssueTokenInput,
   Source,
   Team,
+  TeamMember,
   TeamRole,
   TokenKind,
   TokenRecord,

@@ -218,6 +218,382 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/bootstrap': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once
+     * @description Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, the
+     *     deployment's one-time secret, not a Token. Creates the first User, an
+     *     instance admin, and a management Token holding every Scope, shown once.
+     *     Answers 401 when `BOOTSTRAP_TOKEN` is unset or wrong, and once an admin
+     *     User exists or bootstrap has been used. The Docker zero-config start
+     *     does the same without a request.
+     */
+    post: operations['bootstrap']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/users': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List every User */
+    get: operations['listUsers']
+    put?: never
+    /**
+     * Create a User
+     * @description With `token` (the default), also issues the User a management Token
+     *     holding every Scope (`admin` only for an admin), shown once. A User
+     *     with an `email` can sign in through Edge Identity instead, so pass
+     *     `token: false` for them.
+     */
+    post: operations['createUser']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/users/{user_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a User and everything they own
+     * @description Hard delete: the User, their Sources, Tokens, Accounts, Grants and
+     *     Team memberships, and every row they own in every Module. Team-owned
+     *     rows stay with the Team. An admin cannot delete their own User
+     *     (`invalid`), so a Hub always keeps one.
+     */
+    delete: operations['deleteUser']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/teams': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List every Team with its members */
+    get: operations['listTeams']
+    put?: never
+    /**
+     * Create a Team
+     * @description `id` is 1 to 64 letters, digits, `_` or `-` (callers name the Team in
+     *     `Embertrail-Owner: team:<id>`) and never a User's id; omitted, it is
+     *     generated. Names are unique.
+     */
+    post: operations['createTeam']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/teams/{team_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a Team and everything it owns
+     * @description Hard delete. The Team, its memberships and Grants, and every row it owns in every Module.
+     */
+    delete: operations['deleteTeam']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/teams/{team_id}/members/{user_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Add a User to a Team, or change their role
+     * @description Members read the Team's data; editors also act for the Team.
+     */
+    put: operations['setTeamMember']
+    post?: never
+    /** Remove a User from a Team */
+    delete: operations['removeTeamMember']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/sources': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List every User's Sources */
+    get: operations['listAllSources']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/admin/sources/{source_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete any Source and every Signal it sent
+     * @description Hard delete. The Source, its ingest Tokens, and its Signals in every Module.
+     */
+    delete: operations['deleteAnySource']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/sources': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List your Sources */
+    get: operations['listSources']
+    put?: never
+    /**
+     * Create a Source and its ingest Token
+     * @description Connects a machine: the Source, and an ingest Token bound to it, shown
+     *     once. `scopes` defaults to every Module `:write` Scope the caller
+     *     holds, which is what ingest needs. Each Scope must be one the caller
+     *     holds (`forbidden` otherwise).
+     */
+    post: operations['createSource']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/sources/{source_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /** Rename one of your Sources */
+    put: operations['renameSource']
+    post?: never
+    /**
+     * Delete one of your Sources and every Signal it sent
+     * @description Hard delete. The Source, its ingest Tokens, and its Signals in every Module.
+     */
+    delete: operations['deleteSource']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/tokens': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List your Tokens
+     * @description Revoked and expired Tokens included. Secrets are never shown again.
+     */
+    get: operations['listTokens']
+    put?: never
+    /**
+     * Issue yourself a Token
+     * @description An `ingest` Token needs `source_id`, one of your Sources; `read` and
+     *     `management` Tokens take none. Each Scope must be one the caller holds
+     *     (`forbidden` otherwise), so a Token never widens access. No expiry
+     *     unless `expires_at` is set. Rotate by issuing a new Token and revoking
+     *     the old one.
+     */
+    post: operations['issueToken']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/tokens/{token_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Revoke one of your Tokens
+     * @description Permanent, and effective on the next request. Revoking a revoked Token changes nothing.
+     */
+    delete: operations['revokeToken']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/accounts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List your Accounts
+     * @description Recognised from your telemetry; they are never created by hand.
+     */
+    get: operations['listAccounts']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/accounts/{account_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Label one of your Accounts
+     * @description `null` or an empty label goes back to the suggestion from the email domain.
+     */
+    put: operations['setAccountLabel']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/grants': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List the Grants on your Accounts
+     * @description The access you gave, not the access you hold.
+     */
+    get: operations['listGrants']
+    put?: never
+    /**
+     * Let a User or a Team read one of your Accounts in one Module
+     * @description Read access only, to exactly one User (`user_id`) or one Team
+     *     (`team_id`); naming both or neither, or a Module the Hub doesn't load,
+     *     is `invalid`.
+     */
+    post: operations['createGrant']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/grants/{grant_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Revoke a Grant on one of your Accounts
+     * @description Takes effect on the next request.
+     */
+    delete: operations['revokeGrant']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/self/export/{module}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export your data in one Module, as JSON Lines
+     * @description Every row you own in the Module, in its native format, one entry per
+     *     line: `otel` answers OTLP JSON Lines, each line a complete OTLP/JSON
+     *     export request that replays through `/v1/logs` or `/v1/metrics`; a
+     *     Module without its own format answers one `{"table", "row"}` object
+     *     per row.
+     */
+    get: operations['exportModule']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/logs': {
     parameters: {
       query?: never
@@ -650,6 +1026,81 @@ export interface components {
       updated_at: components['schemas']['Timestamp']
       data: components['schemas']['StoreData']
     }
+    /** @description Trimmed before it is stored. */
+    Name: string
+    ModuleName: string
+    /**
+     * @description `<module>:<verb>` (such as `otel:read`), or one of the core's `admin`, `self:manage` and `sql:read`.
+     * @example otel:write
+     */
+    Scope: string
+    User: {
+      id: components['schemas']['Id']
+      name: string
+      /** @description Lowercased; what an Edge Identity is matched on. */
+      email: string | null
+      /** @description An instance admin, who alone may hold the `admin` Scope. */
+      admin: boolean
+    }
+    Team: {
+      id: components['schemas']['Id']
+      name: string
+    }
+    /**
+     * @description Members read the Team's data; editors also act for the Team.
+     * @enum {string}
+     */
+    TeamRole: 'member' | 'editor'
+    Source: {
+      id: components['schemas']['Id']
+      /** @description The User who owns the Source and every Signal it sends. */
+      owner_id: components['schemas']['Id']
+      name: string
+    }
+    SourceList: {
+      items: components['schemas']['Source'][]
+    }
+    /**
+     * @description An `ingest` Token is bound to exactly one Source; `read` and `management` Tokens never are.
+     * @enum {string}
+     */
+    TokenKind: 'ingest' | 'read' | 'management'
+    /** @description `et_<id>_<secret>`. Shown once: the Hub keeps only its hash. */
+    TokenSecret: string
+    TokenRecord: {
+      id: components['schemas']['Id']
+      kind: components['schemas']['TokenKind']
+      source_id: string | null
+      scopes: components['schemas']['Scope'][]
+      name: string
+      created_at: components['schemas']['Timestamp']
+      expires_at: components['schemas']['Timestamp'] | null
+      revoked_at: components['schemas']['Timestamp'] | null
+    }
+    IssuedToken: {
+      token: components['schemas']['TokenSecret']
+      record: components['schemas']['TokenRecord']
+    }
+    Account: {
+      id: components['schemas']['Id']
+      /** @description Your label, else the email's domain, else `Unknown`. */
+      label: string
+      /** @description True once you have set a label. */
+      labelled: boolean
+      organization_id: string | null
+      account_uuid: string | null
+      email: string | null
+      /** @description Set only on a Source's Unknown Account. */
+      source_id: string | null
+    }
+    /** @description Read access to one Account's rows in one Module, for exactly one User or one Team. */
+    Grant: {
+      id: components['schemas']['Id']
+      module: components['schemas']['ModuleName']
+      account_id: components['schemas']['Id']
+      user_id: string | null
+      team_id: string | null
+    }
     /** @description RFC 9457 problem details. */
     Problem: {
       /**
@@ -779,7 +1230,11 @@ export interface components {
         'application/problem+json': components['schemas']['Problem']
       }
     }
-    /** @description The id is held by a document the caller cannot see (`conflict`). */
+    /**
+     * @description The id or name is taken (`conflict`): a `store` document's id held by a
+     *     document the caller cannot see, or a User's email, a Team's id or name,
+     *     a Source's name, or a Grant that already exists.
+     */
     Conflict: {
       headers: {
         [name: string]: unknown
@@ -902,6 +1357,12 @@ export interface components {
     OwnerHeader: string
     /** @description `gzip` is accepted. The 5 MB limit applies to the decoded body. */
     ContentEncoding: 'gzip' | 'identity'
+    UserId: components['schemas']['Id']
+    TeamId: components['schemas']['Id']
+    SourceId: components['schemas']['Id']
+    TokenId: components['schemas']['Id']
+    AccountId: components['schemas']['Id']
+    GrantId: components['schemas']['Id']
   }
   requestBodies: never
   headers: {
@@ -1327,6 +1788,753 @@ export interface operations {
       403: components['responses']['Forbidden']
       404: components['responses']['NotFound']
       412: components['responses']['PreconditionFailed']
+      500: components['responses']['Internal']
+    }
+  }
+  bootstrap: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        /**
+         * @example {
+         *       "name": "Ada",
+         *       "email": "ada@example.com"
+         *     }
+         */
+        'application/json': {
+          name?: string
+          /** Format: email */
+          email?: string
+        }
+      }
+    }
+    responses: {
+      /** @description The first User and its management Token. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            user: components['schemas']['User']
+            token: components['schemas']['TokenSecret']
+          }
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      500: components['responses']['Internal']
+    }
+  }
+  listUsers: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Every User, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            items: components['schemas']['User'][]
+          }
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  createUser: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "name": "Bob"
+         *     }
+         */
+        'application/json': {
+          name: components['schemas']['Name']
+          /** Format: email */
+          email?: string
+          /** @default false */
+          admin?: boolean
+          /** @default true */
+          token?: boolean
+        }
+      }
+    }
+    responses: {
+      /** @description The User, and their management Token unless `token` was false. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            user: components['schemas']['User']
+            token: components['schemas']['TokenSecret'] | null
+          }
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      409: components['responses']['Conflict']
+      500: components['responses']['Internal']
+    }
+  }
+  deleteUser: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        user_id: components['parameters']['UserId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      422: components['responses']['Unprocessable']
+      500: components['responses']['Internal']
+    }
+  }
+  listTeams: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Every Team, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            items: (components['schemas']['Team'] & {
+              members: {
+                user_id: components['schemas']['Id']
+                role: components['schemas']['TeamRole']
+              }[]
+            })[]
+          }
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  createTeam: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "id": "crew",
+         *       "name": "The Crew"
+         *     }
+         */
+        'application/json': {
+          id?: string
+          name: components['schemas']['Name']
+        }
+      }
+    }
+    responses: {
+      /** @description The Team. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Team']
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      409: components['responses']['Conflict']
+      500: components['responses']['Internal']
+    }
+  }
+  deleteTeam: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        team_id: components['parameters']['TeamId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  setTeamMember: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        team_id: components['parameters']['TeamId']
+        user_id: components['parameters']['UserId']
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "role": "editor"
+         *     }
+         */
+        'application/json': {
+          role: components['schemas']['TeamRole']
+        }
+      }
+    }
+    responses: {
+      /** @description The membership. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            team_id: components['schemas']['Id']
+            user_id: components['schemas']['Id']
+            role: components['schemas']['TeamRole']
+          }
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  removeTeamMember: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        team_id: components['parameters']['TeamId']
+        user_id: components['parameters']['UserId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Removed. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  listAllSources: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Every Source, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SourceList']
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  deleteAnySource: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        source_id: components['parameters']['SourceId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  listSources: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Your Sources, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SourceList']
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  createSource: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "name": "laptop"
+         *     }
+         */
+        'application/json': {
+          name: components['schemas']['Name']
+          scopes?: components['schemas']['Scope'][]
+          expires_at?: components['schemas']['Timestamp']
+        }
+      }
+    }
+    responses: {
+      /** @description The Source and its ingest Token. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            source: components['schemas']['Source']
+            token: components['schemas']['IssuedToken']
+          }
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      409: components['responses']['Conflict']
+      422: components['responses']['Unprocessable']
+      500: components['responses']['Internal']
+    }
+  }
+  renameSource: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        source_id: components['parameters']['SourceId']
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "name": "work laptop"
+         *     }
+         */
+        'application/json': {
+          name: components['schemas']['Name']
+        }
+      }
+    }
+    responses: {
+      /** @description The renamed Source. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Source']
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      409: components['responses']['Conflict']
+      500: components['responses']['Internal']
+    }
+  }
+  deleteSource: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        source_id: components['parameters']['SourceId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  listTokens: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Your Tokens, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            items: components['schemas']['TokenRecord'][]
+          }
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  issueToken: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "kind": "read",
+         *       "scopes": [
+         *         "otel:read"
+         *       ],
+         *       "name": "dashboard",
+         *       "expires_at": "2027-01-01T00:00:00Z"
+         *     }
+         */
+        'application/json': {
+          kind: components['schemas']['TokenKind']
+          scopes: components['schemas']['Scope'][]
+          name?: string
+          source_id?: components['schemas']['Id']
+          expires_at?: components['schemas']['Timestamp']
+        }
+      }
+    }
+    responses: {
+      /** @description The Token, shown once. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['IssuedToken']
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      422: components['responses']['Unprocessable']
+      500: components['responses']['Internal']
+    }
+  }
+  revokeToken: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        token_id: components['parameters']['TokenId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Revoked. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  listAccounts: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Your Accounts, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            items: components['schemas']['Account'][]
+          }
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  setAccountLabel: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        account_id: components['parameters']['AccountId']
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "label": "Work"
+         *     }
+         */
+        'application/json': {
+          label: string | null
+        }
+      }
+    }
+    responses: {
+      /** @description The Account. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Account']
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  listGrants: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The Grants, oldest first. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            items: components['schemas']['Grant'][]
+          }
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      500: components['responses']['Internal']
+    }
+  }
+  createGrant: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "module": "otel",
+         *       "account_id": "3f2a9c1e-0000-4000-8000-000000000000",
+         *       "team_id": "crew"
+         *     }
+         */
+        'application/json': {
+          module: components['schemas']['ModuleName']
+          account_id: components['schemas']['Id']
+          user_id?: components['schemas']['Id']
+          team_id?: components['schemas']['Id']
+        }
+      }
+    }
+    responses: {
+      /** @description The Grant. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Grant']
+        }
+      }
+      400: components['responses']['BadRequest']
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      409: components['responses']['Conflict']
+      422: components['responses']['Unprocessable']
+      500: components['responses']['Internal']
+    }
+  }
+  revokeGrant: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        grant_id: components['parameters']['GrantId']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Revoked. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  exportModule: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description A Module the Hub loads, such as `otel`. */
+        module: components['schemas']['ModuleName']
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description JSON Lines. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/jsonl': string
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
+      404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
   }

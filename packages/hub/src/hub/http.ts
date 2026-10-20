@@ -28,12 +28,14 @@ async function readBody(request: Request): Promise<Record<string, unknown>> {
 
 /**
  * An op's input: body, then query, then path parameters, merged, then the op's `headers`,
- * which only a header can set. Stamped keys are removed.
+ * which only a header can set. Stamped keys are removed, unless `stamped` is `keep`: the
+ * core's own ops (#30) name Sources by `source_id` and never write a Module's rows.
  */
 export async function readInput(
   request: Request,
   params: Record<string, string>,
   headers: Readonly<Record<string, string>> = {},
+  stamped: 'strip' | 'keep' = 'strip',
 ) {
   // A Map, so a key such as __proto__ is only ever data.
   const query = new Map<string, string | string[]>()
@@ -51,7 +53,7 @@ export async function readInput(
     [
       ...Object.entries(merged).filter(([key]) => !Object.hasOwn(headers, key)),
       ...fromHeaders,
-    ].filter(([key]) => !stampedKeys.has(key)),
+    ].filter(([key]) => stamped === 'keep' || !stampedKeys.has(key)),
   )
 }
 

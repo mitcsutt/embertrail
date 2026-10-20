@@ -1,7 +1,8 @@
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec'
 
+import type { CoreOp } from '../admin/core-op'
 import { opScope } from '../module/define'
-import type { Module, Op } from '../module/define'
+import type { Module, TypedOp } from '../module/define'
 import { HubBootError } from '../module/errors'
 
 type Json = Record<string, unknown>
@@ -10,15 +11,18 @@ function isRecord(value: unknown): value is Json {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** `Module "<name>"`, or `core` for the core's own ops: who a boot error names. */
+type Subject = string
+
 function jsonSchema(
   schema: StandardSchemaV1,
   io: 'input' | 'output',
-  module: Module,
+  subject: Subject,
   key: string,
 ): Json {
   const props: Partial<StandardJSONSchemaV1.Props> = schema['~standard']
   const fail = (why: string) =>
-    new HubBootError(`Module "${module.name}"`, 'no JSON Schema', `op "${key}" ${io}: ${why}`)
+    new HubBootError(subject, 'no JSON Schema', `op "${key}" ${io}: ${why}`)
   if (props.jsonSchema === undefined) {
     throw fail('the schema has no JSON Schema converter; use a Standard JSON Schema library')
   }
@@ -51,12 +55,12 @@ const statusDescriptions = { 200: 'OK', 201: 'Created', 204: 'No Content' } as c
  * body; one response per status.
  */
 function typedOperation(
-  module: Module,
+  subject: Subject,
   key: string,
-  op: Op & { kind: 'query' | 'mutate' | 'ingest' },
+  op: Pick<TypedOp, 'method' | 'path' | 'input' | 'output' | 'headers' | 'statuses' | 'etag'>,
 ) {
-  const input = jsonSchema(op.input, 'input', module, key)
-  const output = jsonSchema(op.output, 'output', module, key)
+  const input = jsonSchema(op.input, 'input', subject, key)
+  const output = jsonSchema(op.output, 'output', subject, key)
   const properties = isRecord(input.properties) ? input.properties : {}
   const required = Array.isArray(input.required) ? (input.required as string[]) : []
   const inPath = [...op.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1] ?? '')
@@ -207,10 +211,10 @@ const sqlOperation = {
 }
 
 /**
- * Assembles the Hub's OpenAPI 3.1 document from every op (#25), served at
- * `/api/v1/openapi.json`. Built at boot, so a schema that can't convert fails boot.
+ * Assembles the Hub's OpenAPI 3.1 document from every op (#25) and the core's own ops (#30),
+ * served at `/api/v1/openapi.json`. Built at boot, so a schema that can't convert fails boot.
  */
-export function buildOpenApi(modules: readonly Module[]) {
+export function buildOpenApi(modules: readonly Module[], coreOps: readonly CoreOp[] = []) {
   const paths: Record<string, Json> = {
     '/api/v1/openapi.json': {
       get: {
@@ -317,10 +321,26 @@ export function buildOpenApi(modules: readonly Module[]) {
         'x-embertrail-scope': opScope(module.name, op),
         ...(op.kind === 'raw'
           ? { ...(op.sourceBound ? sourceBoundSecurity : {}), ...op.openapi }
-          : typedOperation(module, key, op)),
+          : typedOperation(`Module "${module.name}"`, key, op)),
       }
       paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
     }
+  }
+  for (const op of coreOps) {
+    const generated = typedOperation('Hub core', op.key, { ...op, headers: {}, etag: false })
+    const operation = {
+      operationId: `core.${op.key}`,
+      summary: op.summary,
+      ...(op.description === undefined ? {} : { description: op.description }),
+      tags: [op.tag],
+      'x-embertrail-module': 'core',
+      'x-embertrail-scope': op.scope,
+      ...generated,
+      ...(op.responses === undefined
+        ? {}
+        : { responses: { ...op.responses, default: generated.responses.default } }),
+    }
+    paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
   }
   return {
     openapi: '3.1.0',

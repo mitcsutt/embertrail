@@ -24,6 +24,7 @@ export interface ModuleContractOptions {
 const owner = 'contract-owner'
 const source = 'contract-source'
 const stranger = 'contract-stranger'
+const admin = 'contract-admin'
 const forged = { owner_id: 'contract-forger', source_id: 'contract-forged-source' }
 
 /** Wraps a client so every request also carries a forged owner_id and source_id. */
@@ -100,15 +101,24 @@ export async function assertModuleContract(module: Module, options: ModuleContra
       assert.ok(exported.length > 0, 'export is empty')
     }
 
+    // Deletes go through the Admin and self-management API (#30), which uses delete-by-Source
+    // and delete-by-Owner, so the suite proves what a User or an admin actually calls.
     const signalRows = seeded.filter((row) => row.source_id !== null).length
-    assert.equal(await t.hub.deleteBySource(source), signalRows, 'delete-by-Source count')
+    const deletedSource = await t
+      .as(owner, ['self:manage'])
+      .delete(`/api/v1/self/sources/${source}`)
+    assert.equal(deletedSource.status, 204, 'deleting the Source through the API')
+    const afterSource = await stamps()
     assert.equal(
-      (await stamps()).filter((row) => row.source_id === source).length,
+      afterSource.filter((row) => row.source_id === source).length,
       0,
       'delete-by-Source left rows',
     )
-    await t.hub.deleteByOwner(owner)
+    assert.equal(afterSource.length, seeded.length - signalRows, 'delete-by-Source count')
+    const deletedOwner = await t.as(admin, ['admin']).delete(`/api/v1/admin/users/${owner}`)
+    assert.equal(deletedOwner.status, 204, 'deleting the Owner through the Admin API')
     assert.equal((await stamps()).length, 0, 'delete-by-Owner left rows')
+    assert.deepEqual(t.errors, [], 'deleting answered with a 500')
 
     const document = JSON.parse(JSON.stringify(t.hub.openapi)) as typeof t.hub.openapi
     for (const [key, op] of Object.entries(module.ops)) {
