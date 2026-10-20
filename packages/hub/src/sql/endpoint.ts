@@ -93,7 +93,9 @@ function wrapped(input: SqlInput, select: SQL, alias: SQL, limit: number) {
           params.map((p) => sql`${p}`),
           sql` `,
         )} */`
-  const text = input.sql.replace(/[\s;]+$/, '')
+  let end = input.sql.length
+  while (end > 0 && /[\s;]/.test(input.sql.charAt(end - 1))) end--
+  const text = input.sql.slice(0, end)
   return sql`select ${select} from (${named}\n${sql.raw(text)}\n) as q${alias} limit ${limit}`
 }
 
