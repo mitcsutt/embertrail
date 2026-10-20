@@ -28,12 +28,19 @@ function formatter(tz: string) {
   return found
 }
 
-/** Refuses an unknown IANA zone with 422 `invalid`, before Postgres sees it. */
+/**
+ * Refuses anything but a known IANA zone with 422 `invalid`, before Postgres sees it. A fixed
+ * offset such as `+05:00` is refused too: Postgres reads it as a POSIX zone, sign reversed.
+ */
 export function checkTz(tz: string) {
+  let resolved: string
   try {
-    formatter(tz)
+    resolved = formatter(tz).resolvedOptions().timeZone
   } catch {
     throw HubError.invalid(`Unknown time zone "${tz}"`)
+  }
+  if (/^[+\-\d]/.test(tz) || /^[+-]/.test(resolved)) {
+    throw HubError.invalid(`Time zone "${tz}" is not an IANA zone name`)
   }
 }
 

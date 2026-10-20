@@ -250,6 +250,22 @@ describe('bucketing', () => {
     expect(refused.status).toBe(422)
     assertProblem(await refused.json(), 'invalid')
   })
+
+  it('refuses a fixed offset in place of an IANA zone on both endpoints', async () => {
+    for (const tz of ['+05:00', '-0300', '05:00']) {
+      for (const [path, body] of [
+        ['/api/v1/metrics/query', { metric: 'm', aggregation: 'sum', bucket: 'day' }],
+        [
+          '/api/v1/events/query',
+          { mode: 'aggregate', aggregation: { fn: 'count' }, bucket: 'day' },
+        ],
+      ] as const) {
+        const refused = await alice.post(path, { ...body, ...window, tz })
+        expect(refused.status).toBe(422)
+        assertProblem(await refused.json(), 'invalid')
+      }
+    }
+  })
 })
 
 describe('metrics', () => {
