@@ -23,12 +23,26 @@ const signalColumns = sql.raw(`owner_id, session_id, source_id, account_id, serv
 const rfc3339 = (column: string) =>
   sql.raw(`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`)
 
-/** Every Session's summary columns, effective links included, as the relation `s`. */
-const sessions = sql`(
+const signalTables = ['otel.otel_logs', 'otel.otel_metrics_sum', 'otel.otel_metrics_gauge']
+
+/** `(owner_id, session_id)` of every Session with a Signal matching `where`. */
+const sessionsWith = (where: SQL) =>
+  sql`(owner_id, session_id) in (${sql.join(
+    signalTables.map(
+      (table) => sql`select owner_id, session_id from ${sql.raw(table)} where ${where}`,
+    ),
+    sql` union all `,
+  )})`
+
+/**
+ * The summary columns, effective links included, of the Sessions in `scope`, as the relation
+ * `s`. `scope` is a predicate on `owner_id` and `session_id`, applied inside every scan.
+ */
+const sessions = (scope: SQL) => sql`(
   with signals as (
-    select ${signalColumns} from otel.otel_logs where session_id is not null
-    union all select ${signalColumns} from otel.otel_metrics_sum where session_id is not null
-    union all select ${signalColumns} from otel.otel_metrics_gauge where session_id is not null
+    select ${signalColumns} from otel.otel_logs where session_id is not null and ${scope}
+    union all select ${signalColumns} from otel.otel_metrics_sum where session_id is not null and ${scope}
+    union all select ${signalColumns} from otel.otel_metrics_gauge where session_id is not null and ${scope}
   ),
   base as (
     select owner_id, session_id, min(service_name) as service_name, min(source_id) as source_id,
@@ -40,21 +54,24 @@ const sessions = sql`(
   ),
   cost as (
     select owner_id, session_id, sum(value) as cost_usd from otel.otel_metrics_sum
-    where metric_name = ${costMetric} and session_id is not null group by owner_id, session_id
+    where metric_name = ${costMetric} and session_id is not null and ${scope}
+    group by owner_id, session_id
   ),
   tokens as (
     select owner_id, session_id, jsonb_object_agg(type, total) as tokens from (
       select owner_id, session_id, coalesce(type, 'unknown') as type, sum(value) as total
-      from otel.otel_metrics_sum where metric_name = ${tokenMetric} and session_id is not null
+      from otel.otel_metrics_sum
+      where metric_name = ${tokenMetric} and session_id is not null and ${scope}
       group by 1, 2, 3
     ) per_type group by owner_id, session_id
   ),
   events as (
     select owner_id, session_id, jsonb_object_agg(event_name, n) as event_counts from (
       select owner_id, session_id, event_name, count(*)::int as n from otel.otel_logs
-      where session_id is not null group by 1, 2, 3
+      where session_id is not null and ${scope} group by 1, 2, 3
     ) per_name group by owner_id, session_id
-  )
+  ),
+  labels as (select owner_id, session_id, labels from otel.session_labels where ${scope})
   select coalesce(b.owner_id, l.owner_id) as owner_id, coalesce(b.session_id, l.session_id) as id,
     b.service_name, b.source_id, b.account_id, b.started_at, b.last_seen_at,
     coalesce(b.models, '{}') as models, c.cost_usd, coalesce(k.tokens, '{}') as tokens,
@@ -65,7 +82,7 @@ const sessions = sql`(
     coalesce(l.labels ->> 'embertrail.role', b.role) as role,
     coalesce(l.labels, '{}') as labels
   from base b
-  full join otel.session_labels l on l.owner_id = b.owner_id and l.session_id = b.session_id
+  full join labels l on l.owner_id = b.owner_id and l.session_id = b.session_id
   left join cost c on c.owner_id = b.owner_id and c.session_id = b.session_id
   left join tokens k on k.owner_id = b.owner_id and k.session_id = b.session_id
   left join events e on e.owner_id = b.owner_id and e.session_id = b.session_id
@@ -99,6 +116,7 @@ const orders = {
 
 async function select(
   db: ScopedDb,
+  scope: SQL,
   where: readonly SQL[],
   order: keyof typeof orders,
   limit: number,
@@ -110,7 +128,7 @@ async function select(
       s.account_id, ${rfc3339('s.started_at')} as started_at, ${rfc3339('s.last_seen_at')} as last_seen_at,
       s.models, s.cost_usd, s.tokens, s.event_counts, s.group_id, s.group_kind,
       s.parent_session_id, s.role, s.labels
-    from ${sessions}
+    from ${sessions(scope)}
     ${where.length === 0 ? sql`` : sql`where ${sql.join([...where], sql` and `)}`}
     order by ${sql.raw(orders[order])}, s.owner_id, s.id
     limit ${limit} offset ${offset}`,
@@ -157,9 +175,10 @@ const encode = (parts: z.infer<typeof cursorShape>) =>
   btoa(JSON.stringify(parts)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 
 export async function listSessionSummaries(db: ScopedDb, query: z.output<typeof listSessions>) {
+  const scope: SQL[] = []
+  if (query.from !== undefined) scope.push(sessionsWith(sql`time >= ${query.from}::timestamptz`))
+  if (query.to !== undefined) scope.push(sessionsWith(sql`time < ${query.to}::timestamptz`))
   const where: SQL[] = []
-  if (query.from !== undefined) where.push(sql`s.last_seen_at >= ${query.from}::timestamptz`)
-  if (query.to !== undefined) where.push(sql`s.started_at < ${query.to}::timestamptz`)
   if (query.source_id !== undefined) where.push(sql`s.source_id = ${query.source_id}`)
   if (query.account_id !== undefined) where.push(sql`s.account_id = ${query.account_id}`)
   if (query.service_name !== undefined) where.push(sql`s.service_name = ${query.service_name}`)
@@ -174,7 +193,14 @@ export async function listSessionSummaries(db: ScopedDb, query: z.output<typeof 
   }
   const print = await fingerprint(query)
   const offset = query.cursor === undefined ? 0 : decode(query.cursor, print)
-  const found = await select(db, where, query.sort, query.limit + 1, offset)
+  const found = await select(
+    db,
+    scope.length === 0 ? sql`true` : sql.join(scope, sql` and `),
+    where,
+    query.sort,
+    query.limit + 1,
+    offset,
+  )
   return {
     items: found.slice(0, query.limit),
     next_cursor: found.length > query.limit ? encode([print, offset + query.limit]) : null,
@@ -183,12 +209,16 @@ export async function listSessionSummaries(db: ScopedDb, query: z.output<typeof 
 
 /** One Session with its direct children, oldest first; the caller's own first if several Owners share the id. */
 export async function getSession(db: ScopedDb, id: string, ownerId: string) {
-  const found = await select(db, [sql`s.id = ${id}`], 'started_at', 1000)
+  const found = await select(db, sql`session_id = ${id}`, [], 'started_at', 1000)
   const session = found.find((s) => s.owner_id === ownerId) ?? found[0]
   if (session === undefined) throw HubError.notFound()
+  const owner = sql`owner_id = ${session.owner_id}`
   const children = await select(
     db,
-    [sql`s.parent_session_id = ${id}`, sql`s.owner_id = ${session.owner_id}`],
+    sql`${owner} and (${sessionsWith(sql`${owner} and parent_session_id = ${id}`)}
+      or session_id in (select session_id from otel.session_labels
+        where ${owner} and labels ->> 'embertrail.parent.session_id' = ${id}))`,
+    [sql`s.parent_session_id = ${id}`],
     'started_at',
     1000,
   )
