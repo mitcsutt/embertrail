@@ -55,8 +55,11 @@ export interface Hub {
   deleteBySource(sourceId: string): Promise<number>
   /** Hard-deletes an Owner's rows in every Module. Returns the rows deleted. */
   deleteByOwner(ownerId: string): Promise<number>
-  /** One Module's data for one Owner, as JSON Lines. */
-  exportOwner(module: string, ownerId: string): Promise<string>
+  /**
+   * One Module's data for one Owner, streamed as JSON Lines. The export reads in one
+   * transaction, held until the stream ends, errors or is cancelled.
+   */
+  exportOwner(module: string, ownerId: string): ReadableStream<Uint8Array>
   readonly openapi: OpenApiDocument
   /** Every Scope a Token may hold: the loaded Modules' and the core's (`admin`, `self:manage`, `sql:read`). */
   readonly scopes: readonly Scope[]
@@ -307,26 +310,56 @@ export function createHub(options: HubOptions): Hub {
     })
   }
 
-  async function exportOwner(name: string, ownerId: string) {
+  function exportOwner(name: string, ownerId: string): ReadableStream<Uint8Array> {
     const module = modules.find((m) => m.name === name)
     if (module === undefined) throw HubError.notFound(`No Module "${name}"`)
     const caller: Caller = { userId: ownerId, ownerId, scopes: [] }
     const exporter = module.export ?? defaultExporter(module)
     const now = clock()
-    return db.transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
-      const lines: string[] = []
-      const ctx: Ctx = {
-        db: scoped,
-        caller,
-        now: () => new Date(now),
-        ownerOf: ownerOf(scoped),
-        account: accountRecogniser(scoped),
-      }
-      for await (const line of exporter(ctx)) {
-        lines.push(`${line}\n`)
-      }
-      return lines.join('')
+    const encoder = new TextEncoder()
+    let cancelled = false
+    let pulled: () => void
+    let demand = new Promise<void>((resolve) => {
+      pulled = resolve
     })
+    let finished: Promise<void> | undefined
+    return new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          finished = db
+            .transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
+              const ctx: Ctx = {
+                db: scoped,
+                caller,
+                now: () => new Date(now),
+                ownerOf: ownerOf(scoped),
+                account: accountRecogniser(scoped),
+              }
+              for await (const line of exporter(ctx)) {
+                await demand
+                if (cancelled) return
+                demand = new Promise((resolve) => {
+                  pulled = resolve
+                })
+                controller.enqueue(encoder.encode(`${line}\n`))
+              }
+              if (!cancelled) controller.close()
+            })
+            .catch((error: unknown) => {
+              controller.error(error)
+            })
+        },
+        pull() {
+          pulled()
+        },
+        cancel() {
+          cancelled = true
+          pulled()
+          return finished
+        },
+      },
+      { highWaterMark: 0 },
+    )
   }
 
   return {

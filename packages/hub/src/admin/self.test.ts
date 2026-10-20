@@ -88,11 +88,7 @@ describe('self-management', () => {
     it('creates, lists, renames and deletes your Sources', async () => {
       const alice = t.as('alice', ['self:manage', 'alpha:read', 'alpha:write'])
       const created = await body<{ source: { id: string }; token: Issued }>(
-        alice.post(self('sources'), {
-          name: 'laptop',
-          scopes: ['alpha:write'],
-          expires_at: '2999-01-01T00:00:00Z',
-        }),
+        alice.post(self('sources'), { name: 'laptop', expires_at: '2999-01-01T00:00:00Z' }),
       )
       expect(created.token.record).toMatchObject({ scopes: ['alpha:write'], name: 'laptop' })
       const { id } = created.source
@@ -114,20 +110,23 @@ describe('self-management', () => {
       expect(await ids(alice, 'sources')).toEqual([])
     })
 
-    it('refuses a taken name (409) and a Scope the caller lacks (403), creating nothing', async () => {
-      const alice = t.as('alice', ['self:manage', 'alpha:write'])
+    it('refuses a taken name (409) and any chosen Scopes (400), creating nothing', async () => {
+      const alice = t.as('alice', ['admin', 'self:manage', 'alpha:write'])
       await alice.post(self('sources'), { name: 'laptop' })
       expect(await problem(alice.post(self('sources'), { name: 'laptop' }))).toEqual({
         status: 409,
         type: 'conflict',
       })
       expect(
-        await problem(alice.post(self('sources'), { name: 'desktop', scopes: ['sql:read'] })),
-      ).toEqual({ status: 403, type: 'forbidden' })
-      expect(
-        await problem(alice.post(self('sources'), { name: 'desktop', scopes: ['nope:write'] })),
-      ).toEqual({ status: 422, type: 'invalid' })
+        await problem(alice.post(self('sources'), { name: 'desktop', scopes: ['admin'] })),
+      ).toEqual({ status: 400, type: 'validation' })
       expect(await t.sql(sql`select name from core.sources`)).toEqual([{ name: 'laptop' }])
+    })
+
+    it('gives the ingest Token only Module write Scopes, never a core Scope', async () => {
+      const alice = t.as('alice', ['admin', 'self:manage', 'sql:read', 'alpha:read', 'alpha:write'])
+      const created = await body<{ token: Issued }>(alice.post(self('sources'), { name: 'laptop' }))
+      expect(created.token.record.scopes).toEqual(['alpha:write'])
     })
 
     it('refuses a Source with no ingest Scope to give it', async () => {
@@ -203,6 +202,25 @@ describe('self-management', () => {
           }),
         ),
       ).toEqual({ status: 422, type: 'invalid' })
+    })
+
+    it('refuses an ingest Token any Scope but a Module write Scope', async () => {
+      const alice = t.as('alice', ['admin', 'self:manage', 'sql:read', 'alpha:read', 'alpha:write'])
+      const { source } = await body<{ source: { id: string } }>(
+        alice.post(self('sources'), { name: 'laptop' }),
+      )
+      for (const scope of ['admin', 'self:manage', 'sql:read', 'alpha:read']) {
+        expect(
+          await problem(
+            alice.post(self('tokens'), {
+              kind: 'ingest',
+              scopes: ['alpha:write', scope],
+              source_id: source.id,
+            }),
+          ),
+        ).toEqual({ status: 422, type: 'invalid' })
+      }
+      expect(await ids(alice, 'tokens')).toHaveLength(2)
     })
 
     it('never issues a Scope the caller lacks, admin included', async () => {

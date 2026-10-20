@@ -93,7 +93,9 @@ export async function assertModuleContract(module: Module, options: ModuleContra
       }
     }
 
-    const exported = (await t.hub.exportOwner(module.name, owner)).split('\n').filter(Boolean)
+    const exported = (await new Response(t.hub.exportOwner(module.name, owner)).text())
+      .split('\n')
+      .filter(Boolean)
     for (const line of exported) JSON.parse(line)
     if (module.export === undefined) {
       assert.equal(exported.length, seeded.length, 'export is missing owned rows')

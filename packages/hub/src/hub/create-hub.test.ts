@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { DbPort } from '../db/port'
+import type { Ctx } from '../module/define'
 import { noEdgeIdentity } from '../identity/edge'
 import { ledger } from '../testing/ledger'
 import { pgliteDb } from '../testing/pglite'
@@ -124,13 +125,54 @@ describe('createHub', () => {
     const hub = await start()
     await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'mine' })
     await hub.as('bob', write).post('/api/v1/ledger/entries', { note: 'not mine' })
-    const lines = (await hub.hub.exportOwner('ledger', 'alice')).trimEnd().split('\n')
+    const lines = (await new Response(hub.hub.exportOwner('ledger', 'alice')).text())
+      .trimEnd()
+      .split('\n')
     expect(lines.map((line) => JSON.parse(line) as unknown)).toEqual([
       {
         table: 'entries',
         row: expect.objectContaining({ note: 'mine', owner_id: 'alice' }) as unknown,
       },
     ])
+  })
+
+  it('streams an export, holding its transaction only until the stream ends', async () => {
+    let produced = 0
+    let released = 0
+    const endless = {
+      ...ledger,
+      async *export(ctx: Ctx) {
+        try {
+          for (;;) {
+            await ctx.db.execute(sql`select 1`)
+            produced += 1
+            if (produced === 10) throw new Error('export failed')
+            yield JSON.stringify({ n: produced })
+          }
+        } finally {
+          released += 1
+        }
+      },
+    }
+    const hub = await start({ modules: [endless] })
+    const decoder = new TextDecoder()
+
+    const reader = hub.hub.exportOwner('ledger', 'alice').getReader()
+    const lines: string[] = []
+    for (let i = 0; i < 3; i++) {
+      const { value } = await reader.read()
+      lines.push(decoder.decode(value))
+    }
+    expect(lines).toEqual(['{"n":1}\n', '{"n":2}\n', '{"n":3}\n'])
+    expect(produced).toBeLessThanOrEqual(4)
+    await reader.cancel()
+    expect(released).toBe(1)
+    expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
+
+    produced = 0
+    await expect(new Response(hub.hub.exportOwner('ledger', 'alice')).text()).rejects.toThrow()
+    expect(released).toBe(2)
+    expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
   })
 
   it('reports an unexpected error with its request id and Module', async () => {

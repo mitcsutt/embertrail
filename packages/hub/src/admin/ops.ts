@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import type { Account, Grant, Source, TokenRecord, User } from '../identity/directory'
-import { coreScopes, reply } from '../module/define'
+import { reply } from '../module/define'
 import type { Scope } from '../module/define'
 import { HubError } from '../module/errors'
 import { coreOp } from './core-op'
@@ -102,6 +102,9 @@ function checkScopes(ctx: CoreCtx, scopes: readonly string[]): Scope[] {
   }
   return scopes as Scope[]
 }
+
+/** An ingest Token only sends Signals, so it holds Module `:write` Scopes and nothing else. */
+const ingestScope = (scope: string) => scope.endsWith(':write')
 
 function expiry(ctx: CoreCtx, value: string | undefined) {
   if (value === undefined) return undefined
@@ -327,20 +330,12 @@ const selfOps = [
     path: '/api/v1/self/sources',
     summary: 'Create a Source and its ingest Token',
     description:
-      'The Token is bound to the new Source and shown once. `scopes` defaults to every Module `:write` Scope the caller holds, which is what ingest needs.',
-    input: z.strictObject({
-      name,
-      scopes: z.array(scope).min(1).optional(),
-      expires_at: timestamp.optional(),
-    }),
+      'The Token is bound to the new Source and shown once. It holds every Module `:write` Scope the caller holds, which is what ingest needs.',
+    input: z.strictObject({ name, expires_at: timestamp.optional() }),
     output: z.object({ source: sourceOut, token: issuedOut }),
     statuses: [201],
     async run(input, ctx) {
-      const scopes = checkScopes(
-        ctx,
-        input.scopes ??
-          ctx.caller.scopes.filter((s) => s.endsWith(':write') && !coreScopes.includes(s)),
-      )
+      const scopes = ctx.caller.scopes.filter(ingestScope)
       if (scopes.length === 0) {
         throw HubError.invalid('The caller holds no Module write Scope to give an ingest Token')
       }
@@ -416,7 +411,7 @@ const selfOps = [
     path: '/api/v1/self/tokens',
     summary: 'Issue yourself a Token',
     description:
-      'An `ingest` Token needs `source_id`, one of your Sources; `read` and `management` Tokens take none. Each Scope must be one the caller holds. No expiry unless `expires_at` is set.',
+      'An `ingest` Token needs `source_id`, one of your Sources, and holds only Module `:write` Scopes; `read` and `management` Tokens take no `source_id`. Each Scope must be one the caller holds. No expiry unless `expires_at` is set.',
     input: z.strictObject({
       kind: z.enum(['ingest', 'read', 'management']),
       scopes: z.array(scope).min(1),
@@ -428,6 +423,10 @@ const selfOps = [
     statuses: [201],
     async run(input, ctx) {
       const scopes = checkScopes(ctx, input.scopes)
+      const other = scopes.find((s) => !ingestScope(s))
+      if (input.kind === 'ingest' && other !== undefined) {
+        throw HubError.invalid(`An ingest Token holds only Module :write Scopes, not ${other}`)
+      }
       const issued = await ctx.directory.issueToken(ctx.caller.userId, {
         kind: input.kind,
         scopes,
@@ -554,15 +553,16 @@ const selfOps = [
         content: { 'application/jsonl': { schema: { type: 'string' } } },
       },
     },
-    async run({ module }, ctx) {
+    run({ module }, ctx) {
       if (!ctx.modules.includes(module)) throw HubError.notFound(`No Module "${module}"`)
-      const body = await ctx.exportOwner(module, ctx.caller.userId)
-      return new Response(body, {
-        headers: {
-          'content-type': 'application/jsonl; charset=utf-8',
-          'content-disposition': `attachment; filename="${module}.jsonl"`,
-        },
-      })
+      return Promise.resolve(
+        new Response(ctx.exportOwner(module, ctx.caller.userId), {
+          headers: {
+            'content-type': 'application/jsonl; charset=utf-8',
+            'content-disposition': `attachment; filename="${module}.jsonl"`,
+          },
+        }),
+      )
     },
   }),
 ]

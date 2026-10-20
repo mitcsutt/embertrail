@@ -122,7 +122,7 @@ describe('the OTLP JSON Lines export', () => {
     await postOtlp(first.sender, '/v1/logs', plain)
     await first.sender.put('/api/v1/sessions/later/labels', { labels: { ticket: 'A-1' } })
 
-    const exported = await first.t.hub.exportOwner('otel', 'alice')
+    const exported = await new Response(first.t.hub.exportOwner('otel', 'alice')).text()
     const lines = exported.split('\n').filter(Boolean)
     expect(lines).toHaveLength(56 + 1 + 20 + 1 + 1)
 
@@ -138,7 +138,7 @@ describe('the OTLP JSON Lines export', () => {
     }
     await postOtlp(sender, '/v1/logs', plain)
     const before = await stored(t)
-    await replay(sender, await t.hub.exportOwner('otel', 'alice'))
+    await replay(sender, await new Response(t.hub.exportOwner('otel', 'alice')).text())
     expect(await stored(t)).toEqual(before)
   })
 
@@ -152,7 +152,9 @@ describe('the OTLP JSON Lines export', () => {
     await t.hub.directory.grant({ module: 'otel', accountId: account?.id ?? '', userId: 'alice' })
     await t.team('crew', { editors: ['alice'] })
 
-    expect((await t.hub.exportOwner('otel', 'alice')).split('\n').filter(Boolean)).toHaveLength(6)
+    expect(
+      (await new Response(t.hub.exportOwner('otel', 'alice')).text()).split('\n').filter(Boolean),
+    ).toHaveLength(6)
   })
 
   it('round trips through GET /api/v1/self/export/otel and ingest', async () => {
@@ -173,7 +175,11 @@ describe('the OTLP JSON Lines export', () => {
     const { t, sender } = await open()
     await postOtlp(sender, '/v1/logs', fixtureText(claudeCode.logsTurn))
     await postOtlp(t.as('bob', ['otel:write'], { sourceId: 'desktop' }), '/v1/logs', plain)
-    expect((await t.hub.exportOwner('otel', 'alice')).split('\n').filter(Boolean)).toHaveLength(6)
-    expect((await t.hub.exportOwner('otel', 'bob')).split('\n').filter(Boolean)).toHaveLength(1)
+    expect(
+      (await new Response(t.hub.exportOwner('otel', 'alice')).text()).split('\n').filter(Boolean),
+    ).toHaveLength(6)
+    expect(
+      (await new Response(t.hub.exportOwner('otel', 'bob')).text()).split('\n').filter(Boolean),
+    ).toHaveLength(1)
   })
 })

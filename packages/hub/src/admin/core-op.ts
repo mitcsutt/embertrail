@@ -22,8 +22,8 @@ export interface CoreCtx {
     team(teamId: string): Promise<boolean>
     source(sourceId: string): Promise<boolean>
   }
-  /** One Module's data for one Owner, as JSON Lines. */
-  exportOwner(module: string, ownerId: string): Promise<string>
+  /** One Module's data for one Owner, streamed as JSON Lines. */
+  exportOwner(module: string, ownerId: string): ReadableStream<Uint8Array>
 }
 
 /**

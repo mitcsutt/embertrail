@@ -37,35 +37,38 @@ describe.skipIf(skipWithoutPostgres)('the otel Module on Postgres', () => {
     'stores each fixture once when it is posted twice, and round trips the export',
     { timeout: 30_000 },
     async () => {
-    const first = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
-    const second = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
-    try {
-      const sender = first.as('alice', ['otel:write'], { sourceId: 'laptop' })
-      for (const name of [...fixtures, ...fixtures]) {
-        expect((await postOtlp(sender, pathOf(name), fixtureText(name))).status).toBe(200)
-      }
-      // The Account is compared by its recognition key: each Hub gives Accounts their own ids.
-      const rows = (t: typeof first) =>
-        t.sql(sql`select t, row - 'account_id' || jsonb_build_object('account', a.key) as row
+      const first = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
+      const second = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })
+      try {
+        const sender = first.as('alice', ['otel:write'], { sourceId: 'laptop' })
+        for (const name of [...fixtures, ...fixtures]) {
+          expect((await postOtlp(sender, pathOf(name), fixtureText(name))).status).toBe(200)
+        }
+        // The Account is compared by its recognition key: each Hub gives Accounts their own ids.
+        const rows = (t: typeof first) =>
+          t.sql(sql`select t, row - 'account_id' || jsonb_build_object('account', a.key) as row
             from (select 'logs' as t, to_jsonb(r) - 'id' as row from otel.otel_logs r
               union all select 'sum', to_jsonb(r) - 'id' from otel.otel_metrics_sum r) s
             left join core.accounts a on a.id = s.row ->> 'account_id'
             order by 1, 2`)
-      expect(await rows(first)).toHaveLength(56 + 20)
+        expect(await rows(first)).toHaveLength(56 + 20)
 
-      const replayer = second.as('alice', ['otel:write'], { sourceId: 'laptop' })
-      for (const line of (await first.hub.exportOwner('otel', 'alice')).split('\n')) {
-        if (line === '') continue
-        const path = line.startsWith('{"resourceLogs"') ? '/v1/logs' : '/v1/metrics'
-        expect(await (await postOtlp(replayer, path, line)).json()).toEqual({})
+        const replayer = second.as('alice', ['otel:write'], { sourceId: 'laptop' })
+        for (const line of (
+          await new Response(first.hub.exportOwner('otel', 'alice')).text()
+        ).split('\n')) {
+          if (line === '') continue
+          const path = line.startsWith('{"resourceLogs"') ? '/v1/logs' : '/v1/metrics'
+          expect(await (await postOtlp(replayer, path, line)).json()).toEqual({})
+        }
+        expect(await rows(second)).toEqual(await rows(first))
+        expect([...first.errors, ...second.errors]).toEqual([])
+      } finally {
+        await first.close()
+        await second.close()
       }
-      expect(await rows(second)).toEqual(await rows(first))
-      expect([...first.errors, ...second.errors]).toEqual([])
-    } finally {
-      await first.close()
-      await second.close()
-    }
-  })
+    },
+  )
 
   it('answers every Query API endpoint as the spec says, Labels and zone buckets included', async () => {
     const t = await testHub({ modules: [otel], db: await openTempDb(databaseUrl) })

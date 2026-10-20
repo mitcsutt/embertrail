@@ -14,9 +14,9 @@ How Users, Teams, Sources, Tokens, Accounts and Grants are managed over HTTP ([#
 ## Rules every op keeps
 
 - **Own records only.** A `self:manage` op reads the caller's records first and answers 404 for anything else, so another User's ids look exactly like ids that don't exist. `admin` ops reach every record.
-- **No escalation.** A Token issued through `self:manage`, including a new Source's ingest Token, may only hold Scopes its caller holds (403 otherwise); `admin` additionally needs an admin User.
+- **No escalation.** A Token issued through `self:manage` may only hold Scopes its caller holds (403 otherwise); `admin` additionally needs an admin User. An ingest Token, which a device keeps in its telemetry config, holds only Module `:write` Scopes, never `admin`, `self:manage`, `sql:read` or a `:read` Scope (422 otherwise); a new Source's ingest Token gets every Module `:write` Scope the caller holds, with no choice of Scopes.
 - **Hard delete only.** Deleting a Source, User or Team removes the record and every row it sent (a Source) or owns (a User or Team) in every Module, in one transaction, through the core's delete-by-Source and delete-by-Owner. The `core` foreign keys cascade to Tokens, Accounts, Grants and memberships. An admin cannot delete their own User, so a Hub always keeps one admin.
-- **Export is the caller's own rows.** `GET /api/v1/self/export/{module}` answers JSON Lines (`application/jsonl`) in the Module's native format: `otel` is OTLP JSON Lines that replay through `/v1/logs` and `/v1/metrics`.
+- **Export is the caller's own rows.** `GET /api/v1/self/export/{module}` streams JSON Lines (`application/jsonl`) in the Module's native format: `otel` is OTLP JSON Lines that replay through `/v1/logs` and `/v1/metrics`. `hub.exportOwner` returns the stream, which reads in one transaction held until the stream ends, errors or is cancelled, and reads ahead at most one line, so an export is never buffered whole.
 - **Lists are unpaginated.** These records stay small, so a list answers `{ "items": [...] }`, oldest first, with no cursor.
 - **Problems** are the existing types: `validation` (400), `unauthenticated` (401), `forbidden` (403), `not-found` (404), `conflict` (409, a taken email, id or name, or a duplicate Grant) and `invalid` (422, such as a past `expires_at` or an unknown Module). #30 added no new problem type.
 

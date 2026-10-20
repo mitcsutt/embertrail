@@ -404,9 +404,8 @@ export interface paths {
     /**
      * Create a Source and its ingest Token
      * @description Connects a machine: the Source, and an ingest Token bound to it, shown
-     *     once. `scopes` defaults to every Module `:write` Scope the caller
-     *     holds, which is what ingest needs. Each Scope must be one the caller
-     *     holds (`forbidden` otherwise).
+     *     once. The Token holds every Module `:write` Scope the caller holds,
+     *     which is what ingest needs, and no other Scope.
      */
     post: operations['createSource']
     delete?: never
@@ -451,8 +450,9 @@ export interface paths {
     put?: never
     /**
      * Issue yourself a Token
-     * @description An `ingest` Token needs `source_id`, one of your Sources; `read` and
-     *     `management` Tokens take none. Each Scope must be one the caller holds
+     * @description An `ingest` Token needs `source_id`, one of your Sources, and holds only
+     *     Module `:write` Scopes (`invalid` otherwise); `read` and `management`
+     *     Tokens take no `source_id`. Each Scope must be one the caller holds
      *     (`forbidden` otherwise), so a Token never widens access. No expiry
      *     unless `expires_at` is set. Rotate by issuing a new Token and revoking
      *     the old one.
@@ -2172,7 +2172,6 @@ export interface operations {
          */
         'application/json': {
           name: components['schemas']['Name']
-          scopes?: components['schemas']['Scope'][]
           expires_at?: components['schemas']['Timestamp']
         }
       }
