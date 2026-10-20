@@ -104,5 +104,5 @@ The core's privileged API over these records: `createUser`, `createTeam`, `setTe
 
 ## Known gaps
 
-- **The SQL endpoint (#34) must stop callers changing `embertrail.*` settings.** Any role can call `set_config('embertrail.user_id', …)` inside its own statement, and row-level security reads those settings. Module code is trusted, but `/api/v1/sql` runs caller-written SQL, so #34 has to close this before it ships.
+- **Module code can still change `embertrail.*` settings.** The app role keeps `set_config`, and row-level security reads those settings; Module code is trusted. `/api/v1/sql` runs caller-written SQL, so its readonly role has `set_config` revoked ([`sql.md`](sql.md#how-it-stays-read-only)).
 - `/api/v1/bootstrap` is in the Hub's served OpenAPI document but not yet in `spec/`; it joins the Admin API's spec additions in #30.

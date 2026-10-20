@@ -44,15 +44,20 @@ export async function applySession(db: ScopedDb, session: DbSession): Promise<vo
     session.statementTimeoutMs ??
     (session.role === 'readonly' ? readonlyStatementTimeoutMs : undefined)
   const setTimeout =
-    timeout === undefined ? sql`` : sql`, set_config('statement_timeout', ${String(timeout)}, true)`
+    timeout === undefined ? sql`` : sql`set_config('statement_timeout', ${String(timeout)}, true),`
+  // A readonly transaction is also READ ONLY, so even a function that writes outside the
+  // role's grants (lo_create) is refused.
+  const setReadOnly =
+    session.role === 'readonly' ? sql`set_config('transaction_read_only', 'on', true),` : sql``
   // set_config(..., true) is SET LOCAL: it ends with the transaction, so a pooled connection
   // never carries one request's identity into the next. An absent Source is '', which the
-  // policies read as NULL.
+  // policies read as NULL. The role comes last: the readonly role may not call set_config.
   await db.execute(sql`select
-    set_config('role', ${dbRoles[session.role]}, true),
     set_config('embertrail.user_id', ${session.userId}, true),
     set_config('embertrail.owner_id', ${session.ownerId}, true),
-    set_config('embertrail.source_id', ${session.sourceId ?? ''}, true)${setTimeout}`)
+    set_config('embertrail.source_id', ${session.sourceId ?? ''}, true),
+    ${setTimeout} ${setReadOnly}
+    set_config('role', ${dbRoles[session.role]}, true)`)
 }
 
 /**

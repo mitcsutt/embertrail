@@ -10,6 +10,8 @@ export type ProblemSlug =
   | 'precondition-failed'
   | 'payload-too-large'
   | 'invalid'
+  | 'query-timeout'
+  | 'sql-error'
   | 'internal'
 
 /** One field error on a `validation` problem. */
@@ -30,6 +32,8 @@ export const problemTitles: Record<ProblemSlug, string> = {
   'precondition-failed': 'Precondition failed',
   'payload-too-large': 'Payload too large',
   invalid: 'Unprocessable request',
+  'query-timeout': 'Query timed out',
+  'sql-error': 'The database rejected the SQL',
   internal: 'Internal error',
 }
 
@@ -47,6 +51,8 @@ export class HubError extends Error {
     readonly slug: ProblemSlug,
     readonly detail?: string,
     readonly errors?: readonly FieldError[],
+    /** Postgres SQLSTATE, on `sql-error`. */
+    readonly sqlstate?: string,
   ) {
     super(detail ?? problemTitles[slug])
   }
@@ -79,6 +85,16 @@ export class HubError extends Error {
   /** 422: a valid shape that can't be carried out. */
   static invalid(detail: string) {
     return new HubError(422, 'invalid', detail)
+  }
+
+  /** 422: the statement ran past its `statement_timeout`. */
+  static queryTimeout(detail?: string) {
+    return new HubError(422, 'query-timeout', detail)
+  }
+
+  /** 422: Postgres refused the caller's SQL, with its SQLSTATE. */
+  static sqlError(sqlstate: string, detail: string) {
+    return new HubError(422, 'sql-error', detail, undefined, sqlstate)
   }
 
   static validation(errors: readonly FieldError[]) {

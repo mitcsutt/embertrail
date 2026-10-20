@@ -23,9 +23,10 @@ interface DbSession {
 
 - the role, `embertrail_app` or `embertrail_readonly`, which the core's first migration creates and grants to the connecting role;
 - `embertrail.user_id`, `embertrail.owner_id` and `embertrail.source_id`, which the ownership columns' defaults and the row-level security policies read (an absent Source is `''`, read as `NULL`);
-- `statement_timeout`, when set.
+- `statement_timeout`, when set;
+- for `readonly`, `transaction_read_only`, so even a function that writes outside the role's grants is refused.
 
-Each is `SET LOCAL`, so it ends with the transaction and a pooled connection never carries one caller into the next. One connection per call, released when it ends; a throw rolls back and is rethrown unchanged.
+The role is set last, since `migrate` revokes `set_config` from the readonly role ([`sql.md`](sql.md#how-it-stays-read-only)). Each is `SET LOCAL`, so it ends with the transaction and a pooled connection never carries one caller into the next. One connection per call, released when it ends; a throw rolls back and is rethrown unchanged.
 
 `privileged` runs as the connecting role with no session, outside row-level security. Only the core uses it, for migrations, the policy sync, boot checks, retention and deletes. Modules never see it. It replaces #26's `migrate(sources)`: the core runs migrations itself through `privileged`, so an Adapter has no migration logic of its own.
 
@@ -105,8 +106,9 @@ it.each(dbPortChecks)('$name', async (check) => {
 })
 ```
 
-- `dbPortChecks` (`/contract`): settings applied before the first statement, the readonly role and its timeout, nothing left behind for the next transaction, rollback with the same error, connections released.
+- `dbPortChecks` (`/contract`): settings applied before the first statement, the readonly role, `READ ONLY` and its timeout, nothing left behind for the next transaction, rollback with the same error, connections released.
 - `edgeIdentityChecks` (`/contract`): valid, absent and invalid assertions, given a fixture of requests.
+- `sqlEndpointChecks` and `sqlTimeoutChecks` (`/testing`): the SQL endpoint's refusals and isolation ([`sql.md`](sql.md#testing)), given the same function. PGLite runs the first; Postgres 17 runs both.
 - `hubInvariantChecks` (`/testing`): the Module contract's invariants (forged ownership refused, cross-Owner reads hidden, rollback, foreign keys outside `core.*` refused, and the Module contract suite), given a function that opens a fresh database. The Hub's tests run them on PGLite; [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) runs them on Postgres 17.
 
 A new Adapter passes its Port's suite, and a new Db Adapter also passes `hubInvariantChecks`. Today the suites run against the Test and Docker Db Adapters on Node; the Cloudflare Db Adapter and its `workerd` run in CI come with #38.
