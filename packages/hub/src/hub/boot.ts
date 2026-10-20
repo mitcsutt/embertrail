@@ -42,6 +42,7 @@ export function parseConfig(config: HubConfig) {
 export const coreRoutes: readonly { method: HttpMethod; path: string }[] = [
   { method: 'GET', path: '/api/v1/openapi.json' },
   { method: 'POST', path: '/api/v1/bootstrap' },
+  { method: 'POST', path: '/api/v1/sql' },
 ]
 
 const namePattern = /^[a-z][a-z0-9_]{0,62}$/

@@ -92,6 +92,7 @@ export function problem(error: HubError, requestId: string, module?: string): Re
     request_id: requestId,
     ...(module === undefined ? {} : { module }),
     ...(error.errors === undefined ? {} : { errors: error.errors }),
+    ...(error.sqlstate === undefined ? {} : { sqlstate: error.sqlstate }),
   }
   return Response.json(body, {
     status: error.status,

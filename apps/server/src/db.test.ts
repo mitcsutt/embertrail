@@ -1,5 +1,9 @@
 import { dbPortChecks } from '@mitcsutt/embertrail-hub/contract'
-import { hubInvariantChecks } from '@mitcsutt/embertrail-hub/testing'
+import {
+  hubInvariantChecks,
+  sqlEndpointChecks,
+  sqlTimeoutChecks,
+} from '@mitcsutt/embertrail-hub/testing'
 import { describe, expect, it } from 'vitest'
 
 import { openTempDb } from './testing/temp-database'
@@ -27,6 +31,17 @@ describe.skipIf(databaseUrl === '' && process.env.CI === undefined)(
       it.each(hubInvariantChecks)('$name', async (check) => {
         await expect(check.run(open)).resolves.toBeUndefined()
       })
+    })
+
+    describe('the read-only SQL endpoint', () => {
+      // The timeout check waits out the real 10 s statement timeout.
+      it.each([...sqlEndpointChecks, ...sqlTimeoutChecks])(
+        '$name',
+        async (check) => {
+          await expect(check.run(open)).resolves.toBeUndefined()
+        },
+        30_000,
+      )
     })
   },
 )

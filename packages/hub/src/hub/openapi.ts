@@ -120,6 +120,7 @@ const problemSchema = {
     detail: { type: 'string' },
     request_id: { type: 'string' },
     module: { type: 'string', description: 'Module that raised the error, on `internal`.' },
+    sqlstate: { type: 'string', description: 'Postgres SQLSTATE, on `sql-error`.' },
     errors: {
       type: 'array',
       items: {
@@ -128,6 +129,62 @@ const problemSchema = {
         properties: { pointer: { type: 'string' }, message: { type: 'string' } },
       },
     },
+  },
+}
+
+/** `POST /api/v1/sql` (#34), as `runSql` in spec/query-api.yaml. */
+const sqlOperation = {
+  operationId: 'core.sql',
+  summary: 'Run one read-only SQL statement',
+  description:
+    'Runs a single `SELECT` as the read-only database role, with the caller’s row-level security applied. 10 s statement timeout; at most 10,000 rows, and `truncated` says whether more existed.',
+  'x-embertrail-module': 'core',
+  'x-embertrail-scope': 'sql:read',
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          required: ['sql'],
+          additionalProperties: false,
+          properties: {
+            sql: { type: 'string', minLength: 1, maxLength: 20_000 },
+            params: {
+              type: 'array',
+              maxItems: 100,
+              items: { type: ['string', 'number', 'boolean', 'null'] },
+            },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    '200': {
+      description: 'The result set',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['columns', 'rows', 'truncated'],
+            properties: {
+              columns: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['name', 'type'],
+                  properties: { name: { type: 'string' }, type: { type: 'string' } },
+                },
+              },
+              rows: { type: 'array', maxItems: 10_000, items: { type: 'array' } },
+              truncated: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    default: { $ref: '#/components/responses/Problem' },
   },
 }
 
@@ -198,6 +255,7 @@ export function buildOpenApi(modules: readonly Module[]) {
         },
       },
     },
+    '/api/v1/sql': { post: sqlOperation },
   }
   for (const module of modules) {
     for (const [key, op] of Object.entries(module.ops)) {

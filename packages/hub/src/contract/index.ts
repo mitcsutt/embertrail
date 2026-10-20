@@ -92,13 +92,17 @@ export const dbPortChecks: readonly Check<DbPort>[] = [
     },
   },
   {
-    name: 'runs readonly as a SELECT-only role with a 10 s statement timeout',
+    name: 'runs readonly as a SELECT-only role, READ ONLY, with a 10 s statement timeout',
     async run(port) {
       await probe(port)
       const session: DbSession = { role: 'readonly', userId: 'alice', ownerId: 'alice' }
       const [settings] = await port.transaction(session, (db) => rows<Settings>(db, readSettings))
       assert.equal(settings?.role, dbRoles.readonly)
       assert.equal(settings.statement_timeout, '10s')
+      const [readOnly] = await port.transaction(session, (db) =>
+        rows<{ on: string }>(db, sql`select current_setting('transaction_read_only') as on`),
+      )
+      assert.equal(readOnly?.on, 'on')
       await assert.rejects(
         port.transaction(session, (db) =>
           db.execute(sql`insert into port_contract.probe values ('readonly')`),

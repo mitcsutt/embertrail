@@ -34,6 +34,30 @@ export const coreMigrations: readonly Migration[] = [
   identityMigration,
 ]
 
+/**
+ * Built-in functions every role may call by default that would let `/api/v1/sql` (#34) escape
+ * its session: `set_config` rewrites the `embertrail.*` settings row-level security reads and
+ * can switch the role back to the connecting one, and session-level advisory locks outlive the
+ * transaction on a pooled connection. Revoking from PUBLIC needs the function's owner (a
+ * superuser); elsewhere it is a warning, and the SQL endpoint refuses to run (docs/sql.md).
+ */
+export const lockedFunctions = [
+  'pg_catalog.set_config(text, text, boolean)',
+  ...[
+    'pg_advisory_lock',
+    'pg_advisory_lock_shared',
+    'pg_try_advisory_lock',
+    'pg_try_advisory_lock_shared',
+  ].flatMap((name) => [`pg_catalog.${name}(bigint)`, `pg_catalog.${name}(integer, integer)`]),
+]
+
+function lockFunctions(): string[] {
+  return lockedFunctions.flatMap((fn) => [
+    `revoke execute on function ${fn} from public`,
+    `grant execute on function ${fn} to ${dbRoles.app}, current_user`,
+  ])
+}
+
 /** Quotes a Postgres identifier. */
 export function ident(name: string) {
   return `"${name.replaceAll('"', '""')}"`
@@ -238,8 +262,8 @@ function checkAhead(applied: readonly AppliedMigration[], all: readonly Source[]
 
 /**
  * `embertrail migrate`: core migrations, then each Module in the given (dependency) order,
- * then the policy sync and isolation checks. One transaction: any failure leaves the
- * database as it was.
+ * then the policy sync, isolation checks and `lockedFunctions`. One transaction: any failure
+ * leaves the database as it was.
  */
 export async function migrate(db: DbPort, modules: readonly Module[]): Promise<MigrationReport> {
   return db.privileged(async (tx) => {
@@ -286,6 +310,7 @@ export async function migrate(db: DbPort, modules: readonly Module[]): Promise<M
         await run(tx, statement)
       }
     }
+    for (const statement of lockFunctions()) await run(tx, statement)
     return { applied }
   })
 }

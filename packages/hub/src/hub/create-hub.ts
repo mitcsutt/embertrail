@@ -14,6 +14,7 @@ import { hashSecret, sameHash } from '../identity/tokens'
 import { coreScopes, isReply, opScope } from '../module/define'
 import type { Caller, Ctx, Exporter, Module, Op, OwnerRef, Scope } from '../module/define'
 import { HubError } from '../module/errors'
+import { runSql, sqlInput } from '../sql/endpoint'
 import { checkModules, parseConfig } from './boot'
 import type { HubConfig } from './boot'
 import { knownError, OutputError, parseOutput, problem, readInput, validate } from './http'
@@ -143,9 +144,19 @@ export function createHub(options: HubOptions): Hub {
     return Response.json({ user: first.user, token: first.token })
   }
 
+  /** `POST /api/v1/sql`: one read-only statement under the caller's row-level security (#34). */
+  async function sqlEndpoint(request: Request) {
+    await boot()
+    const caller = await resolveCaller(request, edgeIdentity, directory)
+    if (!caller.scopes.includes('sql:read')) throw HubError.forbidden('Needs Scope sql:read')
+    const input = await validate(sqlInput, await readInput(request, {}))
+    return Response.json(await runSql(db, caller, input))
+  }
+
   const router = new Router<Target>()
   router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
   router.add('POST', '/api/v1/bootstrap', { kind: 'core', respond: bootstrap })
+  router.add('POST', '/api/v1/sql', { kind: 'core', respond: sqlEndpoint })
   for (const module of modules) {
     for (const [key, op] of Object.entries(module.ops))
       router.add(op.method, op.path, { kind: 'op', module, key, op })
