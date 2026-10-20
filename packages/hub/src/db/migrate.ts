@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/pg-core'
 
+import { identityMigration } from '../identity/tables'
 import { ownedTableInfo } from '../module/define'
 import type { Migration, Module } from '../module/define'
 import { HubBootError } from '../module/errors'
@@ -19,10 +20,7 @@ export interface MigrationReport {
 
 const coreSubject = 'Hub core'
 
-/**
- * The core's own schema. Users, Tokens and Grants arrive with core identity (#29); for now
- * the core only needs the two roles every transaction switches to.
- */
+/** The core's own schema: the two roles every transaction switches to, then identity (#29). */
 export const coreMigrations: readonly Migration[] = [
   {
     id: '0000_roles',
@@ -33,6 +31,7 @@ export const coreMigrations: readonly Migration[] = [
       `grant ${dbRoles.app}, ${dbRoles.readonly} to current_user`,
     ].join('\n--> statement-breakpoint\n'),
   },
+  identityMigration,
 ]
 
 /** Quotes a Postgres identifier. */
@@ -79,11 +78,24 @@ function policySync(module: Module, views: readonly string[]): string[] {
     `grant usage on schema ${schema} to ${dbRoles.app}, ${dbRoles.readonly}`,
     `grant usage, select on all sequences in schema ${schema} to ${dbRoles.app}`,
   ]
-  for (const { name, signal } of declaredTables(module)) {
+  for (const { name, signal, columns: declared } of declaredTables(module)) {
     const t = `${schema}.${ident(name)}`
-    const stamped = signal
-      ? `owner_id = ${owner} and source_id = ${setting('source_id')}`
-      : `owner_id = ${owner}`
+    // A table with an account_id column holds an Account's rows: Grants (#29) apply to it,
+    // and a row may only name an Account of its own Owner.
+    const account = declared.includes('account_id')
+    const stamped = [
+      `owner_id = ${owner}`,
+      ...(signal ? [`source_id = ${setting('source_id')}`] : []),
+      ...(account ? ['(account_id is null or core.account_owner(account_id) = owner_id)'] : []),
+    ].join(' and ')
+    const readable = [
+      // The caller's User, the Owner they act for, and their Teams (core.readable_owners).
+      // Cast, so `any` takes the array; the subquery is uncorrelated, so it runs once.
+      'owner_id = any ((select core.readable_owners())::text[])',
+      ...(account
+        ? [`account_id = any ((select core.granted_accounts('${module.name}'))::text[])`]
+        : []),
+    ].join(' or ')
     const columns = signal ? ['owner_id', 'source_id'] : ['owner_id']
     for (const column of columns) {
       out.push(
@@ -92,11 +104,14 @@ function policySync(module: Module, views: readonly string[]): string[] {
         `create index if not exists ${ident(`${name}_${column}_idx`)} on ${t} (${column})`,
       )
     }
+    if (account) {
+      out.push(`create index if not exists ${ident(`${name}_account_id_idx`)} on ${t} (account_id)`)
+    }
     out.push(
       `alter table ${t} enable row level security`,
-      // Reads: the caller's own rows, or the Owner they act for. Grants (#29) widen this.
+      // Reads: the caller's own rows, their Teams' rows, and rows a Grant lets them read.
       `drop policy if exists embertrail_read on ${t}`,
-      `create policy embertrail_read on ${t} for select to ${dbRoles.app}, ${dbRoles.readonly} using (owner_id in (${setting('user_id')}, ${owner}))`,
+      `create policy embertrail_read on ${t} for select to ${dbRoles.app}, ${dbRoles.readonly} using (${readable})`,
       // Writes: only the caller's Owner (and Source), whatever the Module's SQL says.
       `drop policy if exists embertrail_insert on ${t}`,
       `create policy embertrail_insert on ${t} for insert to ${dbRoles.app} with check (${stamped})`,

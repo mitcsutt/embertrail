@@ -146,6 +146,58 @@ export function buildOpenApi(modules: readonly Module[]) {
         responses: { '200': { description: 'The OpenAPI document' } },
       },
     },
+    '/api/v1/bootstrap': {
+      post: {
+        operationId: 'core.bootstrap',
+        summary: 'Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once',
+        description:
+          'Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, not a Token. Answers 401 once an admin User exists or bootstrap has been used, and when BOOTSTRAP_TOKEN is unset or wrong.',
+        security: [{ bearerToken: [] }],
+        'x-embertrail-module': 'core',
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  name: { type: 'string', minLength: 1, maxLength: 200 },
+                  email: { type: 'string', format: 'email' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'The first User and its admin Token, shown once',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['user', 'token'],
+                  properties: {
+                    user: {
+                      type: 'object',
+                      required: ['id', 'name', 'email', 'admin'],
+                      properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: ['string', 'null'] },
+                        admin: { type: 'boolean' },
+                      },
+                    },
+                    token: { type: 'string', description: '`et_<id>_<secret>`' },
+                  },
+                },
+              },
+            },
+          },
+          default: { $ref: '#/components/responses/Problem' },
+        },
+      },
+    },
   }
   for (const module of modules) {
     for (const [key, op] of Object.entries(module.ops)) {

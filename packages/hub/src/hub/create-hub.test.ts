@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import type { DbPort } from '../db/port'
 import { noEdgeIdentity } from '../identity/edge'
 import { ledger } from '../testing/ledger'
 import { pgliteDb } from '../testing/pglite'
@@ -44,6 +45,10 @@ describe('createHub', () => {
         required: true,
         content: { 'application/json': { schema: { required: ['note'] } } },
       },
+    })
+    expect(document.paths['/api/v1/bootstrap']?.post).toMatchObject({
+      operationId: 'core.bootstrap',
+      'x-embertrail-module': 'core',
     })
     expect(document.paths['/api/v1/ledger/raw-readings']?.post).toMatchObject({
       'x-embertrail-scope': 'ledger:write',
@@ -124,20 +129,24 @@ describe('createHub', () => {
     const db = pgliteDb()
     try {
       const errors: unknown[] = []
+      let down = false
+      const flaky: DbPort = {
+        ...db,
+        privileged: (fn) =>
+          down ? Promise.reject(new Error('directory down')) : db.privileged(fn),
+      }
       const hub = createHub({
         config: {},
-        ports: { db, edgeIdentity: noEdgeIdentity() },
+        ports: { db: flaky, edgeIdentity: noEdgeIdentity() },
         modules: [ledger],
-        directory: {
-          token: () => Promise.reject(new Error('directory down')),
-          edgeUser: () => Promise.resolve(null),
-        },
         onError: (error) => errors.push(error),
       })
       await hub.migrate()
+      await hub.boot()
+      down = true
       const response = await hub.fetch(
         new Request('http://hub.test/api/v1/ledger/entries', {
-          headers: { authorization: 'Bearer any' },
+          headers: { authorization: `Bearer et_${'a'.repeat(16)}_${'b'.repeat(40)}` },
         }),
       )
       expect(response.status).toBe(500)
@@ -207,34 +216,16 @@ describe('createHub', () => {
   })
 
   describe('ctx.ownerOf', () => {
-    it('calls every Owner a User when the Directory knows no Teams', async () => {
+    it('calls every Owner a User when there are no Teams', async () => {
       const response = await (await start()).as('alice', write).get('/api/v1/ledger/owner')
       expect(await response.json()).toEqual({ kind: 'user', id: 'alice' })
     })
 
-    it('asks the Directory when it knows Teams', async () => {
-      const db = pgliteDb()
-      try {
-        const hub = createHub({
-          config: {},
-          ports: { db, edgeIdentity: noEdgeIdentity() },
-          modules: [ledger],
-          directory: {
-            token: () => Promise.resolve({ userId: 'crew', scopes: write }),
-            edgeUser: () => Promise.resolve(null),
-            ownerKind: (id) => Promise.resolve(id === 'crew' ? 'team' : 'user'),
-          },
-        })
-        await hub.migrate()
-        const response = await hub.fetch(
-          new Request('http://hub.test/api/v1/ledger/owner', {
-            headers: { authorization: 'Bearer any' },
-          }),
-        )
-        expect(await response.json()).toEqual({ kind: 'team', id: 'crew' })
-      } finally {
-        await db.close()
-      }
+    it('calls an Owner that names a Team a Team', async () => {
+      const hub = await start()
+      await hub.team('crew', { editors: ['alice'] })
+      const response = await hub.as('alice', write, { team: 'crew' }).get('/api/v1/ledger/owner')
+      expect(await response.json()).toEqual({ kind: 'team', id: 'crew' })
     })
   })
 })

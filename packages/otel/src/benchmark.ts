@@ -26,14 +26,16 @@ export async function benchmarkLogs(
   }: { warmup?: number; rounds?: number; iterations?: number } = {},
 ): Promise<BenchmarkResult> {
   const now = new Date()
-  for (let i = 0; i < warmup; i += 1) await mapLogs(JSON.parse(body), now)
+  // No database: every Signal maps to one Account.
+  const account = () => Promise.resolve('account')
+  for (let i = 0; i < warmup; i += 1) await mapLogs(JSON.parse(body), now, account)
   const times: number[] = []
   const cpuMeans: number[] = []
   for (let round = 0; round < rounds; round += 1) {
     const cpu = process.cpuUsage()
     for (let i = 0; i < iterations; i += 1) {
       const start = performance.now()
-      await mapLogs(JSON.parse(body), now)
+      await mapLogs(JSON.parse(body), now, account)
       times.push(performance.now() - start)
     }
     const used = process.cpuUsage(cpu)

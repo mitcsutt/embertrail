@@ -11,6 +11,12 @@ export const contractVersion = 1
 /** A permission naming one Module and one verb, such as `otel:write`, or `admin`. */
 export type Scope = `${string}:${string}` | 'admin'
 
+/**
+ * Scopes the core defines (#27, #29): `admin` (instance admin), `self:manage` (a User's own
+ * Sources, Tokens, Accounts and Grants) and `sql:read` (the read-only SQL endpoint).
+ */
+export const coreScopes: readonly Scope[] = ['admin', 'self:manage', 'sql:read']
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 /** A status a typed op answers with. 204 sends no body. */
@@ -41,6 +47,14 @@ export interface Ctx {
   now: () => Date
   /** Whether an `owner_id` names a User or a Team. */
   ownerOf: (ownerId: string) => Promise<OwnerRef>
+  /**
+   * The Account (#29) that telemetry attributes name, created on first sight, for the
+   * caller's User: `organization.id` + `user.account_uuid`, else `user.email`, else the
+   * caller's Source's Unknown Account (which needs a Source-bound caller). Store the id in
+   * an `account_id` column so Grants apply to the row. The Account is the caller's User's
+   * even when acting for a Team, so don't store it on Team-owned rows.
+   */
+  account: (attributes: Readonly<Record<string, unknown>>) => Promise<string>
 }
 
 declare const replyBrand: unique symbol

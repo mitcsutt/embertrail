@@ -1,13 +1,17 @@
 import { sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { checkDatabase, declaredTables, ident, migrate } from '../db/migrate'
 import type { MigrationReport } from '../db/migrate'
 import { rows } from '../db/port'
 import type { DbPort, DbSession, ScopedDb } from '../db/port'
+import { accountRecogniser } from '../identity/accounts'
+import { coreDirectory, ownerKind } from '../identity/directory'
+import type { Directory } from '../identity/directory'
 import type { EdgeIdentityPort } from '../identity/edge'
-import { emptyDirectory, resolveCaller } from '../identity/resolve'
-import type { Directory } from '../identity/resolve'
-import { isReply, opScope } from '../module/define'
+import { bearer, resolveCaller } from '../identity/resolve'
+import { hashSecret, sameHash } from '../identity/tokens'
+import { coreScopes, isReply, opScope } from '../module/define'
 import type { Caller, Ctx, Exporter, Module, Op, OwnerRef, Scope } from '../module/define'
 import { HubError } from '../module/errors'
 import { checkModules, parseConfig } from './boot'
@@ -28,8 +32,6 @@ export interface HubOptions {
   config: HubConfig
   ports: Ports
   modules: readonly Module[]
-  /** Where Users and Tokens are looked up. Until core identity (#29), the default knows nobody. */
-  directory?: Directory
   /** The clock behind `ctx.now()` and retention. */
   clock?: () => Date
   /** Receives every unexpected error (each one a 500). Default: `console.error`. */
@@ -52,12 +54,21 @@ export interface Hub {
   /** One Module's data for one Owner, as JSON Lines. */
   exportOwner(module: string, ownerId: string): Promise<string>
   readonly openapi: OpenApiDocument
-  /** Every Scope the loaded Modules derive, plus `admin`. */
+  /** Every Scope a Token may hold: the loaded Modules' and the core's (`admin`, `self:manage`, `sql:read`). */
   readonly scopes: readonly Scope[]
+  /** Users, Teams, Sources, Tokens, Accounts and Grants (#29), unchecked as to who asks. */
+  readonly directory: Directory
 }
 
 type Target =
-  { kind: 'core'; respond: () => Response } | { kind: 'op'; module: Module; key: string; op: Op }
+  | { kind: 'core'; respond: (request: Request) => Response | Promise<Response> }
+  | { kind: 'op'; module: Module; key: string; op: Op }
+
+/** `POST /api/v1/bootstrap`'s optional body: who the first User is. */
+const bootstrapInput = z.strictObject({
+  name: z.string().min(1).max(200).optional(),
+  email: z.email().optional(),
+})
 
 /** JSON Lines of every row the Owner owns, one `{ table, row }` object per line. */
 function defaultExporter(module: Module): Exporter {
@@ -82,24 +93,28 @@ export function createHub(options: HubOptions): Hub {
   const modules = checkModules(options.modules)
   const openapi = buildOpenApi(modules)
   const { db, edgeIdentity } = options.ports
-  const directory = options.directory ?? emptyDirectory
   const clock = options.clock ?? (() => new Date())
+  const scopes = [...new Set<Scope>([...modules.flatMap((m) => m.scopes), ...coreScopes])]
+  const directory = coreDirectory({
+    db,
+    scopes,
+    modules: modules.map((m) => m.name),
+    allowedEmails: config.allowedEmails,
+    allowedDomains: config.allowedDomains,
+    clock,
+  })
   const onError =
     options.onError ??
     ((error, context) => {
       console.error(`[embertrail] ${context.requestId} in ${context.module}:`, error)
     })
-  const ownerOf = async (ownerId: string): Promise<OwnerRef> => ({
-    kind: (await directory.ownerKind?.(ownerId)) ?? 'user',
-    id: ownerId,
-  })
-
-  const router = new Router<Target>()
-  router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
-  for (const module of modules) {
-    for (const [key, op] of Object.entries(module.ops))
-      router.add(op.method, op.path, { kind: 'op', module, key, op })
-  }
+  // On the op's own transaction: a second connection would wait on it (PGLite has one).
+  const ownerOf =
+    (scoped: ScopedDb) =>
+    async (ownerId: string): Promise<OwnerRef> => ({
+      kind: await ownerKind(scoped, ownerId),
+      id: ownerId,
+    })
 
   let booted: Promise<void> | undefined
   const boot = () => {
@@ -108,6 +123,32 @@ export function createHub(options: HubOptions): Hub {
       throw error
     })
     return booted
+  }
+
+  /** Exchanges `BOOTSTRAP_TOKEN` for the first User and an admin Token, once (#29). */
+  async function bootstrap(request: Request) {
+    await boot()
+    const presented = bearer(request)
+    const expected = config.bootstrapToken
+    if (
+      presented === undefined ||
+      expected === undefined ||
+      !sameHash(await hashSecret(presented), await hashSecret(expected))
+    ) {
+      throw HubError.unauthenticated('Invalid bootstrap Token')
+    }
+    const input = await validate(bootstrapInput, await readInput(request, {}))
+    const first = await directory.createFirstUser(input)
+    if (first === null) throw HubError.unauthenticated('The Hub is already bootstrapped')
+    return Response.json({ user: first.user, token: first.token })
+  }
+
+  const router = new Router<Target>()
+  router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
+  router.add('POST', '/api/v1/bootstrap', { kind: 'core', respond: bootstrap })
+  for (const module of modules) {
+    for (const [key, op] of Object.entries(module.ops))
+      router.add(op.method, op.path, { kind: 'op', module, key, op })
   }
 
   /** Resolves the caller, checks the Scope and validates the input; returns the op's run. */
@@ -136,7 +177,8 @@ export function createHub(options: HubOptions): Hub {
       db: scoped,
       caller,
       now: () => new Date(now),
-      ownerOf,
+      ownerOf: ownerOf(scoped),
+      account: accountRecogniser(scoped),
     })
     if (op.kind === 'raw') {
       return () => db.transaction(session, (scoped) => op.run(request, ctx(scoped)))
@@ -183,7 +225,8 @@ export function createHub(options: HubOptions): Hub {
 
   return {
     openapi,
-    scopes: [...new Set<Scope>([...modules.flatMap((m) => m.scopes), 'admin'])],
+    scopes,
+    directory,
 
     async fetch(request) {
       const requestId = crypto.randomUUID()
@@ -195,7 +238,7 @@ export function createHub(options: HubOptions): Hub {
           throw HubError.notFound(`No route for ${request.method} ${url.pathname}`)
         }
         const { target } = found
-        if (target.kind === 'core') return target.respond()
+        if (target.kind === 'core') return await target.respond(request)
         await boot()
         const run = await prepare(request, target.module, target.key, target.op, found.params)
         // From here on, an unexpected error is the Module's.
@@ -253,12 +296,14 @@ export function createHub(options: HubOptions): Hub {
       const now = clock()
       return db.transaction({ role: 'app', userId: ownerId, ownerId }, async (scoped) => {
         const lines: string[] = []
-        for await (const line of exporter({
+        const ctx: Ctx = {
           db: scoped,
           caller,
           now: () => new Date(now),
-          ownerOf,
-        })) {
+          ownerOf: ownerOf(scoped),
+          account: accountRecogniser(scoped),
+        }
+        for await (const line of exporter(ctx)) {
           lines.push(`${line}\n`)
         }
         return lines.join('')

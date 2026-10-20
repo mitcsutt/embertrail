@@ -30,7 +30,7 @@ Schema `otel`, in the Collector ClickHouse exporter's layout trimmed to what age
 
 A promoted attribute is read from the record's or point's attributes, falling back to the resource's, as the Query API's dimensions are.
 
-**Account:** recognised from the telemetry in #29's order, `organization.id` with `user.account_uuid`, else `user.email` (case-insensitive), and stored as the first 32 hex digits of its SHA-256, so the id never carries an email. A Signal with none of these has no `account_id`. Mapping these ids onto core Accounts is #29's.
+**Account:** the core Account `ctx.account` recognises from the Signal's `organization.id`, `user.account_uuid` and `user.email` (a point's own attribute wins over its resource's), in the order [`identity.md`](identity.md#accounts) gives: `organization.id` with `user.account_uuid`, else `user.email` (case-insensitive), else the Source's Unknown Account. So Grants apply to every row.
 
 ### De-duplication keys
 

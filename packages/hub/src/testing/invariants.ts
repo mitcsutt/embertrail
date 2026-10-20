@@ -8,6 +8,7 @@ import { createHub } from '../hub/create-hub'
 import { noEdgeIdentity } from '../identity/edge'
 import type { Scope } from '../module/define'
 import { HubBootError } from '../module/errors'
+import { identityInvariantChecks } from './identity-checks'
 import { ledger, tangle, untangled } from './ledger'
 import { assertModuleContract } from './module-contract'
 import type { ClosableDbPort } from './pglite'
@@ -49,8 +50,9 @@ async function expectInternal(t: TestHub, response: Response) {
 }
 
 /**
- * The Module contract's invariants (#25), proven against a real database. Hub tests run them
- * on PGLite; the Docker Platform's tests run them on Postgres 17.
+ * The Module contract's invariants (#25) and core identity's row-level security (#29),
+ * proven against a real database. Hub tests run them on PGLite; the Docker Platform's tests
+ * run them on Postgres 17.
  */
 export const hubInvariantChecks: readonly Check<OpenDb>[] = [
   {
@@ -317,4 +319,5 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
       })
     },
   },
+  ...identityInvariantChecks,
 ]

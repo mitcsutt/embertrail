@@ -1,7 +1,7 @@
 // The Hub's core. Modules import only from here; Platforms import the Ports and createHub.
 // Tests use `@mitcsutt/embertrail-hub/testing`; Adapter suites `@mitcsutt/embertrail-hub/contract`.
 
-export { contractVersion, defineModule, moduleSchema, op, reply } from './module/define'
+export { contractVersion, coreScopes, defineModule, moduleSchema, op, reply } from './module/define'
 export type {
   Caller,
   Ctx,
@@ -33,4 +33,16 @@ export type { AppliedMigration, MigrationReport } from './db/migrate'
 
 export { cloudflareAccess, EdgeIdentityError, noEdgeIdentity } from './identity/edge'
 export type { CloudflareAccessOptions, EdgeIdentity, EdgeIdentityPort } from './identity/edge'
-export type { Directory, Principal } from './identity/resolve'
+export type {
+  Account,
+  Directory,
+  Grant,
+  IssuedToken,
+  IssueTokenInput,
+  Source,
+  Team,
+  TeamRole,
+  TokenKind,
+  TokenRecord,
+  User,
+} from './identity/directory'

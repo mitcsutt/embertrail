@@ -90,9 +90,9 @@ export const otel = defineModule({
         'OTLP/HTTP JSON `ExportLogsServiceRequest`. Each log record becomes one Event; a duplicate of a stored Event is skipped, not rejected. Answered after the batch is stored.',
         'rejectedLogRecords',
       ),
-      run: (request, { db, now }: Ctx) =>
+      run: (request, { db, now, account }: Ctx) =>
         otlp(request, async (body) => {
-          const mapped = await mapLogs(body, now())
+          const mapped = await mapLogs(body, now(), account)
           await storeLogs(db, mapped.rows)
           return exportResponse('rejectedLogRecords', mapped.rejected, mapped.messages)
         }),
@@ -107,9 +107,9 @@ export const otel = defineModule({
         'OTLP/HTTP JSON `ExportMetricsServiceRequest`. Delta sums and gauges are stored; cumulative sums, histograms and summaries are refused through `partialSuccess`.',
         'rejectedDataPoints',
       ),
-      run: (request, { db }: Ctx) =>
+      run: (request, { db, account }: Ctx) =>
         otlp(request, async (body) => {
-          const mapped = await mapMetrics(body)
+          const mapped = await mapMetrics(body, account)
           await storeMetrics(db, mapped.rows)
           return exportResponse('rejectedDataPoints', mapped.rejected, mapped.messages)
         }),

@@ -1,5 +1,6 @@
 // Maps a parsed OTLP/JSON export request to the rows the tables store. Pure apart from the
-// clock: no database, so the benchmark measures exactly parse + map.
+// clock and the Account recogniser it is handed (`ctx.account` in the ops), so the benchmark
+// measures exactly parse + map.
 
 import { attributes, canonical, isObject, list, nanosToIso, sha256, unwrap } from './otlp'
 import type { Attributes, Json } from './otlp'
@@ -9,7 +10,7 @@ interface Promoted {
   time: string
   serviceName: string
   sessionId: string | null
-  accountId: string | null
+  accountId: string
   groupId: string | null
   groupKind: string | null
   parentSessionId: string | null
@@ -94,33 +95,11 @@ function hexId(value: unknown): string | null {
     : null
 }
 
-/**
- * The Account a Signal came from, recognised from the telemetry (#29's order): the
- * organisation and account UUID, else the email. Hashed, so the id carries no email.
- * Mapping these ids to core Accounts is #29's.
- */
-function accountKey(own: Attributes, resource: Attributes): string | null {
-  const organization = text(own, resource, 'organization.id')
-  const account = text(own, resource, 'user.account_uuid')
-  if (organization !== null || account !== null) {
-    return `account:${organization ?? ''}:${account ?? ''}`
-  }
-  const email = text(own, resource, 'user.email')
-  return email === null ? null : `email:${email.toLowerCase()}`
-}
+/** Recognises the core Account a set of telemetry attributes names (`ctx.account`). */
+export type AccountRecogniser = (attributes: Readonly<Record<string, unknown>>) => Promise<string>
 
-/** Hashes each distinct key once per request. */
-function hasher() {
-  const seen = new Map<string, Promise<string>>()
-  return (key: string) => {
-    let found = seen.get(key)
-    if (found === undefined) {
-      found = sha256(key)
-      seen.set(key, found)
-    }
-    return found
-  }
-}
+/** The attributes core Account recognition reads, the record's own winning over the resource. */
+const accountAttributes = ['organization.id', 'user.account_uuid', 'user.email']
 
 interface Context {
   resource: Attributes
@@ -150,15 +129,16 @@ async function promote(
   own: Attributes,
   context: Context,
   time: string,
-  account: (key: string) => Promise<string>,
+  account: AccountRecogniser,
 ): Promise<Promoted> {
   const { resource } = context
-  const key = accountKey(own, resource)
   return {
     time,
     serviceName: text(own, resource, 'service.name') ?? unknownService,
     sessionId: text(own, resource, 'session.id'),
-    accountId: key === null ? null : (await account(key)).slice(0, 32),
+    accountId: await account(
+      Object.fromEntries(accountAttributes.map((key) => [key, text(own, resource, key)])),
+    ),
     groupId: text(own, resource, 'embertrail.group.id'),
     groupKind: text(own, resource, 'embertrail.group.kind'),
     parentSessionId: text(own, resource, 'embertrail.parent.session_id'),
@@ -183,9 +163,12 @@ function recordTime(record: Record<string, unknown>, own: Attributes, now: Date)
 }
 
 /** An `ExportLogsServiceRequest` as Event rows. Every record is stored; none is dropped. */
-export async function mapLogs(request: unknown, now: Date): Promise<Mapped<LogRow[]>> {
+export async function mapLogs(
+  request: unknown,
+  now: Date,
+  account: AccountRecogniser,
+): Promise<Mapped<LogRow[]>> {
   const rows: LogRow[] = []
-  const account = hasher()
   let rejected = 0
   const messages = new Set<string>()
   for (const { context, items } of scopes(request, 'resourceLogs', 'scopeLogs', 'logRecords')) {
@@ -251,10 +234,10 @@ const unsupported = ['histogram', 'exponentialHistogram', 'summary'] as const
 /** An `ExportMetricsServiceRequest` as rows: delta sums and gauges; the rest refused. */
 export async function mapMetrics(
   request: unknown,
+  account: AccountRecogniser,
 ): Promise<Mapped<{ sums: SumRow[]; gauges: MetricRow[] }>> {
   const sums: SumRow[] = []
   const gauges: MetricRow[] = []
-  const account = hasher()
   let rejected = 0
   const messages = new Set<string>()
   const refuse = (count: number, message: string) => {

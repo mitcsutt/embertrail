@@ -34,9 +34,12 @@ describe.skipIf(databaseUrl === '' && process.env.CI === undefined)(
         for (const name of [...fixtures, ...fixtures]) {
           expect((await postOtlp(sender, pathOf(name), fixtureText(name))).status).toBe(200)
         }
+        // The Account is compared by its recognition key: each Hub gives Accounts their own ids.
         const rows = (t: typeof first) =>
-          t.sql(sql`select 'logs' as t, to_jsonb(r) - 'id' as row from otel.otel_logs r
-            union all select 'sum', to_jsonb(r) - 'id' from otel.otel_metrics_sum r
+          t.sql(sql`select t, row - 'account_id' || jsonb_build_object('account', a.key) as row
+            from (select 'logs' as t, to_jsonb(r) - 'id' as row from otel.otel_logs r
+              union all select 'sum', to_jsonb(r) - 'id' from otel.otel_metrics_sum r) s
+            left join core.accounts a on a.id = s.row ->> 'account_id'
             order by 1, 2`)
         expect(await rows(first)).toHaveLength(56 + 20)
 
