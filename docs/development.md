@@ -17,14 +17,14 @@ pnpm db:up         # Postgres 17 on localhost:54317, for the database tests
 
 Run these from the repo root. Turborepo runs each one across the workspace and caches the results per package.
 
-| Command          | What it does                                                                                                                                                         |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, the secret scan (`secretlint`), `redocly lint` of the spec, and publint and attw on the packed client |
-| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                                                                                      |
-| `pnpm test`      | Vitest in every package, one package at a time: on Node, and in `workerd` for `apps/worker`                                                                          |
-| `pnpm format`    | Prettier over the whole repo                                                                                                                                         |
-| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                                                                                           |
-| `pnpm changeset` | Adds a release note for a change that should reach a release                                                                                                         |
+| Command          | What it does                                                                                                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, the secret scan (`secretlint`), `redocly lint` of the spec, publint and attw on the packed client, and an install-and-run check of the packed CLI ([`cli.md`](cli.md#developing-it)) |
+| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                                                                                                                                                                     |
+| `pnpm test`      | Vitest in every package, one package at a time: on Node, and in `workerd` for `apps/worker`                                                                                                                                                         |
+| `pnpm format`    | Prettier over the whole repo                                                                                                                                                                                                                        |
+| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                                                                                                                                                                          |
+| `pnpm changeset` | Adds a release note for a change that should reach a release                                                                                                                                                                                        |
 
 Packages test one at a time (`--concurrency=1`) because each test boots its own PGLite or Postgres database and Vitest already spreads a package's files over every core; run together, the packages contend for CPU and database tests time out (the 30 s limits in each `vitest.config.ts` stay as headroom, not as the fix).
 
