@@ -53,6 +53,12 @@ describe('items', () => {
     const event: Schemas['Event'] = {
       time: '2026-10-09T08:00:00Z',
       event_name: 'api_request',
+      sequence: null,
+      session_id: null,
+      prompt_id: null,
+      request_id: null,
+      model: null,
+      body: null,
       service_name: 'claude-code',
       owner_id: 'u1',
       source_id: 's1',

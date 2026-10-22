@@ -99,6 +99,10 @@ pnpm --filter @mitcsutt/embertrail-client generate
 
 `packages/client/scripts/generate.test.ts` fails when the committed files in `packages/client/src/generated/` differ from a fresh run, and the client's test task hashes the spec, so a spec-only change re-runs it. A new operation also needs a case in `packages/client/src/client.test.ts`: the case table is typed over every operation, so typecheck fails until it has one. Usage is in the [client README](../packages/client/README.md).
 
+### The served document must match the spec
+
+The Hub builds its own OpenAPI document from the Modules' ops and serves it at `/api/v1/openapi.json`. `apps/server/src/spec.test.ts` compares it with the spec through `compareOpenApi` (`@mitcsutt/embertrail-hub/testing`) and fails on drift, so change an op and the spec together. It compares each operation's Module, Scope, security, parameters, request body and success responses by what they accept and return; prose, examples, limits and the spelling of a schema are ignored. A route the spec doesn't describe yet goes in `servedOnly` in that test (today `POST /api/v1/bootstrap`, until #30); the test also fails when such an exception is no longer needed. The Hub serves `/api/v1/docs` and `/llms.txt` from the same document.
+
 ## Turborepo
 
 Turborepo's configuration and CLI change between versions. Before changing `turbo.json`, read the docs bundled with the installed version in `node_modules/turbo/docs/` rather than relying on memory.

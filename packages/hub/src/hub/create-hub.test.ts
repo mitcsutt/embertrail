@@ -56,6 +56,23 @@ describe('createHub', () => {
     })
   })
 
+  it('serves the API reference and llms.txt without auth', async () => {
+    const { anonymous } = await start()
+    const docs = await anonymous.get('/api/v1/docs')
+    expect(docs.status).toBe(200)
+    expect(docs.headers.get('content-type')).toBe('text/html; charset=utf-8')
+    const page = await docs.text()
+    expect(page).toContain('<code>/api/v1/ledger/entries/{id}</code>')
+    expect(page).toContain('ledger:read')
+
+    const llms = await anonymous.get('/llms.txt')
+    expect(llms.status).toBe(200)
+    expect(llms.headers.get('content-type')).toBe('text/markdown; charset=utf-8')
+    const text = await llms.text()
+    expect(text).toContain('(http://hub.test/api/v1/openapi.json)')
+    expect(text).toContain('`GET /api/v1/ledger/entries/{id}`')
+  })
+
   it('answers an unknown route with a 404 problem', async () => {
     const { anonymous } = await start()
     const response = await anonymous.get('/api/v1/nowhere')
@@ -200,6 +217,7 @@ describe('createHub', () => {
       expect(put?.parameters).toEqual([
         { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
         { name: 'Ledger-Stamp', in: 'header', required: false, schema: { type: 'string' } },
+        expect.objectContaining({ name: 'Embertrail-Owner', in: 'header', required: false }),
       ])
       expect(put?.requestBody).toMatchObject({
         content: { 'application/json': { schema: { properties: { note: {} } } } },

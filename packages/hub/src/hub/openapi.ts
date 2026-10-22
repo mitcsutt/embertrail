@@ -32,6 +32,18 @@ function jsonSchema(
   return Object.fromEntries(Object.entries(converted).filter(([k]) => k !== '$schema'))
 }
 
+const ownerHeader = {
+  name: 'Embertrail-Owner',
+  in: 'header',
+  required: false,
+  description:
+    'Act for a Team instead of the caller: `team:<id>`. The caller must be an editor of that Team. Omit on the solo path.',
+  schema: { type: 'string', pattern: '^team:[A-Za-z0-9_-]{1,64}$' },
+}
+
+/** Ingest takes a Token bound to a Source; an Edge Identity alone cannot send. */
+const sourceBoundSecurity = { security: [{ bearerToken: [] }] }
+
 const statusDescriptions = { 200: 'OK', 201: 'Created', 204: 'No Content' } as const
 
 /**
@@ -62,6 +74,8 @@ function typedOperation(
       schema: properties[name] ?? { type: 'string' },
     })
   }
+  // The core reads this header before any op runs, so every write can name a Team.
+  if (op.kind === 'mutate') parameters.push(ownerHeader)
   const rest = Object.keys(properties).filter(
     (name) => !inPath.includes(name) && !Object.hasOwn(op.headers, name),
   )
@@ -75,6 +89,9 @@ function typedOperation(
         schema: properties[name],
       })
     }
+  } else if (!isRecord(input.properties)) {
+    // A union such as `mode: list | aggregate` has no top-level properties: it is the body.
+    requestBody = { required: true, content: { 'application/json': { schema: input } } }
   } else if (rest.length > 0) {
     const bodyRequired = required.filter((name) => rest.includes(name))
     requestBody = {
@@ -91,6 +108,7 @@ function typedOperation(
     }
   }
   return {
+    ...(op.kind === 'ingest' ? sourceBoundSecurity : {}),
     ...(parameters.length > 0 ? { parameters } : {}),
     ...(requestBody === undefined ? {} : { requestBody }),
     responses: {
@@ -200,7 +218,40 @@ export function buildOpenApi(modules: readonly Module[]) {
         summary: 'This document',
         security: [],
         'x-embertrail-module': 'core',
-        responses: { '200': { description: 'The OpenAPI document' } },
+        responses: {
+          '200': {
+            description: 'The OpenAPI document',
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+        },
+      },
+    },
+    '/api/v1/docs': {
+      get: {
+        operationId: 'core.docs',
+        summary: 'Human-readable API reference rendered from `openapi.json`',
+        security: [],
+        'x-embertrail-module': 'core',
+        responses: {
+          '200': {
+            description: 'HTML page.',
+            content: { 'text/html': { schema: { type: 'string' } } },
+          },
+        },
+      },
+    },
+    '/llms.txt': {
+      get: {
+        operationId: 'core.llmsTxt',
+        summary: 'Plain-text pointer to the API for AI agents',
+        security: [],
+        'x-embertrail-module': 'core',
+        responses: {
+          '200': {
+            description: 'Markdown text.',
+            content: { 'text/markdown': { schema: { type: 'string' } } },
+          },
+        },
       },
     },
     '/api/v1/bootstrap': {
@@ -264,7 +315,9 @@ export function buildOpenApi(modules: readonly Module[]) {
         summary: op.summary,
         'x-embertrail-module': module.name,
         'x-embertrail-scope': opScope(module.name, op),
-        ...(op.kind === 'raw' ? op.openapi : typedOperation(module, key, op)),
+        ...(op.kind === 'raw'
+          ? { ...(op.sourceBound ? sourceBoundSecurity : {}), ...op.openapi }
+          : typedOperation(module, key, op)),
       }
       paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
     }

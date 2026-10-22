@@ -453,7 +453,7 @@ export interface components {
         tz: components['schemas']['Tz']
         bucket?: components['schemas']['Bucket']
         /** @description The Metric's unit, or `null` for Event counts and mixed units. */
-        unit?: string | null
+        unit: string | null
       }
     }
     AggregateRow: {
@@ -515,18 +515,18 @@ export interface components {
       time: components['schemas']['Timestamp']
       /** @description Unprefixed (`api_request`). */
       event_name: string
-      sequence?: number | null
-      session_id?: string | null
-      prompt_id?: string | null
-      request_id?: string | null
-      model?: string | null
+      sequence: number | null
+      session_id: string | null
+      prompt_id: string | null
+      request_id: string | null
+      model: string | null
       service_name: string
       owner_id: components['schemas']['Id']
       source_id: components['schemas']['Id']
       /** @description The Account recognised from the telemetry; `null` when it carries none. */
       account_id: string | null
       /** @description The log record body as sent, when it was a string. */
-      body?: string | null
+      body: string | null
       /** @description Log record attributes as sent, with OTLP values unwrapped to plain JSON. */
       attributes: Record<string, unknown>
       /** @description Resource attributes as sent, unwrapped. */
@@ -565,7 +565,7 @@ export interface components {
       }
       group: {
         id: string
-        kind?: string | null
+        kind: string | null
       } | null
       parent_session_id: string | null
       role: string | null
@@ -593,9 +593,9 @@ export interface components {
         /** @description The User's label, or a suggestion from the email domain, or `Unknown`. */
         label: string
         owner_id: components['schemas']['Id']
-        organization_id?: string | null
-        account_uuid?: string | null
-        email?: string | null
+        organization_id: string | null
+        account_uuid: string | null
+        email: string | null
       }[]
       services: string[]
       models: string[]
@@ -604,12 +604,12 @@ export interface components {
         /** @enum {string} */
         kind: 'sum' | 'gauge'
         unit: string | null
-        service_name?: string
+        service_name: string
       }[]
       events: {
         /** @description Unprefixed. */
         name: string
-        service_name?: string
+        service_name: string
       }[]
       /** @description Attribute keys seen, for building `group_by` and filter pickers. Capped at 1,000, most frequent first. */
       attributes: {
@@ -896,8 +896,8 @@ export interface components {
     /** @description Client-chosen document id, unique within the namespace. */
     DocumentId: components['schemas']['Slug']
     /**
-     * @description Create the document for a Team instead of the caller: `team:<id>`.
-     *     The caller must be an editor of that Team. Omit on the solo path.
+     * @description Act for a Team instead of the caller: `team:<id>`. The caller must be
+     *     an editor of that Team. Every write takes it; omit it on the solo path.
      */
     OwnerHeader: string
     /** @description `gzip` is accepted. The 5 MB limit applies to the decoded body. */
@@ -1061,7 +1061,13 @@ export interface operations {
   putSessionLabels: {
     parameters: {
       query?: never
-      header?: never
+      header?: {
+        /**
+         * @description Act for a Team instead of the caller: `team:<id>`. The caller must be
+         *     an editor of that Team. Every write takes it; omit it on the solo path.
+         */
+        'Embertrail-Owner'?: components['parameters']['OwnerHeader']
+      }
       path: {
         /** @description The sender's `session.id`. */
         session_id: components['parameters']['SessionId']
@@ -1236,8 +1242,8 @@ export interface operations {
       query?: never
       header?: {
         /**
-         * @description Create the document for a Team instead of the caller: `team:<id>`.
-         *     The caller must be an editor of that Team. Omit on the solo path.
+         * @description Act for a Team instead of the caller: `team:<id>`. The caller must be
+         *     an editor of that Team. Every write takes it; omit it on the solo path.
          */
         'Embertrail-Owner'?: components['parameters']['OwnerHeader']
         'If-Match'?: string
@@ -1293,6 +1299,11 @@ export interface operations {
     parameters: {
       query?: never
       header?: {
+        /**
+         * @description Act for a Team instead of the caller: `team:<id>`. The caller must be
+         *     an editor of that Team. Every write takes it; omit it on the solo path.
+         */
+        'Embertrail-Owner'?: components['parameters']['OwnerHeader']
         'If-Match'?: string
       }
       path: {

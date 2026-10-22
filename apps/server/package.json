@@ -26,6 +26,8 @@
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "@electric-sql/pglite": "catalog:"
+    "@electric-sql/pglite": "catalog:",
+    "@mitcsutt/embertrail-store": "workspace:*",
+    "yaml": "catalog:"
   }
 }

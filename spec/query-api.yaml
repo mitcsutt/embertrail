@@ -300,6 +300,7 @@ paths:
       x-embertrail-scope: otel:write
       parameters:
         - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/OwnerHeader'
       requestBody:
         required: true
         content:
@@ -514,6 +515,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Namespace'
         - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/OwnerHeader'
         - name: If-Match
           in: header
           schema: { type: string }
@@ -728,8 +730,8 @@ components:
       name: Embertrail-Owner
       in: header
       description: |
-        Create the document for a Team instead of the caller: `team:<id>`.
-        The caller must be an editor of that Team. Omit on the solo path.
+        Act for a Team instead of the caller: `team:<id>`. The caller must be
+        an editor of that Team. Every write takes it; omit it on the solo path.
       schema: { type: string, pattern: '^team:[A-Za-z0-9_-]{1,64}$' }
     ContentEncoding:
       name: Content-Encoding
@@ -984,7 +986,7 @@ components:
           items: { $ref: '#/components/schemas/AggregateRow' }
         meta:
           type: object
-          required: [tz]
+          required: [tz, unit]
           properties:
             tz: { $ref: '#/components/schemas/Tz' }
             bucket: { $ref: '#/components/schemas/Bucket' }
@@ -1071,7 +1073,22 @@ components:
     Event:
       type: object
       required:
-        [time, event_name, service_name, owner_id, source_id, account_id, attributes, resource]
+        [
+          time,
+          event_name,
+          sequence,
+          session_id,
+          prompt_id,
+          request_id,
+          model,
+          service_name,
+          owner_id,
+          source_id,
+          account_id,
+          body,
+          attributes,
+          resource,
+        ]
       properties:
         time: { $ref: '#/components/schemas/Timestamp' }
         event_name:
@@ -1149,7 +1166,7 @@ components:
           additionalProperties: { type: integer }
         group:
           type: [object, 'null']
-          required: [id]
+          required: [id, kind]
           properties:
             id: { type: string }
             kind: { type: [string, 'null'] }
@@ -1196,7 +1213,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, label, owner_id]
+            required: [id, label, owner_id, organization_id, account_uuid, email]
             properties:
               id: { $ref: '#/components/schemas/Id' }
               label:
@@ -1216,7 +1233,7 @@ components:
           type: array
           items:
             type: object
-            required: [name, kind, unit]
+            required: [name, kind, unit, service_name]
             properties:
               name: { type: string }
               kind: { type: string, enum: [sum, gauge] }
@@ -1226,7 +1243,7 @@ components:
           type: array
           items:
             type: object
-            required: [name]
+            required: [name, service_name]
             properties:
               name: { type: string, description: Unprefixed. }
               service_name: { type: string }

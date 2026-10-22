@@ -103,6 +103,7 @@ export interface Operations {
   putSessionLabels: {
     input: {
       path: NonNullable<operations['putSessionLabels']['parameters']['path']>
+      header?: NonNullable<operations['putSessionLabels']['parameters']['header']>
       body: NonNullable<
         operations['putSessionLabels']['requestBody']
       >['content']['application/json']
