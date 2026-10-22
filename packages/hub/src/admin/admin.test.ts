@@ -153,12 +153,15 @@ describe('the Admin and self-management API', () => {
         (path, init) =>
           t.anonymous.fetch(path, {
             ...init,
-            headers: { ...init.headers, authorization: `Bearer ${expiring.token}` },
+            headers: new Headers({
+              ...Object.fromEntries(new Headers(init.headers)),
+              authorization: `Bearer ${expiring.token}`,
+            }),
           }),
         'Cy',
       )
       expect(await expiryOf(capped.user.id)).toEqual([short])
-      const unbounded = await create(ada.fetch, 'Di')
+      const unbounded = await create((path, init) => ada.fetch(path, init), 'Di')
       expect(await expiryOf(unbounded.user.id)).toEqual([null])
     })
 
