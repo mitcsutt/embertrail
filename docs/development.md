@@ -97,7 +97,7 @@ A Module is a package under `packages/` that plugs into the Hub through the Modu
 pnpm --filter @mitcsutt/embertrail-client generate
 ```
 
-`packages/client/scripts/generate.test.ts` fails when the committed files in `packages/client/src/generated/` differ from a fresh run, and the client's test task hashes the spec, so a spec-only change re-runs it. A new operation also needs a case in `packages/client/src/client.test.ts`: the case table is typed over every operation, so typecheck fails until it has one. Usage is in the [client README](../packages/client/README.md).
+`packages/client/scripts/generate.test.ts` fails when the committed files in `packages/client/src/generated/` differ from a fresh run, and the client's test task hashes the spec, so a spec-only change re-runs it. A new operation also needs a call in `packages/client/src/integration.test.ts`, which drives every operation through the client against `testHub` with the otel and store Modules; its last test fails until every operation in the spec has been called. `client.test.ts` keeps only the client's own transport behaviour, against a stand-in Hub. Usage is in the [client README](../packages/client/README.md).
 
 ## Turborepo
 
