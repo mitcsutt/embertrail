@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "test": "turbo run test",
+    "test": "turbo run test --concurrency=1",
     "lint": "turbo run lint lint:package lint:root lint:spec format:check secrets",
     "lint:root": "eslint --max-warnings=0 --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
     "lint:spec": "redocly lint spec/query-api.yaml",
