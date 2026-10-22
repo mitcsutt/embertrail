@@ -36,7 +36,7 @@ Tests that talk to a database read `DATABASE_URL`. Locally, with `pnpm db:up` ru
 DATABASE_URL=postgres://postgres:postgres@localhost:54317/embertrail pnpm test
 ```
 
-Without `DATABASE_URL` they are skipped locally. In CI (`CI` is set) they always run, against a Postgres 17 service container, so a missing database fails the run rather than skipping it. A new database test follows the same pattern as `apps/server/src/postgres.test.ts`; `apps/server/src/db.test.ts` gives each check a fresh database on that server.
+Without `DATABASE_URL` they are skipped locally. In CI (`CI` is set) they always run, against a Postgres 17 service container, so a missing database fails the run rather than skipping it. A new database test wraps itself in `describe.skipIf(skipWithoutPostgres)` and reads `databaseUrl`, both from `apps/server/src/testing/postgres.ts` (ESLint refuses `process.env.DATABASE_URL` in those tests), as `apps/server/src/postgres.test.ts` does; `openTempDb` in `apps/server/src/testing/temp-database.ts` gives each check a fresh database on that server, as `apps/server/src/db.test.ts` does.
 
 The Hub's own tests (`packages/hub`) need no server: they run on PGLite, in-process, with real migrations and row-level security.
 
@@ -50,7 +50,7 @@ The rules are mechanical, so they hold for every contributor, human or agent:
 
 - **Git hooks** ([`lefthook.yml`](../lefthook.yml)): before each commit, the secret scan, Prettier and ESLint run on the staged files; each commit message must pass [commitlint](https://commitlint.js.org/) with the [Conventional Commits](https://www.conventionalcommits.org/) config. Never bypass them with `--no-verify`; fix what they report.
 - **Commit identity**: the commit-msg hook refuses a commit whose author or committer email isn't a `@users.noreply.github.com` address, since every commit in this public repository is visible. Set yours with `git config user.email '<id>+<username>@users.noreply.github.com'` (GitHub shows it under Settings → Emails).
-- **ESLint** ([`eslint.config.js`](../eslint.config.js)): one config for the workspace, built from [`@mitcsutt/kiln-eslint-config`](https://www.npmjs.com/package/@mitcsutt/kiln-eslint-config). It is type-aware, every rule is an error, and unused `eslint-disable` comments are errors too.
+- **ESLint** ([`eslint.config.js`](../eslint.config.js)): one config for the workspace, built from [`@mitcsutt/kiln-eslint-config`](https://www.npmjs.com/package/@mitcsutt/kiln-eslint-config). It is type-aware, every rule is an error, and unused `eslint-disable` comments are errors too. Beyond that base it enforces two repository rules: the Hub's core and its Modules import no database driver or test support in code that ships (ADR-0004; they reach the database through the Db Port), and the server's database tests take `DATABASE_URL` from the shared helper.
 - **Prettier**: [`@mitcsutt/kiln-prettier-config`](https://www.npmjs.com/package/@mitcsutt/kiln-prettier-config), set in the root `package.json`.
 - **TypeScript**: every `tsconfig.json` extends a [`@mitcsutt/kiln-tsconfig`](https://www.npmjs.com/package/@mitcsutt/kiln-tsconfig) preset (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`).
 - **Secret scan**: [secretlint](https://github.com/secretlint/secretlint) with its recommended rules, on staged files in the hook and over the whole tree in `pnpm lint`. The repository is public, so nothing secret or deployment-specific belongs in it.
