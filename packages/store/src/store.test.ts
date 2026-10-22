@@ -328,25 +328,55 @@ describe('the store Module', () => {
     })
   })
 
-  // TODO(#29): Teams, their member and editor roles, `Embertrail-Owner: team:<id>` and the
-  // row-level security that lets members read and editors write a Team's rows are core
-  // identity, not built yet. Write these once the core offers them; the Module needs no change
-  // beyond reporting the Team as `owner` (ctx.ownerOf already asks the Directory).
   describe('Team documents', () => {
-    it('answers 403 to Embertrail-Owner for a Team the caller does not edit, and stores nothing', async () => {
-      const t = await testHub({ modules: [store] })
-      try {
-        const alice = t.as('alice', scopes)
-        const response = await put(alice, doc, 1, { 'embertrail-owner': 'team:x' })
-        expect(response.status).toBe(403)
-        expect((await alice.get(doc)).status).toBe(404)
-      } finally {
-        await t.close()
-      }
+    const team = '/api/v1/store/notes/shared'
+    let t: TestHub
+    let editor: TestClient
+    let member: TestClient
+    let outsider: TestClient
+
+    beforeEach(async () => {
+      t = await testHub({ modules: [store] })
+      await t.team('crew', { editors: ['erin'], members: ['carol'] })
+      editor = t.as('erin', scopes, { team: 'crew' })
+      member = t.as('carol', scopes)
+      outsider = t.as('dave', scopes)
     })
-    it.todo('lets an editor create a Team document with Embertrail-Owner: team:<id>')
-    it.todo('lets an editor replace a Team document, which keeps its Team Owner')
-    it.todo('lets a member read a Team document but not write it (403)')
-    it.todo('answers 404 to a non-member')
+    afterEach(async () => {
+      await t.close()
+    })
+
+    it('lets an editor create a Team document with Embertrail-Owner: team:<id>', async () => {
+      const created = await put(editor, team, { a: 1 }, { 'embertrail-owner': 'team:crew' })
+      expect(created.status).toBe(201)
+      expect((await json<StoreDocument>(created)).owner).toEqual({ kind: 'team', id: 'crew' })
+    })
+
+    it('lets an editor replace a Team document, which keeps its Team Owner', async () => {
+      await put(editor, team, 1, { 'embertrail-owner': 'team:crew' })
+      const replaced = await put(editor, team, 2)
+      expect(replaced.status).toBe(200)
+      const body = await json<StoreDocument>(replaced)
+      expect(body.owner).toEqual({ kind: 'team', id: 'crew' })
+      expect(body.version).toBe(2)
+    })
+
+    it('lets a member read a Team document but not write it (403)', async () => {
+      await put(editor, team, 1, { 'embertrail-owner': 'team:crew' })
+      expect((await member.get(team)).status).toBe(200)
+      expect((await put(member, team, 2)).status).toBe(403)
+      expect((await member.delete(team)).status).toBe(403)
+      expect(
+        (await put(member, '/api/v1/store/notes/new', 1, { 'embertrail-owner': 'team:crew' }))
+          .status,
+      ).toBe(403)
+    })
+
+    it('answers 404 to a non-member', async () => {
+      await put(editor, team, 1, { 'embertrail-owner': 'team:crew' })
+      expect((await outsider.get(team)).status).toBe(404)
+      expect((await outsider.delete(team)).status).toBe(404)
+      expect((await put(outsider, team, 2)).status).toBe(409)
+    })
   })
 })
