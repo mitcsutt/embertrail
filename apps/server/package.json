@@ -9,25 +9,29 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "node scripts/build.ts",
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hono/node-server": "catalog:",
     "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-otel": "workspace:*",
+    "@mitcsutt/embertrail-store": "workspace:*",
     "drizzle-orm": "catalog:",
-    "pg": "catalog:"
+    "pg": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
-    "@mitcsutt/embertrail-otel": "workspace:*",
     "@types/pg": "catalog:",
+    "esbuild": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "@electric-sql/pglite": "catalog:",
-    "@mitcsutt/embertrail-store": "workspace:*",
     "yaml": "catalog:"
   }
 }

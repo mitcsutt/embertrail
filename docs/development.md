@@ -56,7 +56,7 @@ The rules are mechanical, so they hold for every contributor, human or agent:
 - **Prettier**: [`@mitcsutt/kiln-prettier-config`](https://www.npmjs.com/package/@mitcsutt/kiln-prettier-config), set in the root `package.json`.
 - **TypeScript**: every `tsconfig.json` extends a [`@mitcsutt/kiln-tsconfig`](https://www.npmjs.com/package/@mitcsutt/kiln-tsconfig) preset (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`).
 - **Secret scan**: [secretlint](https://github.com/secretlint/secretlint) with its recommended rules, on staged files in the hook and over the whole tree in `pnpm lint`. The repository is public, so nothing secret or deployment-specific belongs in it.
-- **CI** ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)): on every pull request and push to `main`, the Lint, Typecheck and Test jobs run, and the **CI passed** job fails unless all of them succeeded. CI passed is the only required check, so a new job must be added to its `needs` list.
+- **CI** ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)): on every pull request and push to `main`, the Lint, Typecheck, Test and Docker smoke jobs run (the last boots the compose stack, [`self-hosting.md`](self-hosting.md#developing-it)), and the **CI passed** job fails unless all of them succeeded. CI passed is the only required check, so a new job must be added to its `needs` list.
 - **Dependencies**: shared versions live in the `catalog` in [`pnpm-workspace.yaml`](../pnpm-workspace.yaml) and packages reference them as `catalog:`. Only packages listed under `allowBuilds` may run install scripts. Renovate ([`.github/renovate.json`](../.github/renovate.json)) opens grouped updates weekly.
 
 When a rule gets in the way of good work, change the rule (and this page) in its own pull request rather than working around it.
@@ -65,7 +65,7 @@ When a rule gets in the way of good work, change the rule (and this page) in its
 
 ```
 apps/
-  server/      @mitcsutt/embertrail-server     the Hub on the Docker Platform (private)
+  server/      @mitcsutt/embertrail-server     the Hub on the Docker Platform, and its image (private; docs/self-hosting.md)
   worker/      @mitcsutt/embertrail-worker     the Hub on the Cloudflare Platform (private)
   dashboard/   @mitcsutt/embertrail-dashboard  the Dashboard (private)
 packages/

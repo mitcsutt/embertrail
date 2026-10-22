@@ -6,7 +6,7 @@ Who a request acts as, and what it may read: Users, Teams, Sources, Tokens, Acco
 
 One person on their own Hub needs one User and nothing else: no Team, no Grant, no allowlist.
 
-1. The first start creates the User: `POST /api/v1/bootstrap` with `BOOTSTRAP_TOKEN` (Cloudflare), or the Docker zero-config start (#37), both through `directory.createFirstUser()`.
+1. The first start creates the User: `POST /api/v1/bootstrap` with `BOOTSTRAP_TOKEN` (Cloudflare), or the Docker zero-config start ([`self-hosting.md`](self-hosting.md#the-zero-config-start)), both through `directory.createFirstUser()`.
 2. Connecting a laptop creates a Source and its ingest Token (`embertrail setup claude-code`, through `POST /api/v1/self/sources`; [`admin-api.md`](admin-api.md), #30).
 3. Signals arrive, their Accounts are recognised, and the User reads everything they own.
 
@@ -79,7 +79,7 @@ A Grant lets a User, or every member of a Team, read one Account's rows in one M
 
 ## Bootstrap
 
-`POST /api/v1/bootstrap` with `Authorization: Bearer <BOOTSTRAP_TOKEN>` and an optional `{ "name", "email" }` creates the first User (an admin) and a management Token holding every Scope, and returns both. It answers 401 when `bootstrapToken` is unset or wrong, and once an admin User exists or bootstrap has been used. Users that Edge Identity signed up before bootstrap ran are not admins, so they don't stop it: bootstrap keeps working until an admin exists, and promotes the User who already has the bootstrap email rather than creating a second one. The Docker zero-config start (#37) calls `hub.directory.createFirstUser()` directly when `BOOTSTRAP_TOKEN` is unset; it is the same one-time path.
+`POST /api/v1/bootstrap` with `Authorization: Bearer <BOOTSTRAP_TOKEN>` and an optional `{ "name", "email" }` creates the first User (an admin) and a management Token holding every Scope, and returns both. It answers 401 when `bootstrapToken` is unset or wrong, and once an admin User exists or bootstrap has been used. Users that Edge Identity signed up before bootstrap ran are not admins, so they don't stop it: bootstrap keeps working until an admin exists, and promotes the User who already has the bootstrap email rather than creating a second one. The Docker zero-config start calls `hub.directory.createFirstUser()` directly when `BOOTSTRAP_TOKEN` is unset; it is the same one-time path.
 
 ## Config
 
