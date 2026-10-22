@@ -78,16 +78,26 @@ const bootstrapInput = z.strictObject({
   email: z.email().optional(),
 })
 
+const exportPage = 500
+
 /** JSON Lines of every row the Owner owns, one `{ table, row }` object per line. */
 function defaultExporter(module: Module): Exporter {
   return async function* exportRows(ctx) {
     for (const { name } of declaredTables(module)) {
-      const found = await rows<{ row: unknown }>(
-        ctx.db,
-        sql`select row_to_json(t) as row from ${sql.raw(`${ident(module.name)}.${ident(name)}`)} t
-          where owner_id = ${ctx.caller.ownerId}`,
-      )
-      for (const { row } of found) yield JSON.stringify({ table: name, row })
+      const table = sql.raw(`${ident(module.name)}.${ident(name)}`)
+      let after: string | undefined
+      for (;;) {
+        const found = await rows<{ row: unknown; cursor: string }>(
+          ctx.db,
+          sql`select row_to_json(t) as row, t.ctid::text as cursor from ${table} t
+            where owner_id = ${ctx.caller.ownerId}
+              ${after === undefined ? sql`` : sql`and t.ctid > ${after}::tid`}
+            order by t.ctid limit ${exportPage}`,
+        )
+        for (const { row } of found) yield JSON.stringify({ table: name, row })
+        if (found.length < exportPage) break
+        after = found[found.length - 1]?.cursor
+      }
     }
   }
 }
