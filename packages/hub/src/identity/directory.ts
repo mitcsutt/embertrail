@@ -153,6 +153,8 @@ export interface Principal {
   scopes: readonly Scope[]
   /** Set for a Source-bound (ingest) Token. */
   sourceId?: string | undefined
+  /** Set for a Token that expires. */
+  expiresAt?: Date | undefined
 }
 
 /** What caller resolution looks up. */
@@ -578,7 +580,12 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
       if (token.expiresAt !== null && token.expiresAt.getTime() <= clock().getTime()) return null
       // A User who is no longer an admin loses `admin` from Tokens issued while they were.
       const scopes = (token.scopes as Scope[]).filter((s) => row.admin || s !== 'admin')
-      return { userId: token.userId, scopes, sourceId: token.sourceId ?? undefined }
+      return {
+        userId: token.userId,
+        scopes,
+        sourceId: token.sourceId ?? undefined,
+        expiresAt: token.expiresAt ?? undefined,
+      }
     },
 
     edgeUser(email, { provision }) {

@@ -25,7 +25,13 @@ const bearer = (token: string) => ({ authorization: `Bearer ${token}` })
 
 interface Issued {
   token: string
-  record: { id: string; kind: string; source_id: string | null; scopes: string[] }
+  record: {
+    id: string
+    kind: string
+    source_id: string | null
+    scopes: string[]
+    expires_at: string | null
+  }
 }
 
 const self = (id: string) => `/api/v1/self/${id}`
@@ -244,6 +250,39 @@ describe('self-management', () => {
       })
       expect(await problem(issue('tomorrow'))).toEqual({ status: 400, type: 'validation' })
       expect((await issue('2999-01-01T00:00:00+02:00')).status).toBe(201)
+    })
+
+    it('never issues a Token that outlives the calling Token', async () => {
+      const alice = t.as('alice', ['self:manage', 'alpha:read', 'alpha:write'])
+      const short = '2030-01-01T00:00:00.000Z'
+      const expiring = await body<Issued>(
+        alice.post(self('tokens'), {
+          kind: 'management',
+          scopes: ['self:manage', 'alpha:read', 'alpha:write'],
+          expires_at: short,
+        }),
+      )
+      const post = (path: string, payload: unknown) =>
+        t.anonymous.fetch(self(path), {
+          method: 'POST',
+          headers: { ...bearer(expiring.token), 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      const expiry = async (response: Promise<Response>) =>
+        (await body<Issued>(response)).record.expires_at
+
+      const read = { kind: 'read', scopes: ['alpha:read'] }
+      expect(await expiry(post('tokens', read))).toBe(short)
+      expect(await expiry(post('tokens', { ...read, expires_at: '2999-01-01T00:00:00Z' }))).toBe(
+        short,
+      )
+      expect(await expiry(post('tokens', { ...read, expires_at: '2029-01-01T00:00:00Z' }))).toBe(
+        '2029-01-01T00:00:00.000Z',
+      )
+      const created = await body<{ token: Issued }>(post('sources', { name: 'laptop' }))
+      expect(created.token.record.expires_at).toBe(short)
+
+      expect(await expiry(alice.post(self('tokens'), read))).toBeNull()
     })
   })
 

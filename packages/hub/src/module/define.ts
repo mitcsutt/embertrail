@@ -36,6 +36,8 @@ export interface Caller {
   /** Set only for a Source-bound Token. */
   sourceId?: string | undefined
   scopes: readonly Scope[]
+  /** When the caller's Token expires; unset for a Token that never does, or an Edge Identity. */
+  expiresAt?: Date | undefined
 }
 
 /** What an op receives besides its input. */

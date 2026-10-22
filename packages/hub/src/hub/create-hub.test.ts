@@ -169,9 +169,12 @@ describe('createHub', () => {
     expect(released).toBe(1)
     expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
 
+    expect(hub.errors).toEqual([])
+
     produced = 0
     await expect(new Response(hub.hub.exportOwner('ledger', 'alice')).text()).rejects.toThrow()
     expect(released).toBe(2)
+    expect(hub.errors).toEqual([expect.objectContaining({ message: 'export failed' })])
     expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
   })
 

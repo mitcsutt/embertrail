@@ -106,12 +106,14 @@ function checkScopes(ctx: CoreCtx, scopes: readonly string[]): Scope[] {
 /** An ingest Token only sends Signals, so it holds Module `:write` Scopes and nothing else. */
 const ingestScope = (scope: string) => scope.endsWith(':write')
 
+/** A new Token's expiry: never later than the caller's own Token's. */
 function expiry(ctx: CoreCtx, value: string | undefined) {
-  if (value === undefined) return undefined
+  const cap = ctx.caller.expiresAt
+  if (value === undefined) return cap
   const at = new Date(value)
   if (at.getTime() <= ctx.now().getTime())
     throw HubError.invalid('expires_at must be in the future')
-  return at
+  return cap !== undefined && cap.getTime() < at.getTime() ? cap : at
 }
 
 async function ownSource(ctx: CoreCtx, sourceId: string) {
@@ -330,7 +332,7 @@ const selfOps = [
     path: '/api/v1/self/sources',
     summary: 'Create a Source and its ingest Token',
     description:
-      'The Token is bound to the new Source and shown once. It holds every Module `:write` Scope the caller holds, which is what ingest needs.',
+      'The Token is bound to the new Source and shown once. It holds every Module `:write` Scope the caller holds, which is what ingest needs, and expires no later than the calling Token.',
     input: z.strictObject({ name, expires_at: timestamp.optional() }),
     output: z.object({ source: sourceOut, token: issuedOut }),
     statuses: [201],
@@ -411,7 +413,7 @@ const selfOps = [
     path: '/api/v1/self/tokens',
     summary: 'Issue yourself a Token',
     description:
-      'An `ingest` Token needs `source_id`, one of your Sources, and holds only Module `:write` Scopes; `read` and `management` Tokens take no `source_id`. Each Scope must be one the caller holds. No expiry unless `expires_at` is set.',
+      'An `ingest` Token needs `source_id`, one of your Sources, and holds only Module `:write` Scopes; `read` and `management` Tokens take no `source_id`. Each Scope must be one the caller holds. A Token expires no later than the calling Token: `expires_at` is capped at its expiry, and with none set the new Token takes that expiry (or none, when the calling Token never expires).',
     input: z.strictObject({
       kind: z.enum(['ingest', 'read', 'management']),
       scopes: z.array(scope).min(1),

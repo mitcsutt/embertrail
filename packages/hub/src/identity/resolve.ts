@@ -22,6 +22,7 @@ function toCaller(principal: Principal): Caller {
     ownerId: principal.userId,
     sourceId: principal.sourceId,
     scopes: principal.scopes,
+    expiresAt: principal.expiresAt,
   }
 }
 

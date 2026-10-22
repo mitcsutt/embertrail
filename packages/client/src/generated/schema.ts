@@ -405,7 +405,8 @@ export interface paths {
      * Create a Source and its ingest Token
      * @description Connects a machine: the Source, and an ingest Token bound to it, shown
      *     once. The Token holds every Module `:write` Scope the caller holds,
-     *     which is what ingest needs, and no other Scope.
+     *     which is what ingest needs, and no other Scope. It expires no later
+     *     than the calling Token.
      */
     post: operations['createSource']
     delete?: never
@@ -453,9 +454,11 @@ export interface paths {
      * @description An `ingest` Token needs `source_id`, one of your Sources, and holds only
      *     Module `:write` Scopes (`invalid` otherwise); `read` and `management`
      *     Tokens take no `source_id`. Each Scope must be one the caller holds
-     *     (`forbidden` otherwise), so a Token never widens access. No expiry
-     *     unless `expires_at` is set. Rotate by issuing a new Token and revoking
-     *     the old one.
+     *     (`forbidden` otherwise), so a Token never widens access. Nor does it
+     *     outlive the calling Token: `expires_at` is capped at the calling
+     *     Token's expiry, and with none set the new Token takes that expiry (or
+     *     none, when the calling Token never expires). Rotate by issuing a new
+     *     Token and revoking the old one.
      */
     post: operations['issueToken']
     delete?: never

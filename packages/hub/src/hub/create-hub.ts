@@ -284,7 +284,12 @@ export function createHub(options: HubOptions): Hub {
   }
 
   /** Runs one of the core's own ops (#30): caller, Scope and input checked as for a Module's. */
-  async function serveCoreOp(request: Request, op: CoreOp, params: Record<string, string>) {
+  async function serveCoreOp(
+    request: Request,
+    op: CoreOp,
+    params: Record<string, string>,
+    requestId: string,
+  ) {
     const caller = await resolveCaller(request, edgeIdentity, directory)
     if (!caller.scopes.includes(op.scope)) throw HubError.forbidden(`Needs Scope ${op.scope}`)
     const input = await validate(op.input, await readInput(request, params, {}, 'keep'))
@@ -296,7 +301,7 @@ export function createHub(options: HubOptions): Hub {
       scopes,
       modules: modules.map((m) => m.name),
       remove,
-      exportOwner,
+      exportOwner: (module, ownerId) => exportOwner(module, ownerId, requestId),
     })
     if (result instanceof Response) return result
     const name = `core.${op.key}`
@@ -310,7 +315,11 @@ export function createHub(options: HubOptions): Hub {
     })
   }
 
-  function exportOwner(name: string, ownerId: string): ReadableStream<Uint8Array> {
+  function exportOwner(
+    name: string,
+    ownerId: string,
+    requestId: string = crypto.randomUUID(),
+  ): ReadableStream<Uint8Array> {
     const module = modules.find((m) => m.name === name)
     if (module === undefined) throw HubError.notFound(`No Module "${name}"`)
     const caller: Caller = { userId: ownerId, ownerId, scopes: [] }
@@ -346,6 +355,7 @@ export function createHub(options: HubOptions): Hub {
               if (!cancelled) controller.close()
             })
             .catch((error: unknown) => {
+              onError(error, { requestId, module: name })
               controller.error(error)
             })
         },
@@ -379,7 +389,8 @@ export function createHub(options: HubOptions): Hub {
         const { target } = found
         if (target.kind === 'core') return await target.respond(request)
         await boot()
-        if (target.kind === 'coreOp') return await serveCoreOp(request, target.op, found.params)
+        if (target.kind === 'coreOp')
+          return await serveCoreOp(request, target.op, found.params, requestId)
         const run = await prepare(request, target.module, target.key, target.op, found.params)
         // From here on, an unexpected error is the Module's.
         module = target.module.name
