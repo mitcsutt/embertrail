@@ -17,14 +17,14 @@ pnpm db:up         # Postgres 17 on localhost:54317, for the database tests
 
 Run these from the repo root. Turborepo runs each one across the workspace and caches the results per package.
 
-| Command          | What it does                                                                                                                             |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, the secret scan (`secretlint`), and publint and attw on the packed client |
-| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                                                          |
-| `pnpm test`      | Vitest in every package: on Node, and in `workerd` for `apps/worker`                                                                     |
-| `pnpm format`    | Prettier over the whole repo                                                                                                             |
-| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                                                               |
-| `pnpm changeset` | Adds a release note for a change that should reach a release                                                                             |
+| Command          | What it does                                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`      | ESLint in every package and at the root, `prettier --check .`, the secret scan (`secretlint`), `redocly lint` of the spec, and publint and attw on the packed client |
+| `pnpm typecheck` | `tsc --noEmit` in every package and at the root                                                                                                                      |
+| `pnpm test`      | Vitest in every package: on Node, and in `workerd` for `apps/worker`                                                                                                 |
+| `pnpm format`    | Prettier over the whole repo                                                                                                                                         |
+| `pnpm db:up`     | Starts the local Postgres from `compose.dev.yaml`; `pnpm db:down` stops it                                                                                           |
+| `pnpm changeset` | Adds a release note for a change that should reach a release                                                                                                         |
 
 To run one package's task, filter it: `pnpm turbo run test --filter=@mitcsutt/embertrail-server`.
 
@@ -50,7 +50,7 @@ The rules are mechanical, so they hold for every contributor, human or agent:
 
 - **Git hooks** ([`lefthook.yml`](../lefthook.yml)): before each commit, the secret scan, Prettier and ESLint run on the staged files; each commit message must pass [commitlint](https://commitlint.js.org/) with the [Conventional Commits](https://www.conventionalcommits.org/) config. Never bypass them with `--no-verify`; fix what they report.
 - **Commit identity**: the commit-msg hook refuses a commit whose author or committer email isn't a `@users.noreply.github.com` address, since every commit in this public repository is visible. Set yours with `git config user.email '<id>+<username>@users.noreply.github.com'` (GitHub shows it under Settings → Emails).
-- **ESLint** ([`eslint.config.js`](../eslint.config.js)): one config for the workspace, built from [`@mitcsutt/kiln-eslint-config`](https://www.npmjs.com/package/@mitcsutt/kiln-eslint-config). It is type-aware, every rule is an error, and unused `eslint-disable` comments are errors too. Beyond that base it enforces two repository rules: the Hub's core and its Modules import no database driver or test support in code that ships (ADR-0004; they reach the database through the Db Port), and the server's database tests take `DATABASE_URL` from the shared helper.
+- **ESLint** ([`eslint.config.js`](../eslint.config.js)): one config for the workspace, built from [`@mitcsutt/kiln-eslint-config`](https://www.npmjs.com/package/@mitcsutt/kiln-eslint-config). It is type-aware, every rule is an error, and unused `eslint-disable` comments are errors too. Beyond that base it enforces three repository rules: the Hub's core and its Modules import no database driver or test support in code that ships (ADR-0004; they reach the database through the Db Port), the server's database tests take `DATABASE_URL` from the shared helper, and the Dashboard reaches the Hub only through `@mitcsutt/embertrail-client` (no other workspace package, no `fetch`).
 - **Prettier**: [`@mitcsutt/kiln-prettier-config`](https://www.npmjs.com/package/@mitcsutt/kiln-prettier-config), set in the root `package.json`.
 - **TypeScript**: every `tsconfig.json` extends a [`@mitcsutt/kiln-tsconfig`](https://www.npmjs.com/package/@mitcsutt/kiln-tsconfig) preset (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`).
 - **Secret scan**: [secretlint](https://github.com/secretlint/secretlint) with its recommended rules, on staged files in the hook and over the whole tree in `pnpm lint`. The repository is public, so nothing secret or deployment-specific belongs in it.
@@ -98,6 +98,12 @@ pnpm --filter @mitcsutt/embertrail-client generate
 ```
 
 `packages/client/scripts/generate.test.ts` fails when the committed files in `packages/client/src/generated/` differ from a fresh run, and the client's test task hashes the spec, so a spec-only change re-runs it. A new operation also needs a call in `packages/client/src/integration.test.ts`, which drives every operation through the client against `testHub` with the otel and store Modules; its last test fails until every operation in the spec has been called. `client.test.ts` keeps only the client's own transport behaviour, against a stand-in Hub. Usage is in the [client README](../packages/client/README.md).
+
+`pnpm lint` runs `redocly lint` on the spec with [`redocly.yaml`](../redocly.yaml) (`recommended-strict`, so warnings fail too); CI's Lint job covers it. Each rule switched off there says why.
+
+### Problem types and limits
+
+`apps/server/src/problems.test.ts` produces every problem `type` in the spec's `Problem` enum over HTTP and checks its status; its last test fails when the spec gains a type the file doesn't produce. Add the type to the spec and a test there together. Limit tests (`group_by`, row caps, body sizes, DST days) sit with the Module they limit.
 
 ### The served document must match the spec
 
