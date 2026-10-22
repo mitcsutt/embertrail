@@ -32,7 +32,12 @@ export default defineConfig(
     // stays out of code that ships. Adapters live in the apps; tests may use both.
     name: 'embertrail/core/no-drivers-or-test-support',
     files: ['packages/{hub,otel,store}/src/**'],
-    ignores: ['**/*.test.ts', 'packages/hub/src/testing/**', 'packages/otel/src/testing.ts'],
+    ignores: [
+      '**/*.test.ts',
+      'packages/hub/src/testing/**',
+      'packages/otel/src/testing.ts',
+      'packages/otel/src/query/testing/**',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
