@@ -136,6 +136,21 @@ describe('createHub', () => {
     ])
   })
 
+  it.each([500, 501, 1001])('exports %i rows across pages, each exactly once', async (count) => {
+    const hub = await start()
+    await hub.sql(
+      sql`insert into ledger.entries (note, owner_id)
+        select 'n' || g, 'alice' from generate_series(1, ${count}::int) g`,
+    )
+    await hub.sql(sql`insert into ledger.entries (note, owner_id) values ('other', 'bob')`)
+    const lines = (await new Response(hub.hub.exportOwner('ledger', 'alice')).text())
+      .trimEnd()
+      .split('\n')
+    const notes = lines.map((line) => (JSON.parse(line) as { row: { note: string } }).row.note)
+    expect(notes).toHaveLength(count)
+    expect(new Set(notes).size).toBe(count)
+  })
+
   it('streams an export, holding its transaction only until the stream ends', async () => {
     let produced = 0
     let released = 0
