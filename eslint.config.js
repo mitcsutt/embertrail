@@ -27,6 +27,15 @@ export default defineConfig(
     extends: [node],
   },
   {
+    // The CLI bundles its workspace packages into dist/bin.js (packages/cli/scripts/build.ts), so
+    // they are devDependencies; only pg is a runtime dependency.
+    name: 'embertrail/cli/bundled-dependencies',
+    files: ['packages/cli/src/**'],
+    rules: {
+      'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }],
+    },
+  },
+  {
     // ADR-0004: the Hub's core and its Modules reach a database only through the Db Port, so
     // they import no driver, and test support (pglite, `@mitcsutt/embertrail-hub/testing`)
     // stays out of code that ships. Adapters live in the apps; tests may use both.

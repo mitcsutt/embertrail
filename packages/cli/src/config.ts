@@ -56,7 +56,12 @@ export async function readConfig(io: Io): Promise<StoredConfig | undefined> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
     throw error
   }
-  const parsed: unknown = JSON.parse(text)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new CliError(`${path} is not valid JSON; run embertrail login again`)
+  }
   if (
     typeof parsed !== 'object' ||
     parsed === null ||

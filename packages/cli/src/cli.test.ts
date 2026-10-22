@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -103,6 +103,20 @@ describe('login', () => {
       await other.close()
     }
   })
+
+  it('tells the user to log in again when the stored config is corrupt', async () => {
+    const other = await startHarness()
+    try {
+      await other.cli('login', '--hub', 'http://hub.test', '--token', other.token)
+      await writeFile(join(other.env.EMBERTRAIL_CONFIG_DIR ?? '', 'config.json'), '{ nope')
+      const { code, err } = await other.cli('sources', 'list')
+      expect(code).toBe(1)
+      expect(err).toContain('run embertrail login again')
+      expect(err).not.toContain('SyntaxError')
+    } finally {
+      await other.close()
+    }
+  })
 })
 
 describe('errors', () => {
@@ -150,40 +164,66 @@ describe('setup claude-code', () => {
     expect(sent.status).toBe(200)
   })
 
-  it('run again, rotates the Token and revokes the old one, leaving the settings shape alone', async () => {
-    const first = JSON.parse(await readFile(settingsFile(), 'utf8')) as {
-      env: Record<string, string>
-    }
+  it('run again, keeps the active Token: the settings are unchanged and nothing is revoked', async () => {
+    const before = await readFile(settingsFile(), 'utf8')
     const { code, out } = await h.cli('setup', 'claude-code', '--source', 'laptop')
     expect(code).toBe(0)
     expect(out).toContain('Reusing Source "laptop"')
-    expect(out).toContain('Revoked 1 earlier ingest Token')
+    expect(out).toContain('Kept the telemetry settings')
+    expect(await readFile(settingsFile(), 'utf8')).toBe(before)
 
+    const { env } = JSON.parse(before) as { env: Record<string, string> }
+    const authorization = (env.OTEL_EXPORTER_OTLP_HEADERS ?? '').replace('Authorization=', '')
+    const sent = await h.t.hub.fetch(
+      new Request('http://hub.test/v1/logs', {
+        method: 'POST',
+        headers: { authorization, 'content-type': 'application/json' },
+        body: JSON.stringify({ resourceLogs: [] }),
+      }),
+    )
+    expect(sent.status).toBe(200)
+    const tokens = JSON.parse((await h.cli('tokens', 'list', '--json')).out) as {
+      kind: string
+      revoked_at: string | null
+    }[]
+    expect(
+      tokens.filter((token) => token.kind === 'ingest' && token.revoked_at === null),
+    ).toHaveLength(1)
+  })
+
+  it('run again with no active Token in the settings, issues a new one', async () => {
+    const first = JSON.parse(await readFile(settingsFile(), 'utf8')) as {
+      env: Record<string, string>
+    }
+    const oldHeader = first.env.OTEL_EXPORTER_OTLP_HEADERS ?? ''
+    const oldId = /et_([a-z0-9]{16})_/.exec(oldHeader)?.[1] ?? ''
+    expect((await h.cli('tokens', 'revoke', oldId)).code).toBe(0)
+
+    const { code, out } = await h.cli('setup', 'claude-code', '--source', 'laptop')
+    expect(code).toBe(0)
+    expect(out).toContain('Wrote the telemetry settings')
     const second = JSON.parse(await readFile(settingsFile(), 'utf8')) as {
       env: Record<string, string>
     }
     expect(Object.keys(second.env)).toEqual(Object.keys(first.env))
-    expect(second.env.OTEL_EXPORTER_OTLP_HEADERS).not.toBe(first.env.OTEL_EXPORTER_OTLP_HEADERS)
+    expect(second.env.OTEL_EXPORTER_OTLP_HEADERS).not.toBe(oldHeader)
 
-    const old = (first.env.OTEL_EXPORTER_OTLP_HEADERS ?? '').replace('Authorization=', '')
-    const post = (authorization: string) =>
+    const post = (header: string) =>
       h.t.hub.fetch(
         new Request('http://hub.test/v1/logs', {
           method: 'POST',
-          headers: { authorization, 'content-type': 'application/json' },
+          headers: {
+            authorization: header.replace('Authorization=', ''),
+            'content-type': 'application/json',
+          },
           body: JSON.stringify({ resourceLogs: [] }),
         }),
       )
-    expect((await post(old)).status).toBe(401)
-    expect(
-      (await post((second.env.OTEL_EXPORTER_OTLP_HEADERS ?? '').replace('Authorization=', '')))
-        .status,
-    ).toBe(200)
-    expect((await h.cli('sources', 'list', '--json')).out).toContain('"laptop"')
+    expect((await post(oldHeader)).status).toBe(401)
+    expect((await post(second.env.OTEL_EXPORTER_OTLP_HEADERS ?? '')).status).toBe(200)
   })
 
   it('fails before creating anything when the settings file is not JSON', async () => {
-    const { writeFile } = await import('node:fs/promises')
     const path = join(h.home, 'broken.json')
     await writeFile(path, '{ nope')
     const { code, err } = await h.cli(
