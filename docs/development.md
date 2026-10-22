@@ -73,7 +73,7 @@ packages/
   otel/        @mitcsutt/embertrail-otel       the otel Module (private)
   store/       @mitcsutt/embertrail-store      the store Module (private)
   client/      @mitcsutt/embertrail-client     typed Query API client (published later)
-  cli/         @mitcsutt/embertrail-cli        the `embertrail` CLI (published later)
+  cli/         @mitcsutt/embertrail-cli        the `embertrail` CLI (published later; docs/cli.md)
 spec/          the Query API as OpenAPI 3.1
 docs/          these docs, and the ADR index in docs/adr/
 .changeset/    pending release notes and the Changesets config
