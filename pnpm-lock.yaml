@@ -212,6 +212,9 @@ catalogs:
     drizzle-orm:
       specifier: ^0.45.4
       version: 0.45.4
+    esbuild:
+      specifier: ^0.28.2
+      version: 0.28.2
     eslint:
       specifier: ^10.12.0
       version: 10.13.0
@@ -392,13 +395,41 @@ importers:
         version: 4.151.1(@types/node@24.19.2)
 
   packages/cli:
+    dependencies:
+      pg:
+        specifier: 'catalog:'
+        version: 8.23.1
     devDependencies:
+      '@mitcsutt/embertrail-client':
+        specifier: workspace:*
+        version: link:../client
+      '@mitcsutt/embertrail-hub':
+        specifier: workspace:*
+        version: link:../hub
+      '@mitcsutt/embertrail-otel':
+        specifier: workspace:*
+        version: link:../otel
+      '@mitcsutt/embertrail-server':
+        specifier: workspace:*
+        version: link:../../apps/server
+      '@mitcsutt/embertrail-store':
+        specifier: workspace:*
+        version: link:../store
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.23.1
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.4(@electric-sql/pglite@0.5.10)(@types/pg@8.23.1)(pg@8.23.1)
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
       eslint:
         specifier: 'catalog:'
         version: 10.13.0(jiti@2.6.1)(supports-color@10.2.2)

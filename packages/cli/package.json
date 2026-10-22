@@ -8,19 +8,28 @@
     "url": "git+https://github.com/mitcsutt/embertrail.git",
     "directory": "packages/cli"
   },
-  "bugs": "https://github.com/mitcsutt/embertrail/issues",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "bugs": {
+    "url": "https://github.com/mitcsutt/embertrail/issues"
   },
+  "type": "module",
   "scripts": {
+    "build": "node scripts/build.ts",
     "lint": "eslint --max-warnings=0 .",
+    "lint:package": "node scripts/check-package.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@mitcsutt/embertrail-client": "workspace:*",
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-otel": "workspace:*",
+    "@mitcsutt/embertrail-server": "workspace:*",
+    "@mitcsutt/embertrail-store": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "drizzle-orm": "catalog:",
+    "esbuild": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
@@ -30,5 +39,15 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "bin": {
+    "embertrail": "dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "pg": "catalog:"
+  },
+  "homepage": "https://github.com/mitcsutt/embertrail#readme"
 }

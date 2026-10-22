@@ -1,6 +1,6 @@
 # Admin and self-management API
 
-How Users, Teams, Sources, Tokens, Accounts and Grants are managed over HTTP ([#30](https://github.com/mitcsutt/embertrail/issues/30), decided in #13). The `embertrail` CLI (#31) is its only client in v1. The contract is the `admin` and `self` tags in [`spec/query-api.yaml`](../spec/query-api.yaml); the code is in [`packages/hub/src/admin/`](../packages/hub/src/admin/). The records themselves are described in [`identity.md`](identity.md).
+How Users, Teams, Sources, Tokens, Accounts and Grants are managed over HTTP ([#30](https://github.com/mitcsutt/embertrail/issues/30), decided in #13). The `embertrail` CLI ([`cli.md`](cli.md), #31) is its only client in v1. The contract is the `admin` and `self` tags in [`spec/query-api.yaml`](../spec/query-api.yaml); the code is in [`packages/hub/src/admin/`](../packages/hub/src/admin/). The records themselves are described in [`identity.md`](identity.md).
 
 ## Two Scopes
 

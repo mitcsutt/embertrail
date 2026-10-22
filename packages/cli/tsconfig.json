@@ -2,7 +2,8 @@
   "extends": "@mitcsutt/kiln-tsconfig/base",
   "compilerOptions": {
     "noEmit": true,
+    "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["src", "*.config.ts"]
+  "include": ["src", "scripts", "*.config.ts"]
 }

@@ -1,0 +1,8 @@
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://old.example.test:4318",
+    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer et_oldoldoldoldoldo_oldoldoldoldoldoldoldoldoldoldoldoldoldoldoldold"
+  },
+  "theme": "dark"
+}
