@@ -151,7 +151,7 @@ const adminOps = [
     path: '/api/v1/admin/users',
     summary: 'Create a User',
     description:
-      'With `token` (the default), also issues the User a management Token holding every Scope (`admin` only for an admin), shown once. A User with an `email` can sign in through Edge Identity instead.',
+      'With `token` (the default), also issues the User a management Token holding every Scope (`admin` only for an admin), shown once, expiring no later than the calling Token. A User with an `email` can sign in through Edge Identity instead.',
     input: z.strictObject({
       name,
       email: z.email().optional(),
@@ -171,6 +171,7 @@ const adminOps = [
             kind: 'management',
             scopes: ctx.scopes.filter((s) => user.admin || s !== 'admin'),
             name: 'created by an admin',
+            expiresAt: expiry(ctx, undefined),
           })
         : undefined
       return reply({ user: toUser(user), token: issued?.token ?? null }, { status: 201 })

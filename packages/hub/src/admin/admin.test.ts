@@ -121,6 +121,47 @@ describe('the Admin and self-management API', () => {
       ).toHaveLength(1)
     })
 
+    it('never issues a new User a Token that outlives the calling Token', async () => {
+      const ada = t.as('ada', ['admin', 'self:manage'])
+      const short = new Date(Date.now() + 3_600_000).toISOString()
+      const expiring = await body<{ token: string }>(
+        ada.post('/api/v1/self/tokens', {
+          kind: 'management',
+          scopes: ['admin'],
+          expires_at: short,
+        }),
+      )
+      const create = (
+        client: (path: string, init: RequestInit) => Promise<Response>,
+        name: string,
+      ) =>
+        body<{ user: { id: string } }>(
+          client('/api/v1/admin/users', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ name }),
+          }),
+        )
+      const expiryOf = async (userId: string) =>
+        (
+          await t.sql<{ expires_at: string | null }>(
+            sql`select expires_at::text from core.tokens where user_id = ${userId}`,
+          )
+        ).map((row) => (row.expires_at === null ? null : new Date(row.expires_at).toISOString()))
+
+      const capped = await create(
+        (path, init) =>
+          t.anonymous.fetch(path, {
+            ...init,
+            headers: { ...init.headers, authorization: `Bearer ${expiring.token}` },
+          }),
+        'Cy',
+      )
+      expect(await expiryOf(capped.user.id)).toEqual([short])
+      const unbounded = await create(ada.fetch, 'Di')
+      expect(await expiryOf(unbounded.user.id)).toEqual([null])
+    })
+
     it('refuses a duplicate email (409) and a malformed one (400)', async () => {
       const ada = t.as('ada', ['admin'])
       await ada.post('/api/v1/admin/users', { name: 'Bob', email: 'bob@example.com' })

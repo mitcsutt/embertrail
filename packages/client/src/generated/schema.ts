@@ -256,9 +256,9 @@ export interface paths {
     /**
      * Create a User
      * @description With `token` (the default), also issues the User a management Token
-     *     holding every Scope (`admin` only for an admin), shown once. A User
-     *     with an `email` can sign in through Edge Identity instead, so pass
-     *     `token: false` for them.
+     *     holding every Scope (`admin` only for an admin), shown once, expiring
+     *     no later than the calling Token. A User with an `email` can sign in
+     *     through Edge Identity instead, so pass `token: false` for them.
      */
     post: operations['createUser']
     delete?: never
