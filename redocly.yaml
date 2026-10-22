@@ -1,0 +1,12 @@
+# Redocly CLI config for `pnpm lint:spec`, which runs in CI through `pnpm lint`
+# (docs/development.md). Warnings fail the lint as errors do.
+extends:
+  - recommended-strict
+
+rules:
+  # /api/v1/openapi.json, /api/v1/docs and /llms.txt are public static documents with nothing
+  # a client can get wrong.
+  operation-4xx-response: off
+  # `if`/`then`/`else` on EventsAggregateQuery's `aggregation` names its sibling property `key`,
+  # which the rule cannot see from inside the conditional.
+  no-required-schema-properties-undefined: off

@@ -180,6 +180,54 @@ describe('bucketing', () => {
     ])
   })
 
+  it('starts each day at local midnight across the start of DST, a 23-hour day', async () => {
+    // Berlin enters summer time at 02:00 CET on Sunday 2027-03-28, so that day lasts 23 hours.
+    await ok(
+      ingest,
+      '/v1/metrics',
+      sumOf('m', [
+        { time: '2027-03-27T22:59:00Z', value: 1 }, // 23:59 CET, the 27th
+        { time: '2027-03-27T23:00:00Z', value: 2 }, // 00:00 CET, the 28th
+        { time: '2027-03-28T21:59:00Z', value: 4 }, // 23:59 CEST, still the 28th
+        { time: '2027-03-28T22:00:00Z', value: 8 }, // 00:00 CEST, the 29th
+      ]),
+    )
+    const { rows } = await metrics(alice, {
+      metric: 'm',
+      from: '2027-03-01T00:00:00Z',
+      to: '2027-04-01T00:00:00Z',
+      tz: 'Europe/Berlin',
+      bucket: 'day',
+    })
+    expect(rows).toEqual([
+      { bucket: '2027-03-27T00:00:00+01:00', group: {}, value: 1 },
+      { bucket: '2027-03-28T00:00:00+01:00', group: {}, value: 6 },
+      { bucket: '2027-03-29T00:00:00+02:00', group: {}, value: 8 },
+    ])
+  })
+
+  it('skips the spring-forward hour in hourly buckets', async () => {
+    await ok(
+      ingest,
+      '/v1/metrics',
+      sumOf('m', [
+        { time: '2027-03-28T00:30:00Z', value: 1 }, // 01:30 CET
+        { time: '2027-03-28T01:30:00Z', value: 2 }, // 03:30 CEST; 02:00 to 03:00 never happens
+      ]),
+    )
+    const { rows } = await metrics(alice, {
+      metric: 'm',
+      from: '2027-03-01T00:00:00Z',
+      to: '2027-04-01T00:00:00Z',
+      tz: 'Europe/Berlin',
+      bucket: 'hour',
+    })
+    expect(rows.map((r) => [r.bucket, r.value])).toEqual([
+      ['2027-03-28T01:00:00+01:00', 1],
+      ['2027-03-28T03:00:00+02:00', 2],
+    ])
+  })
+
   it('counts a fall-back hour twice in hourly buckets, each with its own offset', async () => {
     await ok(
       ingest,

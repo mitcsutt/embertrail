@@ -62,6 +62,54 @@ export default defineConfig(
     },
   },
   {
+    // The Dashboard reaches the Hub only through @mitcsutt/embertrail-client, which is generated
+    // from spec/query-api.yaml (#27): no other workspace package, no hand-written requests.
+    name: 'embertrail/dashboard/client-only',
+    files: ['apps/dashboard/src/**'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@mitcsutt/embertrail-hub',
+                '@mitcsutt/embertrail-hub/*',
+                '@mitcsutt/embertrail-otel',
+                '@mitcsutt/embertrail-otel/*',
+                '@mitcsutt/embertrail-store',
+                '@mitcsutt/embertrail-store/*',
+                '@mitcsutt/embertrail-server',
+                '@mitcsutt/embertrail-worker',
+              ],
+              message: 'The Dashboard reaches the Hub only through @mitcsutt/embertrail-client.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message: 'Call the Hub through @mitcsutt/embertrail-client, not fetch.',
+        },
+        {
+          name: 'XMLHttpRequest',
+          message: 'Call the Hub through @mitcsutt/embertrail-client, not XMLHttpRequest.',
+        },
+        {
+          name: 'EventSource',
+          message: 'Call the Hub through @mitcsutt/embertrail-client.',
+        },
+        {
+          name: 'WebSocket',
+          message: 'Call the Hub through @mitcsutt/embertrail-client.',
+        },
+      ],
+    },
+  },
+  {
     // The database tests read DATABASE_URL through one helper so they skip locally and fail in
     // CI the same way (docs/development.md).
     name: 'embertrail/server/database-url',

@@ -32,6 +32,10 @@
     "//#lint:root": {
       "outputs": []
     },
+    "//#lint:spec": {
+      "inputs": ["$TURBO_ROOT$/spec/**", "$TURBO_ROOT$/redocly.yaml"],
+      "outputs": []
+    },
     "//#typecheck:root": {
       "outputs": []
     },

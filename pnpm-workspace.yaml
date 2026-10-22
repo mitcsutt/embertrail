@@ -14,6 +14,7 @@ catalog:
   '@mitcsutt/kiln-eslint-config': ^0.4.0
   '@mitcsutt/kiln-prettier-config': ^0.1.0
   '@mitcsutt/kiln-tsconfig': ^0.2.0
+  '@redocly/cli': ^2.67.1
   '@secretlint/secretlint-rule-preset-recommend': ^13.0.7
   '@standard-schema/spec': ^1.1.0
   '@types/node': ^24.0.0
@@ -49,3 +50,6 @@ peerDependencyRules:
     eslint-plugin-jsx-a11y>eslint: '10'
     # openapi-typescript 7 declares TypeScript 5; the client's generator check runs it on 6.
     openapi-typescript>typescript: '6'
+
+minimumReleaseAgeExclude:
+  - '@redocly/cli@2.67.1'

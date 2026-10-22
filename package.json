@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "turbo run test",
-    "lint": "turbo run lint lint:package lint:root format:check secrets",
+    "lint": "turbo run lint lint:package lint:root lint:spec format:check secrets",
     "lint:root": "eslint --max-warnings=0 --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
+    "lint:spec": "redocly lint spec/query-api.yaml",
     "typecheck": "turbo run typecheck typecheck:root",
     "typecheck:root": "tsc --noEmit",
     "format": "prettier --write .",
@@ -24,6 +25,7 @@
     "@mitcsutt/kiln-eslint-config": "catalog:",
     "@mitcsutt/kiln-prettier-config": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@redocly/cli": "catalog:",
     "@secretlint/secretlint-rule-preset-recommend": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
