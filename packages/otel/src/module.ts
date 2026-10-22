@@ -38,14 +38,27 @@ const contentEncoding = {
   schema: { type: 'string', enum: ['gzip', 'identity'] },
 }
 
-function operation(operationId: string, description: string, rejectedKey: string) {
+function operation(
+  operationId: string,
+  description: string,
+  rejectedKey: string,
+  /** The request's list key, and whether the response always carries `partialSuccess`. */
+  { listKey, alwaysPartial = false }: { listKey: string; alwaysPartial?: boolean },
+) {
   return {
     operationId,
     description,
     parameters: [contentEncoding],
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: { type: 'object' } } },
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: { [listKey]: { type: 'array', items: { type: 'object' } } },
+          },
+        },
+      },
     },
     responses: {
       '200': {
@@ -54,9 +67,11 @@ function operation(operationId: string, description: string, rejectedKey: string
           'application/json': {
             schema: {
               type: 'object',
+              ...(alwaysPartial ? { required: ['partialSuccess'] } : {}),
               properties: {
                 partialSuccess: {
                   type: 'object',
+                  ...(alwaysPartial ? { required: [rejectedKey, 'errorMessage'] } : {}),
                   properties: {
                     [rejectedKey]: { type: 'string', pattern: '^[0-9]+$' },
                     errorMessage: { type: 'string' },
@@ -91,6 +106,7 @@ export const otel = defineModule({
         'ingestLogs',
         'OTLP/HTTP JSON `ExportLogsServiceRequest`. Each log record becomes one Event; a duplicate of a stored Event is skipped, not rejected. Answered after the batch is stored.',
         'rejectedLogRecords',
+        { listKey: 'resourceLogs' },
       ),
       run: (request, { db, now, account }: Ctx) =>
         otlp(request, async (body) => {
@@ -108,6 +124,7 @@ export const otel = defineModule({
         'ingestMetrics',
         'OTLP/HTTP JSON `ExportMetricsServiceRequest`. Delta sums and gauges are stored; cumulative sums, histograms and summaries are refused through `partialSuccess`.',
         'rejectedDataPoints',
+        { listKey: 'resourceMetrics' },
       ),
       run: (request, { db, account }: Ctx) =>
         otlp(request, async (body) => {
@@ -125,6 +142,7 @@ export const otel = defineModule({
         'ingestTraces',
         'Traces are not stored in v1: every span is refused through `partialSuccess`, so exporters do not retry.',
         'rejectedSpans',
+        { listKey: 'resourceSpans', alwaysPartial: true },
       ),
       run: (request) =>
         otlp(request, (body) => {

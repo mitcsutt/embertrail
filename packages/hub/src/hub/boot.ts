@@ -41,6 +41,8 @@ export function parseConfig(config: HubConfig) {
 /** Routes the core serves itself; no op may take them. */
 export const coreRoutes: readonly { method: HttpMethod; path: string }[] = [
   { method: 'GET', path: '/api/v1/openapi.json' },
+  { method: 'GET', path: '/api/v1/docs' },
+  { method: 'GET', path: '/llms.txt' },
   { method: 'POST', path: '/api/v1/bootstrap' },
   { method: 'POST', path: '/api/v1/sql' },
 ]

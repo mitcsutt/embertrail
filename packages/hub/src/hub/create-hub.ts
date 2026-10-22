@@ -18,6 +18,7 @@ import { runSql, sqlInput } from '../sql/endpoint'
 import { checkModules, parseConfig } from './boot'
 import type { HubConfig } from './boot'
 import { knownError, OutputError, parseOutput, problem, readInput, validate } from './http'
+import { docsPage, llmsTxt } from './docs'
 import { buildOpenApi } from './openapi'
 import type { OpenApiDocument } from './openapi'
 import { Router } from './router'
@@ -155,6 +156,23 @@ export function createHub(options: HubOptions): Hub {
 
   const router = new Router<Target>()
   router.add('GET', '/api/v1/openapi.json', { kind: 'core', respond: () => Response.json(openapi) })
+  router.add('GET', '/api/v1/docs', {
+    kind: 'core',
+    respond: () =>
+      new Response(docsPage(openapi), {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
+        },
+      }),
+  })
+  router.add('GET', '/llms.txt', {
+    kind: 'core',
+    respond: (request) =>
+      new Response(llmsTxt(openapi, new URL(request.url).origin), {
+        headers: { 'content-type': 'text/markdown; charset=utf-8' },
+      }),
+  })
   router.add('POST', '/api/v1/bootstrap', { kind: 'core', respond: bootstrap })
   router.add('POST', '/api/v1/sql', { kind: 'core', respond: sqlEndpoint })
   for (const module of modules) {
