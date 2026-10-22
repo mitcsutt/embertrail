@@ -24,6 +24,6 @@ The Scopes are `store:read` and `store:write`. The contract is in [`spec/query-a
 - **Cursors** are opaque, tied to their namespace, and keyed on `(updated_at, id)`. A cursor this namespace didn't issue answers 400 `invalid-cursor`.
 - **Owner.** A new document belongs to the caller's Owner, which the database stamps, and a replace keeps the Owner. `owner.kind` comes from `ctx.ownerOf`.
 
-## Not built yet: Team documents
+## Team documents
 
-Core identity (#29) now provides Teams with member and editor roles, `Embertrail-Owner: team:<id>`, and row-level security that lets members read and editors write ([`docs/identity.md`](../../docs/identity.md)). The store doesn't accept Team documents yet. The core answers 403 to `Embertrail-Owner` from anyone who isn't an editor of that Team. When an editor sends it on `PUT`, the store answers 422 and writes nothing, so the document never quietly becomes a personal one. If row-level security lets a caller read a document but not write it, `PUT` and `DELETE` already answer 403. The Team tests are `it.todo` in `src/store.test.ts`.
+An editor of a Team creates a Team document by sending `Embertrail-Owner: team:<id>` on `PUT`; the core checks the role and stamps the Team as Owner ([`docs/identity.md`](../../docs/identity.md)). A replace keeps the Owner. Members read it, and `PUT` and `DELETE` answer 403 to them. A non-member gets 404 on `GET` and `DELETE`, and 409 on `PUT` because the id is taken.
