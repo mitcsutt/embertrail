@@ -17,7 +17,7 @@ From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (E
 
 - `apps/server` (Docker), `apps/worker` (Cloudflare), `apps/dashboard`; `packages/hub` (core), `packages/otel`, `packages/store`, `packages/client`, `packages/cli`; `spec/` (Query API); `docs/`.
 - `packages/client` is generated from `spec/query-api.yaml`: after changing the spec, run `pnpm --filter @mitcsutt/embertrail-client generate` ([details](docs/development.md#changing-the-query-api-spec)).
-- Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module). Writing a Module: [`docs/writing-a-module.md`](docs/writing-a-module.md). The otel Module's ingest, tables and keys: [`docs/otel.md`](docs/otel.md). Ports, Adapters and `createHub`: [`docs/ports-and-adapters.md`](docs/ports-and-adapters.md). Users, Tokens, Accounts, Grants and bootstrap: [`docs/identity.md`](docs/identity.md). The read-only SQL endpoint and how it stays read-only: [`docs/sql.md`](docs/sql.md).
+- Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module). Writing a Module: [`docs/writing-a-module.md`](docs/writing-a-module.md). The otel Module's ingest, tables, keys and Query API: [`docs/otel.md`](docs/otel.md). Ports, Adapters and `createHub`: [`docs/ports-and-adapters.md`](docs/ports-and-adapters.md). Users, Tokens, Accounts, Grants and bootstrap: [`docs/identity.md`](docs/identity.md). The read-only SQL endpoint and how it stays read-only: [`docs/sql.md`](docs/sql.md).
 - Decisions: [`docs/adr/README.md`](docs/adr/README.md) indexes the `adr` issues.
 
 ## Public by default

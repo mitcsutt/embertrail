@@ -99,7 +99,8 @@ export interface paths {
      * @description Replaces the full label set (an empty object clears it). Labels may be
      *     written before the Session's first Signal arrives, since exporters
      *     often flush only on exit, so an unknown `session_id` is accepted, not
-     *     404. Labels belong to the caller's Owner.
+     *     404. Labels belong to the caller's Owner, so another Owner's Labels on
+     *     the same `session_id` never affect them.
      *
      *     The reserved keys `embertrail.group.id`, `embertrail.group.kind`,
      *     `embertrail.parent.session_id` and `embertrail.role` link a Session
@@ -522,7 +523,8 @@ export interface components {
       service_name: string
       owner_id: components['schemas']['Id']
       source_id: components['schemas']['Id']
-      account_id: components['schemas']['Id']
+      /** @description The Account recognised from the telemetry; `null` when it carries none. */
+      account_id: string | null
       /** @description The log record body as sent, when it was a string. */
       body?: string | null
       /** @description Log record attributes as sent, with OTLP values unwrapped to plain JSON. */
