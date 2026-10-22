@@ -222,6 +222,102 @@ describe('the store', () => {
   })
 })
 
+describe('the Admin and self-management API', () => {
+  let root: EmbertrailClient
+
+  beforeAll(async () => {
+    await t.user('root', { admin: true })
+    root = recordCalls(
+      await clientFor(t, 'root', [...scopes, 'admin', 'self:manage']),
+      called,
+    ).client
+  })
+
+  it('bootstrap exchanges BOOTSTRAP_TOKEN for the first admin once', async () => {
+    const fresh = await testHub({
+      modules: hubModules,
+      config: { bootstrapToken: 'test-bootstrap-secret-0123456789abcdef' },
+    })
+    try {
+      const { createClient } = await import('./index.ts')
+      const anonymous = createClient({
+        baseUrl: 'http://hub.test',
+        token: 'test-bootstrap-secret-0123456789abcdef',
+        fetch: (input, init) => fresh.hub.fetch(new Request(input, init)),
+      })
+      const started = await anonymous.bootstrap({ body: { name: 'Ada' } })
+      expect(started.user).toMatchObject({ name: 'Ada', admin: true })
+      expect(started.token).toMatch(/^et_/)
+      called.add('bootstrap')
+      const again = await problem(anonymous.bootstrap({}))
+      expect(again.status).toBe(401)
+    } finally {
+      await fresh.close()
+    }
+  })
+
+  it('creates, lists and deletes Users, Teams and members', async () => {
+    const created = await root.createUser({ body: { name: 'Bob', token: false } })
+    expect(created.token).toBeNull()
+    const bob = created.user.id
+    expect((await root.listUsers()).items.map((u) => u.id)).toContain(bob)
+
+    const team = await root.createTeam({ body: { name: 'Crew' } })
+    await expect(
+      root.setTeamMember({ path: { team_id: team.id, user_id: bob }, body: { role: 'editor' } }),
+    ).resolves.toEqual({ team_id: team.id, user_id: bob, role: 'editor' })
+    const teams = await root.listTeams()
+    expect(teams.items.find((x) => x.id === team.id)?.members).toEqual([
+      { user_id: bob, role: 'editor' },
+    ])
+    await expect(
+      root.removeTeamMember({ path: { team_id: team.id, user_id: bob } }),
+    ).resolves.toBeUndefined()
+    await expect(root.deleteTeam({ path: { team_id: team.id } })).resolves.toBeUndefined()
+    await expect(root.deleteUser({ path: { user_id: bob } })).resolves.toBeUndefined()
+    const missing = await problem(root.deleteUser({ path: { user_id: bob } }))
+    expect(missing.status).toBe(404)
+  })
+
+  it('manages your own Sources, Tokens, Accounts and Grants', async () => {
+    const { source, token } = await root.createSource({ body: { name: 'laptop' } })
+    expect(token.record).toMatchObject({ kind: 'ingest', source_id: source.id })
+    expect((await root.listSources()).items.map((s) => s.id)).toContain(source.id)
+    await expect(
+      root.renameSource({ path: { source_id: source.id }, body: { name: 'work laptop' } }),
+    ).resolves.toMatchObject({ name: 'work laptop' })
+    expect((await root.listAllSources()).items.map((s) => s.id)).toContain(source.id)
+
+    const issued = await root.issueToken({
+      body: { kind: 'management', scopes: ['otel:read'], name: 'reader' },
+    })
+    expect((await root.listTokens()).items.map((r) => r.id)).toContain(issued.record.id)
+    await expect(
+      root.revokeToken({ path: { token_id: issued.record.id } }),
+    ).resolves.toBeUndefined()
+
+    await t.team('grantees', { members: ['alice'] })
+    // Alice's Account came from the seeded Session.
+    const me = recordCalls(await clientFor(t, 'alice', [...scopes, 'self:manage']), called).client
+    const [account] = (await me.listAccounts()).items
+    if (account === undefined) throw new Error('Expected an Account from the seeded Session')
+    await expect(
+      me.setAccountLabel({ path: { account_id: account.id }, body: { label: 'Work' } }),
+    ).resolves.toMatchObject({ label: 'Work', labelled: true })
+    const grant = await me.createGrant({
+      body: { module: 'otel', account_id: account.id, team_id: 'grantees' },
+    })
+    expect((await me.listGrants()).items.map((g) => g.id)).toContain(grant.id)
+    await expect(me.revokeGrant({ path: { grant_id: grant.id } })).resolves.toBeUndefined()
+
+    await expect(root.deleteSource({ path: { source_id: source.id } })).resolves.toBeUndefined()
+    const other = await root.createSource({ body: { name: 'other' } })
+    await expect(
+      root.deleteAnySource({ path: { source_id: other.source.id } }),
+    ).resolves.toBeUndefined()
+  })
+})
+
 describe('problem responses', () => {
   it('becomes a ProblemError with the type URN, status and request_id', async () => {
     const error = await problem(alice.queryMetrics({ body: { metric: '' } as never }))
