@@ -112,7 +112,8 @@ export const notes = defineModule({
 ## Retention and export
 
 - `retention: { column: 'created_at' }` deletes rows older than the Hub's `retentionDays` from every table with that column. Omit it to keep rows forever.
-- The default export is JSON Lines, one `{"table", "row"}` object per owned row. Override it with `export: async function* (ctx) { … }`, yielding one line at a time (`otel` emits OTLP JSON Lines).
+- The default export is JSON Lines, one `{"table", "row"}` object per owned row. Override it with `export: async function* (ctx) { … }`, yielding one line at a time (`otel` emits OTLP JSON Lines). Users download it from `GET /api/v1/self/export/<name>` ([`admin-api.md`](admin-api.md)).
+- **An exporter filters by `owner_id = ctx.caller.ownerId` itself.** It runs as the Owner, so row-level security also shows their Teams' rows and the Accounts Grants let them read; an export is only the Owner's own rows.
 
 ## Testing
 
@@ -138,7 +139,7 @@ await assertModuleContract(notes, {
 })
 ```
 
-It checks that a forged `owner_id` or `source_id` in any request is ignored, that another Owner sees none of the rows (as the app and the read-only role), that export covers every owned row, that delete-by-Source and delete-by-Owner leave nothing behind, and that every op is in the OpenAPI document with its Scope and Module. It does not validate the document against the OpenAPI 3.1 schema. Pass `db` to run it on Postgres instead of PGLite, as [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) does.
+It checks that a forged `owner_id` or `source_id` in any request is ignored, that another Owner sees none of the rows (as the app and the read-only role), that export covers every owned row, that deleting the Source (`DELETE /api/v1/self/sources/{id}`) and then the Owner (`DELETE /api/v1/admin/users/{id}`) leaves nothing behind, and that every op is in the OpenAPI document with its Scope and Module. It does not validate the document against the OpenAPI 3.1 schema. Pass `db` to run it on Postgres instead of PGLite, as [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) does.
 
 ## What fails boot
 

@@ -17,9 +17,7 @@ describe('the served OpenAPI document', () => {
       const spec: unknown = parse(
         readFileSync(new URL('../../../spec/query-api.yaml', import.meta.url), 'utf8'),
       )
-      expect(
-        compareOpenApi(await response.json(), spec, { servedOnly: ['POST /api/v1/bootstrap'] }),
-      ).toEqual([])
+      expect(compareOpenApi(await response.json(), spec)).toEqual([])
     } finally {
       await t.close()
     }

@@ -1,6 +1,7 @@
 import { getTableConfig } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
+import { coreOps } from '../admin/ops'
 import { contractVersion, ownedTableInfo } from '../module/define'
 import type { HttpMethod, Module } from '../module/define'
 import { HubBootError } from '../module/errors'
@@ -38,13 +39,14 @@ export function parseConfig(config: HubConfig) {
   return result.data
 }
 
-/** Routes the core serves itself; no op may take them. */
+/** Routes the core serves itself, the Admin API's included; no op may take them. */
 export const coreRoutes: readonly { method: HttpMethod; path: string }[] = [
   { method: 'GET', path: '/api/v1/openapi.json' },
   { method: 'GET', path: '/api/v1/docs' },
   { method: 'GET', path: '/llms.txt' },
   { method: 'POST', path: '/api/v1/bootstrap' },
   { method: 'POST', path: '/api/v1/sql' },
+  ...coreOps.map(({ method, path }) => ({ method, path })),
 ]
 
 const namePattern = /^[a-z][a-z0-9_]{0,62}$/

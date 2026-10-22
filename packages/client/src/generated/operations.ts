@@ -50,6 +50,45 @@ export const operationTable = {
     path: '/api/v1/store/{namespace}/{id}',
     responseHeaders: [],
   },
+  bootstrap: { method: 'POST', path: '/api/v1/bootstrap', responseHeaders: [] },
+  listUsers: { method: 'GET', path: '/api/v1/admin/users', responseHeaders: [] },
+  createUser: { method: 'POST', path: '/api/v1/admin/users', responseHeaders: [] },
+  deleteUser: { method: 'DELETE', path: '/api/v1/admin/users/{user_id}', responseHeaders: [] },
+  listTeams: { method: 'GET', path: '/api/v1/admin/teams', responseHeaders: [] },
+  createTeam: { method: 'POST', path: '/api/v1/admin/teams', responseHeaders: [] },
+  deleteTeam: { method: 'DELETE', path: '/api/v1/admin/teams/{team_id}', responseHeaders: [] },
+  setTeamMember: {
+    method: 'PUT',
+    path: '/api/v1/admin/teams/{team_id}/members/{user_id}',
+    responseHeaders: [],
+  },
+  removeTeamMember: {
+    method: 'DELETE',
+    path: '/api/v1/admin/teams/{team_id}/members/{user_id}',
+    responseHeaders: [],
+  },
+  listAllSources: { method: 'GET', path: '/api/v1/admin/sources', responseHeaders: [] },
+  deleteAnySource: {
+    method: 'DELETE',
+    path: '/api/v1/admin/sources/{source_id}',
+    responseHeaders: [],
+  },
+  listSources: { method: 'GET', path: '/api/v1/self/sources', responseHeaders: [] },
+  createSource: { method: 'POST', path: '/api/v1/self/sources', responseHeaders: [] },
+  renameSource: { method: 'PUT', path: '/api/v1/self/sources/{source_id}', responseHeaders: [] },
+  deleteSource: { method: 'DELETE', path: '/api/v1/self/sources/{source_id}', responseHeaders: [] },
+  listTokens: { method: 'GET', path: '/api/v1/self/tokens', responseHeaders: [] },
+  issueToken: { method: 'POST', path: '/api/v1/self/tokens', responseHeaders: [] },
+  revokeToken: { method: 'DELETE', path: '/api/v1/self/tokens/{token_id}', responseHeaders: [] },
+  listAccounts: { method: 'GET', path: '/api/v1/self/accounts', responseHeaders: [] },
+  setAccountLabel: {
+    method: 'PUT',
+    path: '/api/v1/self/accounts/{account_id}',
+    responseHeaders: [],
+  },
+  listGrants: { method: 'GET', path: '/api/v1/self/grants', responseHeaders: [] },
+  createGrant: { method: 'POST', path: '/api/v1/self/grants', responseHeaders: [] },
+  revokeGrant: { method: 'DELETE', path: '/api/v1/self/grants/{grant_id}', responseHeaders: [] },
   getOpenApi: { method: 'GET', path: '/api/v1/openapi.json', responseHeaders: [] },
 } as const
 
@@ -182,6 +221,234 @@ export interface Operations {
       path: NonNullable<operations['deleteStoreDocument']['parameters']['path']>
       header?: NonNullable<operations['deleteStoreDocument']['parameters']['header']>
     }
+    output: undefined
+  }
+  /**
+   * Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once
+   *
+   * `POST /api/v1/bootstrap`
+   */
+  bootstrap: {
+    input?: {
+      body?: NonNullable<operations['bootstrap']['requestBody']>['content']['application/json']
+    }
+    output: operations['bootstrap']['responses'][200]['content']['application/json']
+  }
+  /**
+   * List every User
+   *
+   * `GET /api/v1/admin/users`
+   */
+  listUsers: {
+    input?: Record<never, never>
+    output: operations['listUsers']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Create a User
+   *
+   * `POST /api/v1/admin/users`
+   */
+  createUser: {
+    input: {
+      body: NonNullable<operations['createUser']['requestBody']>['content']['application/json']
+    }
+    output: operations['createUser']['responses'][201]['content']['application/json']
+  }
+  /**
+   * Delete a User and everything they own
+   *
+   * `DELETE /api/v1/admin/users/{user_id}`
+   */
+  deleteUser: {
+    input: { path: NonNullable<operations['deleteUser']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * List every Team with its members
+   *
+   * `GET /api/v1/admin/teams`
+   */
+  listTeams: {
+    input?: Record<never, never>
+    output: operations['listTeams']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Create a Team
+   *
+   * `POST /api/v1/admin/teams`
+   */
+  createTeam: {
+    input: {
+      body: NonNullable<operations['createTeam']['requestBody']>['content']['application/json']
+    }
+    output: operations['createTeam']['responses'][201]['content']['application/json']
+  }
+  /**
+   * Delete a Team and everything it owns
+   *
+   * `DELETE /api/v1/admin/teams/{team_id}`
+   */
+  deleteTeam: {
+    input: { path: NonNullable<operations['deleteTeam']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * Add a User to a Team, or change their role
+   *
+   * `PUT /api/v1/admin/teams/{team_id}/members/{user_id}`
+   */
+  setTeamMember: {
+    input: {
+      path: NonNullable<operations['setTeamMember']['parameters']['path']>
+      body: NonNullable<operations['setTeamMember']['requestBody']>['content']['application/json']
+    }
+    output: operations['setTeamMember']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Remove a User from a Team
+   *
+   * `DELETE /api/v1/admin/teams/{team_id}/members/{user_id}`
+   */
+  removeTeamMember: {
+    input: { path: NonNullable<operations['removeTeamMember']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * List every User's Sources
+   *
+   * `GET /api/v1/admin/sources`
+   */
+  listAllSources: {
+    input?: Record<never, never>
+    output: operations['listAllSources']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Delete any Source and every Signal it sent
+   *
+   * `DELETE /api/v1/admin/sources/{source_id}`
+   */
+  deleteAnySource: {
+    input: { path: NonNullable<operations['deleteAnySource']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * List your Sources
+   *
+   * `GET /api/v1/self/sources`
+   */
+  listSources: {
+    input?: Record<never, never>
+    output: operations['listSources']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Create a Source and its ingest Token
+   *
+   * `POST /api/v1/self/sources`
+   */
+  createSource: {
+    input: {
+      body: NonNullable<operations['createSource']['requestBody']>['content']['application/json']
+    }
+    output: operations['createSource']['responses'][201]['content']['application/json']
+  }
+  /**
+   * Rename one of your Sources
+   *
+   * `PUT /api/v1/self/sources/{source_id}`
+   */
+  renameSource: {
+    input: {
+      path: NonNullable<operations['renameSource']['parameters']['path']>
+      body: NonNullable<operations['renameSource']['requestBody']>['content']['application/json']
+    }
+    output: operations['renameSource']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Delete one of your Sources and every Signal it sent
+   *
+   * `DELETE /api/v1/self/sources/{source_id}`
+   */
+  deleteSource: {
+    input: { path: NonNullable<operations['deleteSource']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * List your Tokens
+   *
+   * `GET /api/v1/self/tokens`
+   */
+  listTokens: {
+    input?: Record<never, never>
+    output: operations['listTokens']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Issue yourself a Token
+   *
+   * `POST /api/v1/self/tokens`
+   */
+  issueToken: {
+    input: {
+      body: NonNullable<operations['issueToken']['requestBody']>['content']['application/json']
+    }
+    output: operations['issueToken']['responses'][201]['content']['application/json']
+  }
+  /**
+   * Revoke one of your Tokens
+   *
+   * `DELETE /api/v1/self/tokens/{token_id}`
+   */
+  revokeToken: {
+    input: { path: NonNullable<operations['revokeToken']['parameters']['path']> }
+    output: undefined
+  }
+  /**
+   * List your Accounts
+   *
+   * `GET /api/v1/self/accounts`
+   */
+  listAccounts: {
+    input?: Record<never, never>
+    output: operations['listAccounts']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Label one of your Accounts
+   *
+   * `PUT /api/v1/self/accounts/{account_id}`
+   */
+  setAccountLabel: {
+    input: {
+      path: NonNullable<operations['setAccountLabel']['parameters']['path']>
+      body: NonNullable<operations['setAccountLabel']['requestBody']>['content']['application/json']
+    }
+    output: operations['setAccountLabel']['responses'][200]['content']['application/json']
+  }
+  /**
+   * List the Grants on your Accounts
+   *
+   * `GET /api/v1/self/grants`
+   */
+  listGrants: {
+    input?: Record<never, never>
+    output: operations['listGrants']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Let a User or a Team read one of your Accounts in one Module
+   *
+   * `POST /api/v1/self/grants`
+   */
+  createGrant: {
+    input: {
+      body: NonNullable<operations['createGrant']['requestBody']>['content']['application/json']
+    }
+    output: operations['createGrant']['responses'][201]['content']['application/json']
+  }
+  /**
+   * Revoke a Grant on one of your Accounts
+   *
+   * `DELETE /api/v1/self/grants/{grant_id}`
+   */
+  revokeGrant: {
+    input: { path: NonNullable<operations['revokeGrant']['parameters']['path']> }
     output: undefined
   }
   /**

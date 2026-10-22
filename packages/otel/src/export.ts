@@ -4,7 +4,7 @@
 // `{"sessionLabels": {session_id, labels}}` line, for `PUT /api/v1/sessions/{id}/labels`.
 
 import type { Exporter, ScopedDb } from '@mitcsutt/embertrail-hub'
-import { asc, gt, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, sql } from 'drizzle-orm'
 import type { AnyColumn } from 'drizzle-orm'
 
 import { keyValues, microsToNanos, wrap } from './otlp'
@@ -24,13 +24,13 @@ function envelope(row: { resource: Attributes; scopeName: string; scopeVersion: 
   }
 }
 
-async function* logLines(db: ScopedDb) {
+async function* logLines(db: ScopedDb, ownerId: string) {
   let after = 0
   for (;;) {
     const found = await db
       .select({ row: logs, timeUs: micros(logs.time), observedUs: micros(logs.observedTime) })
       .from(logs)
-      .where(gt(logs.id, after))
+      .where(and(gt(logs.id, after), eq(logs.ownerId, ownerId)))
       .orderBy(asc(logs.id))
       .limit(page)
     for (const { row, timeUs, observedUs } of found) {
@@ -56,14 +56,14 @@ async function* logLines(db: ScopedDb) {
   }
 }
 
-async function* metricLines(db: ScopedDb, kind: 'sum' | 'gauge') {
+async function* metricLines(db: ScopedDb, ownerId: string, kind: 'sum' | 'gauge') {
   const table = kind === 'sum' ? metricsSum : metricsGauge
   let after = 0
   for (;;) {
     const found = await db
       .select({ row: table, timeUs: micros(table.time), startUs: micros(table.startTime) })
       .from(table)
-      .where(gt(table.id, after))
+      .where(and(gt(table.id, after), eq(table.ownerId, ownerId)))
       .orderBy(asc(table.id))
       .limit(page)
     for (const { row, timeUs, startUs } of found) {
@@ -95,20 +95,25 @@ async function* metricLines(db: ScopedDb, kind: 'sum' | 'gauge') {
   }
 }
 
-async function* labelLines(db: ScopedDb) {
+async function* labelLines(db: ScopedDb, ownerId: string) {
   const found = await db
     .select({ sessionId: sessionLabels.sessionId, labels: sessionLabels.labels })
     .from(sessionLabels)
+    .where(eq(sessionLabels.ownerId, ownerId))
     .orderBy(asc(sessionLabels.sessionId))
   for (const row of found) {
     yield JSON.stringify({ sessionLabels: { session_id: row.sessionId, labels: row.labels } })
   }
 }
 
-/** OTLP JSON Lines: Events first, then sums, then gauges; then the Sessions' Labels. */
-export const exportOtlp: Exporter = async function* exportOtlp({ db }) {
-  yield* logLines(db)
-  yield* metricLines(db, 'sum')
-  yield* metricLines(db, 'gauge')
-  yield* labelLines(db)
+/**
+ * OTLP JSON Lines: Events first, then sums, then gauges; then the Sessions' Labels. Events and
+ * metrics are only the Owner's own rows: row-level security would also show their Teams' rows
+ * and the Accounts Grants let them read.
+ */
+export const exportOtlp: Exporter = async function* exportOtlp({ db, caller }) {
+  yield* logLines(db, caller.ownerId)
+  yield* metricLines(db, caller.ownerId, 'sum')
+  yield* metricLines(db, caller.ownerId, 'gauge')
+  yield* labelLines(db, caller.ownerId)
 }

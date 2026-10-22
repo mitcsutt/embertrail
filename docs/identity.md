@@ -7,7 +7,7 @@ Who a request acts as, and what it may read: Users, Teams, Sources, Tokens, Acco
 One person on their own Hub needs one User and nothing else: no Team, no Grant, no allowlist.
 
 1. The first start creates the User: `POST /api/v1/bootstrap` with `BOOTSTRAP_TOKEN` (Cloudflare), or the Docker zero-config start (#37), both through `directory.createFirstUser()`.
-2. Connecting a laptop creates a Source and its ingest Token (`embertrail setup claude-code`, through the Admin API, #30).
+2. Connecting a laptop creates a Source and its ingest Token (`embertrail setup claude-code`, through `POST /api/v1/self/sources`; [`admin-api.md`](admin-api.md), #30).
 3. Signals arrive, their Accounts are recognised, and the User reads everything they own.
 
 Teams, Grants and `ALLOWED_EMAILS` / `ALLOWED_DOMAINS` only matter once a second person joins. Keep it that way: a new feature must not add a Team or Grant step to this path.
@@ -93,7 +93,7 @@ Each Platform's entry file maps env to `HubConfig`; the core validates it at boo
 
 ## `hub.directory`
 
-The core's privileged API over these records: `createUser`, `createTeam`, `setTeamMember`, `removeTeamMember`, `createSource`, `issueToken`, `revokeToken`, `accounts`, `setAccountLabel`, `grant`, `revokeGrant` and `createFirstUser`. It enforces the records' own rules (an ingest Token needs a Source, `admin` needs an admin User, a Grant names a loaded Module) and answers with `HubError`s, but it doesn't check who is asking. The Admin and self-management API (#30) wraps it in ops with the `admin` and `self:manage` Scopes and adds listing and deletion.
+The core's privileged API over these records: `createUser`, `createTeam`, `setTeamMember`, `removeTeamMember`, `createSource`, `renameSource`, `issueToken`, `revokeToken`, `accounts`, `setAccountLabel`, `grant`, `revokeGrant`, `createFirstUser`, and the lists `users`, `teams`, `sources`, `tokens` and `grants`. It enforces the records' own rules (an ingest Token needs a Source, `admin` needs an admin User, a Grant names a loaded Module) and answers with `HubError`s, but it doesn't check who is asking. The [Admin and self-management API](admin-api.md) (#30) wraps it in ops with the `admin` and `self:manage` Scopes, and adds deletion.
 
 ## Testing
 

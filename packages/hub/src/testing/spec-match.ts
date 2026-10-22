@@ -90,7 +90,10 @@ function simplify(node: Json) {
       if (isRecord(properties))
         result.properties = { ...(result.properties as Json), ...properties }
       if (Array.isArray(required))
-        result.required = [...(result.required as unknown[]), ...(required as unknown[])]
+        result.required = [
+          ...((result.required as unknown[] | undefined) ?? []),
+          ...(required as unknown[]),
+        ]
     }
   }
   // A constant or an enum already implies its type.

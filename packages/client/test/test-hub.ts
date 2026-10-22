@@ -34,11 +34,13 @@ export async function clientFor(
 }
 
 /** Names the operations a client has called, so a test can prove it covered all of them. */
-export function recordCalls(client: EmbertrailClient): {
+export function recordCalls(
+  client: EmbertrailClient,
+  called = new Set<string>(),
+): {
   client: EmbertrailClient
   called: Set<string>
 } {
-  const called = new Set<string>()
   const recorded = Object.fromEntries(
     Object.entries(client as Record<string, (input?: unknown) => Promise<unknown>>).map(
       ([id, call]) => [
