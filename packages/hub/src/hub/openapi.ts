@@ -57,7 +57,10 @@ const statusDescriptions = { 200: 'OK', 201: 'Created', 204: 'No Content' } as c
 function typedOperation(
   subject: Subject,
   key: string,
-  op: Pick<TypedOp, 'method' | 'path' | 'input' | 'output' | 'headers' | 'statuses' | 'etag'>,
+  op: Pick<
+    TypedOp,
+    'kind' | 'method' | 'path' | 'input' | 'output' | 'headers' | 'statuses' | 'etag'
+  >,
 ) {
   const input = jsonSchema(op.input, 'input', subject, key)
   const output = jsonSchema(op.output, 'output', subject, key)
@@ -327,7 +330,12 @@ export function buildOpenApi(modules: readonly Module[], coreOps: readonly CoreO
     }
   }
   for (const op of coreOps) {
-    const generated = typedOperation('Hub core', op.key, { ...op, headers: {}, etag: false })
+    const generated = typedOperation('Hub core', op.key, {
+      ...op,
+      kind: 'query',
+      headers: {},
+      etag: false,
+    })
     const operation = {
       operationId: `core.${op.key}`,
       summary: op.summary,
