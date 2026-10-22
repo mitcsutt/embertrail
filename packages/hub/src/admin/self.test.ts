@@ -254,7 +254,9 @@ describe('self-management', () => {
 
     it('never issues a Token that outlives the calling Token', async () => {
       const alice = t.as('alice', ['self:manage', 'alpha:read', 'alpha:write'])
-      const short = '2030-01-01T00:00:00.000Z'
+      const hours = (n: number) => new Date(Date.now() + n * 3_600_000).toISOString()
+      const short = hours(24)
+      const sooner = hours(1)
       const expiring = await body<Issued>(
         alice.post(self('tokens'), {
           kind: 'management',
@@ -276,9 +278,7 @@ describe('self-management', () => {
       expect(await expiry(post('tokens', { ...read, expires_at: '2999-01-01T00:00:00Z' }))).toBe(
         short,
       )
-      expect(await expiry(post('tokens', { ...read, expires_at: '2029-01-01T00:00:00Z' }))).toBe(
-        '2029-01-01T00:00:00.000Z',
-      )
+      expect(await expiry(post('tokens', { ...read, expires_at: sooner }))).toBe(sooner)
       const created = await body<{ token: Issued }>(post('sources', { name: 'laptop' }))
       expect(created.token.record.expires_at).toBe(short)
 
