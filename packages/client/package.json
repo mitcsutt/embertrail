@@ -27,6 +27,9 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-otel": "workspace:*",
+    "@mitcsutt/embertrail-store": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",

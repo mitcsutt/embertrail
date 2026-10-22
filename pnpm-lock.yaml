@@ -398,6 +398,15 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@mitcsutt/embertrail-hub':
+        specifier: workspace:*
+        version: link:../hub
+      '@mitcsutt/embertrail-otel':
+        specifier: workspace:*
+        version: link:../otel
+      '@mitcsutt/embertrail-store':
+        specifier: workspace:*
+        version: link:../store
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
