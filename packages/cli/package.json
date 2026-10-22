@@ -49,11 +49,5 @@
   "dependencies": {
     "pg": "catalog:"
   },
-  "homepage": "https://github.com/mitcsutt/embertrail#readme",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
-  "keywords": [],
-  "author": ""
+  "homepage": "https://github.com/mitcsutt/embertrail#readme"
 }

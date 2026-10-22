@@ -4,13 +4,17 @@
 
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import pg from 'pg'
 
-const run = (command: string, args: string[], options: { env?: NodeJS.ProcessEnv } = {}): string =>
+const run = (
+  command: string,
+  args: string[],
+  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
+): string =>
   execFileSync(command, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
@@ -43,8 +47,9 @@ try {
   if (tarball === undefined) throw new Error(`pnpm pack wrote no tarball to ${directory}`)
 
   const install = join(directory, 'install')
-  run('npm', ['init', '-y', '--prefix', install])
-  run('npm', ['install', '--no-audit', '--no-fund', '--prefix', install, join(directory, tarball)])
+  mkdirSync(install)
+  run('npm', ['init', '-y'], { cwd: install })
+  run('npm', ['install', '--no-audit', '--no-fund', join(directory, tarball)], { cwd: install })
   const bin = join(install, 'node_modules', '.bin', 'embertrail')
 
   const help = run(bin, ['--help'])
