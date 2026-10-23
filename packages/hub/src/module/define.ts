@@ -116,7 +116,7 @@ export interface OpDef<I, O> {
   run(input: I, ctx: Ctx): Promise<O | Reply<O>>
 }
 
-/** What `op.mutate` and `op.raw` add: they may take a Token bound to a Source. */
+/** What `op.mutate` adds: it may take a Token bound to a Source. */
 export interface AcceptsSource {
   /**
    * Accept a Token bound to a Source (an ingest Token). Without it the op refuses one with 403,
@@ -132,8 +132,6 @@ export interface RawDef {
   scope?: Scope
   /** Refuse callers whose Token isn't bound to a Source, as `op.ingest` does. */
   sourceBound?: boolean
-  /** Accept a Token bound to a Source as well as one that isn't. Ignored with `sourceBound`. */
-  acceptsSource?: boolean
   /** The OpenAPI Operation Object for this route; the core adds the Module and Scope. */
   openapi: Record<string, unknown>
   bind?: { mcp?: { tool: string } | false }
@@ -218,7 +216,7 @@ export const op = {
   raw(def: RawDef): Op {
     return {
       kind: 'raw',
-      source: def.sourceBound ? 'require' : def.acceptsSource ? 'accept' : 'refuse',
+      source: def.sourceBound ? 'require' : 'refuse',
       method: def.method,
       path: def.path,
       summary: def.summary,
