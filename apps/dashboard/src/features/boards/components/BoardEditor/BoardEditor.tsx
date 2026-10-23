@@ -43,10 +43,11 @@ export interface BoardEditorProps {
  * pinned filters change the draft. A save that loses to another change opens the conflict dialog
  * and never overwrites; leaving with unsaved changes asks first.
  */
-export function BoardEditor({ stored, onExit }: BoardEditorProps) {
+export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) {
   const { client } = useHub()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const [stored] = useState(opened)
   const [draft, setDraft] = useState<BoardDocument>(stored.board)
   const dirty = !sameBoard(draft, stored.board)
   const { filters, setFilters, tz } = useBoardFilters(draft.filters)
@@ -61,10 +62,16 @@ export function BoardEditor({ stored, onExit }: BoardEditorProps) {
   const [handles] = useState(() => new Map<string, HTMLButtonElement>())
   const added = useRef<string>(undefined)
   const leaving = useRef(false)
+  const onExit = () => {
+    leaving.current = true
+    exit()
+  }
 
   const blocker = useBlocker({
     shouldBlockFn: ({ current, next }) =>
-      dirty && !leaving.current && current.pathname !== next.pathname,
+      dirty &&
+      !leaving.current &&
+      (current.pathname !== next.pathname || (next.search as { edit?: unknown }).edit !== true),
     enableBeforeUnload: () => dirty && !leaving.current,
     withResolver: true,
   })
