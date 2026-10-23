@@ -29,8 +29,8 @@ export function useWidgetData<Data>(
   const query = useQuery({
     queryKey: ['widget', request],
     queryFn: ({ signal }) => runRequest(client, request, signal),
-    // A rejected request will be rejected again; a network failure may not be.
-    retry: (count, error) => !isProblemError(error) && count < 1,
+    // A 4xx rejection will be rejected again; a network failure or a 5xx may not be.
+    retry: (count, error) => !(isProblemError(error) && error.status < 500) && count < 1,
   })
 
   const data = useMemo(

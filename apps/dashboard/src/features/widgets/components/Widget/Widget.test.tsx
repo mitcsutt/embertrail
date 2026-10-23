@@ -136,7 +136,7 @@ describe('Widget', () => {
       'claude-haiku-4-5',
     ])
     expect(table.getByRole('row', { name: /3 Nov/ })).toHaveTextContent(
-      `${formatUsd(4)}${formatUsd(1)}`.replaceAll(' ', ' '),
+      `${formatUsd(4)}${formatUsd(1)}`,
     )
   })
 
