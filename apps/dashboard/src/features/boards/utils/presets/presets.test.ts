@@ -187,4 +187,8 @@ describe('customisePreset', () => {
     copy.layout[0] = { i: 'section-today-at-a-glance', x: 0, y: 5, w: 12, h: 1 }
     expect(overviewPreset).toEqual(before)
   })
+
+  it('keeps the name of the empty Preset, which already names a new Board', () => {
+    expect(customisePreset(newBoardPreset).name).toBe('New Board')
+  })
 })

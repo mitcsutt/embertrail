@@ -19,7 +19,14 @@ const filter = z.union([
   z.strictObject({ key: dimension, op: z.enum(['exists', 'not_exists']) }),
 ])
 
-const instant = z.iso.datetime({ offset: true })
+// An absolute range is two inclusive calendar dates read in the viewer's zone, as the filters
+// resolve them; an instant would not resolve.
+const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+const isCalendarDate = (date: string): boolean => {
+  const instant = new Date(`${date}T00:00:00Z`)
+  return !Number.isNaN(instant.getTime()) && instant.toISOString().startsWith(date)
+}
 
 const timeRange = z.discriminatedUnion('kind', [
   z.strictObject({
@@ -33,7 +40,7 @@ const timeRange = z.discriminatedUnion('kind', [
       'last-90-days',
     ]),
   }),
-  z.strictObject({ kind: z.literal('absolute'), from: instant, to: instant }),
+  z.strictObject({ kind: z.literal('absolute'), from: calendarDate, to: calendarDate }),
 ])
 
 const filterId = z.string().min(1).max(200)
@@ -116,6 +123,20 @@ export const boardStructure = z.strictObject({
 })
 
 export const boardSchema = boardStructure.superRefine((board, ctx) => {
+  const ranges = [
+    { path: ['filters', 'time'], range: board.filters.time },
+    ...board.items.flatMap((entry, index) =>
+      entry.type === 'section' || entry.override?.time === undefined
+        ? []
+        : [{ path: ['items', index, 'override', 'time'], range: entry.override.time }],
+    ),
+  ]
+  for (const { path, range } of ranges) {
+    if (range.kind !== 'absolute') continue
+    if (!isCalendarDate(range.from) || !isCalendarDate(range.to) || range.to < range.from) {
+      ctx.addIssue({ code: 'custom', path, message: 'Not a range of calendar dates' })
+    }
+  }
   const ids = new Set<string>()
   board.items.forEach((entry, index) => {
     if (ids.has(entry.i)) {

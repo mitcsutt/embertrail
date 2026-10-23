@@ -2,41 +2,16 @@
 // a filter change asks the Hub only for the Widgets it affects, and the navigation reaches every
 // Board.
 
-import type { EmbertrailClient } from '@mitcsutt/embertrail-client'
-import { ThemeProvider } from '@mitcsutt/kiln-ui'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { HubProvider } from '#app/components/HubProvider'
 import type { BoardDocument } from '#features/boards/types/board'
 import { presetBoard } from '#features/boards/utils/presets'
 import type { PresetId } from '#features/boards/utils/presets'
 import { catalogue, getWidget } from '#features/widgets/constants/catalogue'
-import { createHub } from '#lib/hub'
-import { routeTree } from '#routeTree'
-
 import { fakeHub } from './fakeHub.ts'
-
-function openBoard(path: string, client: EmbertrailClient) {
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [path] }),
-  })
-  const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000 } } })
-  render(
-    <ThemeProvider theme="paper" defaultMode="light">
-      <QueryClientProvider client={queryClient}>
-        <HubProvider hub={{ ...createHub({ hubUrl: 'http://hub.test' }), client }}>
-          <RouterProvider router={router} />
-        </HubProvider>
-      </QueryClientProvider>
-    </ThemeProvider>,
-  )
-  return { router }
-}
+import { openBoard } from './openBoard.tsx'
 
 const storedBoard: BoardDocument = {
   schema_version: 1,
@@ -144,12 +119,12 @@ describe('BoardPage', () => {
 
   it('offers Customise on a Preset', async () => {
     openBoard('/boards/overview', fakeHub().client)
-    expect(await screen.findByRole('button', { name: 'Customise' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Customise' })).toBeEnabled()
   })
 
   it('offers Edit on a stored Board', async () => {
     openBoard('/boards/b-spend00001', fakeHub({ boards: { 'b-spend00001': storedBoard } }).client)
-    expect(await screen.findByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeEnabled()
   })
 
   it('offers no editing to a Token without store:write', async () => {

@@ -1,2 +1,2 @@
 export { BoardGrid } from './BoardGrid'
-export type { BoardGridProps } from './BoardGrid'
+export type { BoardGridEdit, BoardGridProps } from './BoardGrid'
