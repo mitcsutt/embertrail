@@ -61,13 +61,13 @@ apps/dashboard/
     config/runtimeConfig/  # config.json: load and validate
     lib/                   # configured clients, one module each (hub, queryClient)
     features/
-      filters/             # types, utils (resolveWindow, toQueryContext), hooks, data, components
+      filters/             # types, utils (resolveWindow, toQueryContext), hooks (useBoardFilters, useQueryContext, useBrowserTimeZone), data, components
       widgets/             # the Widget framework and the first Catalogue entries, see Widgets
       boards/{types,schemas,utils,constants,data,hooks,components,pages}  # BoardDocument and its schema, Presets, the store, BoardView and BoardGrid, BoardPage
-      sessions/pages/      # SessionGroupsPage, SessionPage
+      sessions/{types,utils,data,components,pages}  # the Session Group tree and a Session's Event timeline, see Session Groups
 ```
 
-Routes: `/` redirects to `/boards/overview`; `/boards/$boardId` is the [Board view](#the-board-view); `/sessions` and `/sessions/$sessionId` render placeholder pages for now.
+Routes: `/` redirects to `/boards/overview`; `/boards/$boardId` is the [Board view](#the-board-view); `/sessions` is the [Session Group view](#session-groups) and `/sessions/$sessionId` a Session with its Event timeline.
 
 What the structure rule allows, so a new folder does not fail lint after the code is written:
 
@@ -127,6 +127,16 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 - **Navigation** (`app/components`): `BoardNav` is the sidebar list (Presets, then stored Boards, then "New Board", which is the empty Preset), and `JumpPalette` is the `CommandPalette` on ⌘K or Ctrl+K (and a "Jump to…" button) over the same Boards and the Session Groups page. A Hub that refuses the Board list leaves the Presets. Both list `presetIds` in order, named by each Preset's own `name`.
 - Features import each other's public kinds only, so `app` and `boards` reach `filters` and `widgets` through hooks and components (`useQueryContext`, `useResolvedWindow`, `usePresetList`, `WidgetColorScope`), not their `utils`.
 
+## Session Groups
+
+`/sessions` runs `SessionGroupsPage`: the Sessions in a window as a tree of Session Groups (#44). It has the same `FilterBar` as a Board (time range, Source, Account, model), with its live state in the URL over a default of the last 30 days, and no Board behind it.
+
+- **Totals come from `listSessions`, not `queryMetrics`.** `fetchSessions` (`data/sessionGroups`) lists every Session of the window (all pages, `limit` 1,000, through the client's `items()`), with the filter bar's `source_id`, `account_id` and `model`, and `groupSessions` (`utils/groupSessions`) groups them by `group.id`. A group's Session count, cost and tokens are the sums of its members' own `cost_usd` and `tokens`, so they equal the rows listed under it exactly (#44 AC1). Two queries (a `cost.usage` sum per `embertrail.group.id`, and a count) would disagree at the window's edge: the Metric sums the data points inside the window, while a Session's `cost_usd` is the whole Session's. The cost of this choice is that a Session which touches the window counts whole, which the page says; it also holds the Sessions in memory, which is fine at the Hub's scale of one person's Sessions.
+- **The tree.** Rows are groups, ordered by cost, then a "No group" row for Sessions with no `embertrail.group.id`. A Session sits under its `parent_session_id` when the parent is in the same group, and is a root of the group otherwise (its parent may be in another group, or outside the window). Parents that point at each other are shown as roots rather than lost. A reserved Label wins over the attribute (the Hub resolves that), so labelling a Session moves it to another group on the next fetch (#44 AC2).
+- **Rendering** is kiln-ui's `TreeTable` (a WAI-ARIA `treegrid`), one tab stop with the arrow keys: Right opens a row and steps into its first child, Left closes it and steps out, Enter follows the row's link. A Session's first cell links to `/sessions/$sessionId`.
+- **`/sessions/$sessionId` runs `SessionPage`**: `getSession` for the header (its group and kind, its parent and children as links, cost, tokens, first and last Signal, models), and the Event timeline from `queryEvents` with `mode: 'list'`, `order: 'asc'` and a `session.id` filter over the Session's own span (first Signal to just past the last). It loads 100 Events at a time; "Load more" passes the cursor of the last page (`useInfiniteQuery`). A Session known only from its Labels has no span and so no Events to ask for. An unknown Session shows "No such Session".
+- Sessions import the Hub through `useHub` in their pages, with the data modules (`data/sessionGroups`, `data/session`) owning the keys, paging and retries (a 4xx is not retried).
+
 ## Widgets
 
 A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue. Ten Widgets exist so far, in #16's order: **Cost today** and **Cost this week** (stats; the week is a fixed window), **Each day by model** (a stacked `Bars` chart pivoted by model), **Cost by Account** (`Bars`, an Account named by its Inventory label), **Sessions today** (a stat), **Top sessions** (a `Table` linking to `/sessions/$sessionId`), **Sessions per day** (`Bars` stacked by `start_type`), **Model mix** (`Share`), **Cache share** (a stat: cacheRead ÷ (input + cacheRead + cacheCreation), empty when no input was counted) and **Tokens by type** (a stacked `TimeSeries`). The two `session.count` Widgets leave `model` out of their `filters`: that metric has no model.
@@ -176,7 +186,7 @@ kiln-charts needs `ResizeObserver` and `matchMedia`, which jsdom lacks; `test/vi
 
 ## Component tests
 
-`test/fakeHub.ts` is an in-memory Hub for tests that render the app: `fakeHub({ boards?, scopes? })` returns a real client whose `fetch` answers `getSelf`, `getInventory`, the three Query API operations (empty results) and reading Boards, plus `requests` and `widgetRequests()` for what was asked. PGLite does not boot under jsdom, so a `.tsx` test cannot use `dashboardTestHub`; use `fakeHub` for UI behaviour and the test Hub (a `// @vitest-environment node` file) for what the Hub does with a request. `test/boards.test.tsx` is the reference: it renders the real route tree and asserts what each Preset and a stored Board draw, that a filter change asks only the affected Widgets again, and the navigation and palette.
+`test/fakeHub.ts` is an in-memory Hub for tests that render the app: `fakeHub({ boards?, scopes?, sessions?, events?, eventPageSize? })` returns a real client whose `fetch` answers `getSelf`, `getInventory`, the Query API operations (empty results, unless `sessions` fills `listSessions` and `getSession`, or `events` fills a list query, paged by `eventPageSize` through a cursor) and reading Boards, plus `requests` and `widgetRequests()` for what was asked. PGLite does not boot under jsdom, so a `.tsx` test cannot use `dashboardTestHub`; use `fakeHub` for UI behaviour and the test Hub (a `// @vitest-environment node` file) for what the Hub does with a request. `test/boards.test.tsx` is the reference: it renders the real route tree and asserts what each Preset and a stored Board draw, that a filter change asks only the affected Widgets again, and the navigation and palette. `test/sessions.test.tsx` does the same for the Session Group tree (opened by keyboard) and the Event timeline; `test/sessionData.test.ts` runs the same data against the demo dataset on a real Hub.
 
 ## Demo data
 
