@@ -29,6 +29,8 @@ server {
         set $hub_upstream "${EMBERTRAIL_HUB_UPSTREAM}";
         proxy_pass $hub_upstream;
         proxy_ssl_server_name on;
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
         proxy_set_header Authorization $hub_authorization;
         proxy_read_timeout 120s;
     }
