@@ -1,7 +1,8 @@
 import { Share } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { valuedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface EditDecision {
   decision: string
@@ -33,15 +34,14 @@ export const editAcceptance: WidgetDefinition<EditAcceptanceData> = {
       to: ctx.to,
       tz: ctx.tz,
       group_by: ['decision'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    decisions: aggregateRows(response).flatMap((row) =>
-      row.value === null
-        ? []
-        : [{ decision: String(row.group.decision ?? 'Unknown'), edits: row.value }],
-    ),
+    decisions: valuedRows(response).map((row) => ({
+      decision: groupLabel(row, 'decision'),
+      edits: row.value,
+    })),
   }),
   isEmpty: ({ decisions }) => decisions.length === 0,
   View: ({ data, label }) => (

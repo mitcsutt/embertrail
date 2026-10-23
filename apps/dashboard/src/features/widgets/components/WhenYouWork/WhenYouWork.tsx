@@ -1,9 +1,10 @@
 import { Heatmap } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { formatDuration } from '#features/widgets/utils/formats'
 import { foldWeek } from '#features/widgets/utils/localHours'
+import { bucketedRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface WhenYouWorkData {
   /** Seconds of active time: Monday to Sunday, each with 24 local hours. */
@@ -41,15 +42,11 @@ export const whenYouWork: WidgetDefinition<WhenYouWorkData> = {
       to: ctx.to,
       tz: ctx.tz,
       bucket: 'hour',
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response, ctx) => {
-    const buckets = aggregateRows(response).flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ start: row.bucket, value: row.value }],
-    )
+    const buckets = bucketedRows(response).map((row) => ({ start: row.bucket, value: row.value }))
     return { cells: foldWeek(buckets, ctx.tz), hasTime: buckets.length > 0 }
   },
   isEmpty: ({ hasTime }) => !hasTime,

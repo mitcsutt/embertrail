@@ -1,9 +1,9 @@
 import { TimeSeries } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { chartBucket } from '#features/widgets/utils/chartBucket'
 import { formatDuration } from '#features/widgets/utils/formats'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 
 export interface BucketLatency {
   /** The bucket's start, an ISO time with its offset. */
@@ -41,11 +41,11 @@ export const requestLatency: WidgetDefinition<RequestLatencyData> = {
     },
   }),
   select: (response) => ({
-    rows: aggregateRows(response).flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ at: row.bucket, model: String(row.group.model ?? 'Unknown'), p95: row.value }],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      at: row.bucket,
+      model: groupLabel(row, 'model'),
+      p95: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

@@ -1,8 +1,9 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { Inventory } from '#features/filters/data/inventory'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 /** One Account's cost; `accountId` is `null` for cost that carries no Account. */
 export interface AccountCost {
@@ -35,11 +36,11 @@ export const costByAccount: WidgetDefinition<CostByAccountData> = {
       to: ctx.to,
       tz: ctx.tz,
       group_by: ['embertrail.account_id'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    accounts: (response as OperationOutput<'queryMetrics'>).rows
+    accounts: aggregateRows(response)
       .flatMap((row) => {
         const id = row.group['embertrail.account_id']
         return row.value === null

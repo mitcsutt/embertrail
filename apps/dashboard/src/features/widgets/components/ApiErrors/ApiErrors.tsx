@@ -1,8 +1,8 @@
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { chartBucket } from '#features/widgets/utils/chartBucket'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 
 export interface BucketErrors {
   /** The bucket's start, an ISO time with its offset. */
@@ -40,17 +40,11 @@ export const apiErrors: WidgetDefinition<ApiErrorsData> = {
     },
   }),
   select: (response) => ({
-    rows: aggregateRows(response).flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [
-            {
-              at: row.bucket,
-              status: String(row.group.status_code ?? 'Unknown'),
-              errors: row.value,
-            },
-          ],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      at: row.bucket,
+      status: groupLabel(row, 'status_code'),
+      errors: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

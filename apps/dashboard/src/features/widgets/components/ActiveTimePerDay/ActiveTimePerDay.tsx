@@ -1,8 +1,9 @@
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { formatDuration } from '#features/widgets/utils/formats'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface DayActiveTime {
   /** The day's start, an ISO time with its offset. */
@@ -35,15 +36,15 @@ export const activeTimePerDay: WidgetDefinition<ActiveTimePerDayData> = {
       tz: ctx.tz,
       bucket: 'day',
       group_by: ['type'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    rows: aggregateRows(response).flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ day: row.bucket, type: String(row.group.type ?? 'Unknown'), seconds: row.value }],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      day: row.bucket,
+      type: groupLabel(row, 'type'),
+      seconds: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (
