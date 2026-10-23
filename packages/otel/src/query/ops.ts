@@ -52,6 +52,7 @@ export const queryOps = {
     method: 'PUT',
     path: '/api/v1/sessions/{session_id}/labels',
     summary: "Replace a Session's Labels",
+    acceptsSource: true,
     input: z.strictObject({ session_id: schemas.sessionId, labels: schemas.labels }),
     output: z.object({ session_id: z.string(), labels: schemas.labels }),
     run: ({ session_id: id, labels }, ctx) => putLabels(ctx, id, labels),

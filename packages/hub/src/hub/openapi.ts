@@ -60,7 +60,8 @@ function typedOperation(
   op: Pick<
     TypedOp,
     'kind' | 'method' | 'path' | 'input' | 'output' | 'headers' | 'statuses' | 'etag'
-  >,
+  > &
+    Partial<Pick<TypedOp, 'source'>>,
 ) {
   const input = jsonSchema(op.input, 'input', subject, key)
   const output = jsonSchema(op.output, 'output', subject, key)
@@ -129,6 +130,9 @@ function typedOperation(
           },
         ]),
       ),
+      ...(op.source === 'refuse'
+        ? { '403': { $ref: '#/components/responses/SourceRefused' } }
+        : {}),
       default: { $ref: '#/components/responses/Problem' },
     },
   }
@@ -323,7 +327,7 @@ export function buildOpenApi(modules: readonly Module[], coreOps: readonly CoreO
         'x-embertrail-module': module.name,
         'x-embertrail-scope': opScope(module.name, op),
         ...(op.kind === 'raw'
-          ? { ...(op.sourceBound ? sourceBoundSecurity : {}), ...op.openapi }
+          ? { ...(op.source === 'require' ? sourceBoundSecurity : {}), ...op.openapi }
           : typedOperation(`Module "${module.name}"`, key, op)),
       }
       paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
@@ -375,6 +379,13 @@ export function buildOpenApi(modules: readonly Module[], coreOps: readonly CoreO
       responses: {
         Problem: {
           description: 'An error, as RFC 9457 problem details.',
+          content: {
+            'application/problem+json': { schema: { $ref: '#/components/schemas/Problem' } },
+          },
+        },
+        SourceRefused: {
+          description:
+            'Missing Scope, or a Token bound to a Source (an ingest Token), which this operation refuses (`forbidden`).',
           content: {
             'application/problem+json': { schema: { $ref: '#/components/schemas/Problem' } },
           },

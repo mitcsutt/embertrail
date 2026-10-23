@@ -1224,6 +1224,15 @@ export interface components {
         'application/problem+json': components['schemas']['Problem']
       }
     }
+    /** @description Missing Scope (`forbidden`), or a Token bound to a Source (an ingest Token), which this operation refuses (`forbidden`, "Needs a Token not bound to a Source"). Also `identity-conflict`, as `Forbidden`. */
+    ForbiddenSourceBound: {
+      headers: {
+        [name: string]: unknown
+      }
+      content: {
+        'application/problem+json': components['schemas']['Problem']
+      }
+    }
     /** @description No such resource, or one the caller may not read (`not-found`). */
     NotFound: {
       headers: {
@@ -1413,7 +1422,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
     }
@@ -1443,7 +1452,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
     }
@@ -1491,7 +1500,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -1517,7 +1526,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -1596,7 +1605,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -1667,7 +1676,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -1696,7 +1705,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -1751,7 +1760,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       409: components['responses']['Conflict']
       412: components['responses']['PreconditionFailed']
@@ -1788,7 +1797,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       412: components['responses']['PreconditionFailed']
       500: components['responses']['Internal']

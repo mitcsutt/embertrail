@@ -122,6 +122,29 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
       }),
   },
   {
+    name: 'a Token bound to a Source gets 403 on an op that declares nothing, and is let in by one that accepts',
+    run: (open) =>
+      withLedger(open, async (t) => {
+        const laptop = t.as('alice', write, { sourceId: 'laptop' })
+        const refused = await laptop.post('/api/v1/ledger/entries', { note: 'device' })
+        assert.equal(refused.status, 403)
+        const problem = await json(refused)
+        assert.equal(problem.type, 'urn:embertrail:problem:forbidden')
+        assert.equal(problem.detail, 'Needs a Token not bound to a Source')
+        assert.equal(await count(t, 'entries'), 0)
+        assert.equal(
+          (await laptop.post('/api/v1/ledger/device-entries', { note: 'device' })).status,
+          200,
+        )
+        assert.equal(await count(t, 'entries'), 1)
+        assert.equal(
+          (await t.as('alice', write).post('/api/v1/ledger/device-entries', { note: 'mgmt' }))
+            .status,
+          200,
+        )
+      }),
+  },
+  {
     name: 'reads see only the caller’s rows; a hidden row is 404',
     run: (open) =>
       withLedger(open, async (t) => {
@@ -165,11 +188,14 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
     name: 'output is parsed by its schema, so a raw row loses owner_id and source_id',
     run: (open) =>
       withLedger(open, async (t) => {
-        const alice = t.as('alice', write, { sourceId: 'laptop' })
-        const entry = await alice.post('/api/v1/ledger/bare-entries', { note: 'bare' })
+        const entry = await t
+          .as('alice', write)
+          .post('/api/v1/ledger/bare-entries', { note: 'bare' })
         assert.equal(entry.status, 200)
         assert.deepEqual(Object.keys(await json(entry)).sort(), ['id', 'note'])
-        const reading = await alice.post('/api/v1/ledger/bare-readings', { value: 3 })
+        const reading = await t
+          .as('alice', write, { sourceId: 'laptop' })
+          .post('/api/v1/ledger/bare-readings', { value: 3 })
         assert.equal(reading.status, 200)
         assert.deepEqual(Object.keys(await json(reading)).sort(), ['id', 'value'])
       }),
@@ -312,8 +338,8 @@ export const hubInvariantChecks: readonly Check<OpenDb>[] = [
     async run(open) {
       await assertModuleContract(ledger, {
         db: await open(),
-        async seed(client) {
-          await client.post('/api/v1/ledger/entries', { note: 'one' })
+        async seed(client, management) {
+          await management.post('/api/v1/ledger/entries', { note: 'one' })
           await client.post('/api/v1/ledger/readings', { value: 1 })
         },
       })

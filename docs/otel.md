@@ -43,7 +43,7 @@ A promoted attribute is read from the record's or point's attributes, falling ba
 
 `content_hash` is the SHA-256 of the record's time, event name, attributes, body, severity, resource and scope, as canonical JSON: an exact retry collapses and any difference keeps two records apart. A record with no `session.id` and no time at all (no `timeUnixNano`, `observedTimeUnixNano` or `event.timestamp`) is stamped with the request time, so its retries are not collapsed. `attributes_hash` covers the point's attributes, the resource and the scope name. Each request writes one `INSERT … SELECT FROM unnest(…) ON CONFLICT DO NOTHING` per table.
 
-`session_labels` holds each Session's Labels, one row per (`owner_id`, `session_id`). It isn't a Signal table: Labels are written by the caller (any `otel:write` Token, Source-bound or not) and may arrive before the Session's first Signal.
+`session_labels` holds each Session's Labels, one row per (`owner_id`, `session_id`). It isn't a Signal table: Labels are written by the caller (any `otel:write` Token, Source-bound or not: `PUT /api/v1/sessions/{id}/labels` is the one otel write that accepts an ingest Token, so a plugin on the device can label its own Session; every other op the Module serves refuses one) and may arrive before the Session's first Signal.
 
 ## Query API
 
