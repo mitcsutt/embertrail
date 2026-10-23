@@ -9,6 +9,7 @@ import type { SQL } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { sha256 } from '../otlp'
+import { labelKey, labelled } from '../promoted'
 import type { listSessions, sessionSummary } from './schemas'
 import { rows, withoutPaging } from './sql'
 
@@ -22,6 +23,15 @@ const signalColumns = sql.raw(`owner_id, session_id, source_id, account_id, serv
 
 const rfc3339 = (column: string) =>
   sql.raw(`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`)
+
+/** Each link column, the Session's Label over what the Signals say (from `promoted.ts`). */
+const labelOverrides = sql.join(
+  labelled.map(
+    (p) =>
+      sql`coalesce(l.labels ->> ${p.key}::text, b.${sql.raw(p.column)}) as ${sql.raw(p.column)}`,
+  ),
+  sql`,\n    `,
+)
 
 const signalTables = ['otel.otel_logs', 'otel.otel_metrics_sum', 'otel.otel_metrics_gauge']
 
@@ -83,10 +93,7 @@ const sessions = (keys?: SQL) => {
     b.service_name, b.source_id, b.account_id, b.started_at, b.last_seen_at,
     coalesce(b.models, '{}') as models, c.cost_usd, coalesce(k.tokens, '{}') as tokens,
     coalesce(e.event_counts, '{}') as event_counts,
-    coalesce(l.labels ->> 'embertrail.group.id', b.group_id) as group_id,
-    coalesce(l.labels ->> 'embertrail.group.kind', b.group_kind) as group_kind,
-    coalesce(l.labels ->> 'embertrail.parent.session_id', b.parent_session_id) as parent_session_id,
-    coalesce(l.labels ->> 'embertrail.role', b.role) as role,
+    ${labelOverrides},
     coalesce(l.labels, '{}') as labels
   from base b
   full join labels l on l.owner_id = b.owner_id and l.session_id = b.session_id
@@ -227,7 +234,7 @@ export async function getSession(db: ScopedDb, id: string, ownerId: string) {
     db,
     sql`${signalKeys(sql`${owner} and parent_session_id = ${id}`)}
       union select owner_id, session_id from otel.session_labels
-      where ${owner} and labels ->> 'embertrail.parent.session_id' = ${id}`,
+      where ${owner} and labels ->> ${labelKey('parent_session_id')}::text = ${id}`,
     [sql`s.parent_session_id = ${id}`],
     'started_at',
     1000,

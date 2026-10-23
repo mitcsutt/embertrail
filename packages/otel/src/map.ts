@@ -4,9 +4,11 @@
 
 import { attributes, canonical, isObject, list, nanosToIso, sha256, unwrap } from './otlp'
 import type { Attributes, Json } from './otlp'
+import { common, specific } from './promoted'
+import type { Promotion } from './promoted'
 
 /** Promoted on every Signal. */
-interface Promoted {
+export interface Promoted {
   time: string
   serviceName: string
   sessionId: string | null
@@ -59,14 +61,26 @@ export interface Mapped<R> {
   messages: string[]
 }
 
-/** The OTel default when a sender has no `service.name`. */
-const unknownService = 'unknown_service'
-
 /** A string attribute from the record, falling back to the resource. */
 function text(own: Attributes, resource: Attributes, key: string): string | null {
   const value = own[key] ?? resource[key]
   if (value === undefined || value === null) return null
   return typeof value === 'string' ? value : canonical(value)
+}
+
+/** What `promoted.ts` says to read from an attribute, by row field. */
+type Read = Record<string, string | number | null>
+
+function read(rows: readonly Promotion[], own: Attributes, resource: Attributes): Read {
+  const fields: Read = {}
+  for (const p of rows) {
+    if (p.field === undefined || (p.from !== 'attributes' && p.from !== 'own')) continue
+    fields[p.field] =
+      p.type === 'bigint'
+        ? integer(own[p.key])
+        : (text(own, p.from === 'own' ? {} : resource, p.key) ?? p.fallback ?? null)
+  }
+  return fields
 }
 
 function integer(value: Json | undefined): number | null {
@@ -132,18 +146,16 @@ async function promote(
   account: AccountRecogniser,
 ): Promise<Promoted> {
   const { resource } = context
+  const fields = read(common, own, resource) as Omit<
+    Promoted,
+    'time' | 'accountId' | 'scopeName' | 'scopeVersion' | 'attributes' | 'resource'
+  >
   return {
+    ...fields,
     time,
-    serviceName: text(own, resource, 'service.name') ?? unknownService,
-    sessionId: text(own, resource, 'session.id'),
     accountId: await account(
       Object.fromEntries(accountAttributes.map((key) => [key, text(own, resource, key)])),
     ),
-    groupId: text(own, resource, 'embertrail.group.id'),
-    groupKind: text(own, resource, 'embertrail.group.kind'),
-    parentSessionId: text(own, resource, 'embertrail.parent.session_id'),
-    role: text(own, resource, 'embertrail.role'),
-    model: text(own, resource, 'model'),
     scopeName: context.scopeName,
     scopeVersion: context.scopeVersion,
     attributes: own,
@@ -181,8 +193,12 @@ export async function mapLogs(
       const own = attributes(list(record, 'attributes'))
       const time = recordTime(record, own, now)
       const base = await promote(own, context, time, account)
-      const eventName = text(own, {}, 'event.name') ?? string(record.eventName) ?? ''
-      const eventSequence = integer(own['event.sequence'])
+      const event = read(specific.event, own, {}) as Pick<
+        LogRow,
+        'eventSequence' | 'promptId' | 'requestId'
+      > & { eventName: string | null }
+      const eventName = event.eventName ?? string(record.eventName) ?? ''
+      const { eventSequence } = event
       const severityNumber = severity(record.severityNumber)
       const severityText = string(record.severityText)
       const body = unwrap(record.body)
@@ -191,8 +207,8 @@ export async function mapLogs(
         observedTime: nanosToIso(record.observedTimeUnixNano),
         eventName,
         eventSequence,
-        promptId: text(own, {}, 'prompt.id'),
-        requestId: text(own, {}, 'request_id'),
+        promptId: event.promptId,
+        requestId: event.requestId,
         severityNumber,
         severityText,
         body,
@@ -286,6 +302,7 @@ export async function mapMetrics(
         }
         const own = attributes(list(point, 'attributes'))
         const base = await promote(own, context, time, account)
+        const { type: metricType } = read(specific.metric, own, {}) as Pick<MetricRow, 'type'>
         const row: MetricRow = {
           ...base,
           startTime: nanosToIso(point.startTimeUnixNano),
@@ -293,7 +310,7 @@ export async function mapMetrics(
           description: typeof metric.description === 'string' ? metric.description : '',
           unit: typeof metric.unit === 'string' ? metric.unit : '',
           value,
-          type: text(own, {}, 'type'),
+          type: metricType,
           attributesHash: await sha256(canonical([own, context.resource, context.scopeName])),
         }
         if (isSum) sums.push({ ...row, isMonotonic: data.isMonotonic === true })
