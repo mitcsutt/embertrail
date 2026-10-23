@@ -121,3 +121,39 @@ test('Overview is unchanged by customising it, and a save that lost to another i
   await page.goto('/boards/overview')
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible()
 })
+
+test('the Model mix legend stays inside its card at the smallest size the grid allows', async ({
+  page,
+}) => {
+  await customiseOverview(page)
+  const card = page.getByRole('group', { name: 'Model mix' })
+  const legend = card.locator('[class*="kiln-Share__legend"]')
+  await expect(legend).toBeVisible()
+
+  const handle = page.getByRole('button', { name: /Move Model mix/ })
+  await handle.focus()
+  await page.keyboard.press('Space')
+  // Down to the Widget's minimum size, 3 × 3, and one more press to prove the grid stops there.
+  for (let step = 0; step < 3; step += 1) {
+    await page.keyboard.press('Shift+ArrowUp')
+    await page.keyboard.press('Shift+ArrowLeft')
+  }
+  await page.keyboard.press('Space')
+
+  // The legend may be longer than the card, but only inside a box that clips it to the card.
+  const spill = await legend.evaluate((element) => {
+    const card = element.closest('[role="group"]')
+    if (card === null) throw new Error('The legend is not in a card')
+    let clip: Element = element
+    for (let at = element.parentElement; at !== null && at !== card; at = at.parentElement) {
+      if (getComputedStyle(at).overflowY !== 'visible') {
+        clip = at
+        break
+      }
+    }
+    const inside = clip.getBoundingClientRect()
+    const outer = card.getBoundingClientRect()
+    return Math.max(inside.bottom - outer.bottom, inside.right - outer.right)
+  })
+  expect(spill).toBeLessThanOrEqual(0.5)
+})
