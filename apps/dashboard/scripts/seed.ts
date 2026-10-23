@@ -1,6 +1,6 @@
 // Fills a Hub with the demo dataset, for `pnpm dev` and for looking at the Dashboard by hand.
 //
-//   pnpm --filter @mitcsutt/embertrail-dashboard seed [--now <iso>] [--tz <zone>] [--days <n>]
+//   pnpm --filter @mitcsutt/embertrail-dashboard seed [--now <iso>] [--tz <zone>] [--days <n>] [--seed <n>]
 //
 // It talks to the Hub `embertrail login` stored (or EMBERTRAIL_HUB and EMBERTRAIL_TOKEN), deletes
 // the Source `embertrail-demo` if there is one (a hard delete removes the rows it sent), creates it again and
