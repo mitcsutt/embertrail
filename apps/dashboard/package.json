@@ -8,6 +8,7 @@
   "imports": {
     "#assets/*": "./src/assets/*",
     "#routeTree": "./src/routeTree.gen.ts",
+    "#test/*": "./test/*.ts",
     "#*": "./src/*/index.ts"
   },
   "scripts": {
@@ -47,6 +48,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "ajv": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "typescript": "catalog:",

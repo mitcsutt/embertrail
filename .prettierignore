@@ -1,3 +1,4 @@
 # Generated files
 pnpm-lock.yaml
 apps/dashboard/src/routeTree.gen.ts
+apps/dashboard/src/features/boards/schemas/board/board.schema.json
