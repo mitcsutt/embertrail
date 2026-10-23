@@ -15,10 +15,6 @@ export interface UseBoardFilters {
   filters: BoardFilters
   /** Changes the named filters; a key set to `undefined` clears that filter. */
   setFilters: (patch: Partial<BoardFilters>) => void
-  /** Drops the URL's filters, back to the Board's saved ones. */
-  reset: () => void
-  /** True when the URL changes something the Board saved. */
-  changed: boolean
   /** The browser's IANA zone. */
   tz: string
 }
@@ -55,14 +51,8 @@ export function useBoardFilters(saved: BoardFilters): UseBoardFilters {
     },
     [filters, saved, write],
   )
-  const reset = useCallback(() => {
-    write({})
-  }, [write])
 
-  const written: Record<string, unknown> = searchFromFilters(filters, saved)
-  const changed = Object.values(written).some((value) => value !== undefined)
-
-  return { filters, setFilters, reset, changed, tz }
+  return { filters, setFilters, tz }
 }
 
 type FilterSearchPatch = ReturnType<typeof searchFromFilters>

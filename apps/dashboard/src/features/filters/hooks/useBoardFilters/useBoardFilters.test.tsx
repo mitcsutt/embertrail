@@ -52,7 +52,6 @@ describe('useBoardFilters', () => {
     const { latest } = await renderAt('/boards/overview')
 
     expect(latest().filters).toEqual(saved)
-    expect(latest().changed).toBe(false)
   })
 
   it('reads the filters from the URL over the saved ones', async () => {
@@ -63,7 +62,6 @@ describe('useBoardFilters', () => {
       sourceId: 'src-1',
       model: 'claude-opus',
     })
-    expect(latest().changed).toBe(true)
   })
 
   it('ignores a search it cannot read', async () => {
@@ -101,19 +99,6 @@ describe('useBoardFilters', () => {
     await waitFor(() => {
       expect(latest().filters.model).toBeUndefined()
     })
-  })
-
-  it('resets to the saved filters and keeps other params', async () => {
-    const { router, latest } = await renderAt('/boards/overview?edit=true&range="today"&model=""')
-
-    act(() => {
-      latest().reset()
-    })
-
-    await waitFor(() => {
-      expect(latest().filters).toEqual(saved)
-    })
-    expect(router.state.location.search).toEqual({ edit: true })
   })
 
   it('reads the zone from the browser, never a fixed offset', async () => {
