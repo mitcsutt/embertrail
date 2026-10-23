@@ -87,7 +87,7 @@ tags:
     description: JSON documents owned by a User or Team, grouped by client namespace.
   - name: admin
     description: |
-      The instance admin's Users, Teams and Sources (`admin` Scope), and the
+      The Hub's Users, Teams and Sources (`admin` Scope), and the
       one-time bootstrap. The `embertrail` CLI is its client.
   - name: self
     description: |
@@ -548,7 +548,7 @@ paths:
       description: |
         Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, the
         deployment's one-time secret, not a Token. Creates the first User, an
-        instance admin, and a management Token holding every Scope, shown once.
+        Admin, and a management Token holding every Scope, shown once.
         Answers 401 when `BOOTSTRAP_TOKEN` is unset or wrong, and once an admin
         User exists or bootstrap has been used. The Docker zero-config start
         does the same without a request.
@@ -2062,7 +2062,7 @@ components:
           description: Lowercased; what an Edge Identity is matched on.
         admin:
           type: boolean
-          description: An instance admin, who alone may hold the `admin` Scope.
+          description: An Admin, who alone may hold the `admin` Scope.
     Team:
       type: object
       required: [id, name]

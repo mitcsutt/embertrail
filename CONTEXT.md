@@ -40,6 +40,10 @@ _Avoid_: API call, turn
 A person whose data Embertrail holds, identified by an edge identity or by their Tokens.
 _Avoid_: member, login
 
+**Admin**:
+A User with the admin flag, the only kind of User who may hold the `admin` Scope.
+_Avoid_: instance admin, superuser
+
 **Team**:
 A named group of Users that can own data and dashboards together.
 _Avoid_: org, group, workspace

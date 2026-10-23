@@ -37,7 +37,7 @@ export interface CoreOp {
   path: string
   summary: string
   description?: string | undefined
-  /** OpenAPI tag: `admin` for instance admins, `self` for a User's own records. */
+  /** OpenAPI tag: `admin` for Admins, `self` for a User's own records. */
   tag: 'admin' | 'self'
   scope: 'admin' | 'self:manage'
   input: StandardSchemaV1

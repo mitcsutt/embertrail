@@ -29,7 +29,7 @@ export const adminCommands: Command[] = [
     positionals: [{ name: 'name', description: "The User's name" }],
     options: {
       email: { type: 'string', value: 'email', description: 'Matched against an Edge Identity' },
-      admin: { type: 'boolean', description: 'Make them an instance admin' },
+      admin: { type: 'boolean', description: 'Make them an Admin' },
       'no-token': { type: 'boolean', description: 'Do not issue a Token' },
     },
     async run(ctx, args) {

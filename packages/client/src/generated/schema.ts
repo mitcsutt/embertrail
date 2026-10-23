@@ -231,7 +231,7 @@ export interface paths {
      * Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once
      * @description Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, the
      *     deployment's one-time secret, not a Token. Creates the first User, an
-     *     instance admin, and a management Token holding every Scope, shown once.
+     *     Admin, and a management Token holding every Scope, shown once.
      *     Answers 401 when `BOOTSTRAP_TOKEN` is unset or wrong, and once an admin
      *     User exists or bootstrap has been used. The Docker zero-config start
      *     does the same without a request.
@@ -1042,7 +1042,7 @@ export interface components {
       name: string
       /** @description Lowercased; what an Edge Identity is matched on. */
       email: string | null
-      /** @description An instance admin, who alone may hold the `admin` Scope. */
+      /** @description An Admin, who alone may hold the `admin` Scope. */
       admin: boolean
     }
     Team: {

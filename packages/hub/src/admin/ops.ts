@@ -7,7 +7,7 @@ import { HubError } from '../module/errors'
 import { coreOp } from './core-op'
 import type { CoreCtx, CoreOp } from './core-op'
 
-// The Admin and self-management API (#30). `admin` ops manage the instance's Users, Teams and
+// The Admin and self-management API (#30). `admin` ops manage the Hub's Users, Teams and
 // Sources; `self:manage` ops manage the caller's own Sources, Tokens, Accounts and Grants, and
 // export their data. Every self op reads the caller's records first and answers 404 for
 // anyone else's, so another User's ids look exactly like ids that don't exist.
