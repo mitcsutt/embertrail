@@ -125,7 +125,9 @@ function typedOperation(subject: Subject, op: TypedHubOp) {
                 },
               ]),
             ),
-            ...(op.auth.kind === 'scope' && op.auth.source === 'refuse'
+            ...(op.auth.kind !== 'public' &&
+            op.auth.kind !== 'bootstrap' &&
+            op.auth.source === 'refuse'
               ? { '403': { $ref: '#/components/responses/SourceRefused' } }
               : {}),
             ...problem,

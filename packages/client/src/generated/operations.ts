@@ -73,6 +73,7 @@ export const operationTable = {
     path: '/api/v1/admin/sources/{source_id}',
     responseHeaders: [],
   },
+  getSelf: { method: 'GET', path: '/api/v1/self', responseHeaders: [] },
   listSources: { method: 'GET', path: '/api/v1/self/sources', responseHeaders: [] },
   createSource: { method: 'POST', path: '/api/v1/self/sources', responseHeaders: [] },
   renameSource: { method: 'PUT', path: '/api/v1/self/sources/{source_id}', responseHeaders: [] },
@@ -330,6 +331,15 @@ export interface Operations {
   deleteAnySource: {
     input: { path: NonNullable<operations['deleteAnySource']['parameters']['path']> }
     output: undefined
+  }
+  /**
+   * Who you are
+   *
+   * `GET /api/v1/self`
+   */
+  getSelf: {
+    input?: Record<never, never>
+    output: operations['getSelf']['responses'][200]['content']['application/json']
   }
   /**
    * List your Sources

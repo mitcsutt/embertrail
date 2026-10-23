@@ -391,6 +391,30 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/self': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Who you are
+     * @description Your User, the Scopes your Token holds and the Teams you belong to,
+     *     and for each whether you edit it. Any authenticated caller may ask,
+     *     whatever Scopes their Token holds, and it answers only about the
+     *     caller: a Dashboard shows Team controls from `teams` and hides edit
+     *     mode without `store:write`. A Token bound to a Source is refused.
+     */
+    get: operations['getSelf']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/self/sources': {
     parameters: {
       query?: never
@@ -1044,6 +1068,16 @@ export interface components {
       email: string | null
       /** @description An Admin, who alone may hold the `admin` Scope. */
       admin: boolean
+    }
+    Self: {
+      user: components['schemas']['User']
+      /** @description The Scopes the calling Token holds. */
+      scopes: string[]
+      /** @description The Teams the caller belongs to, oldest first. Empty for a solo User. */
+      teams: (components['schemas']['Team'] & {
+        /** @description Whether the caller may write documents the Team owns. */
+        editor: boolean
+      })[]
     }
     Team: {
       id: components['schemas']['Id']
@@ -2142,6 +2176,29 @@ export interface operations {
       401: components['responses']['Unauthorized']
       403: components['responses']['Forbidden']
       404: components['responses']['NotFound']
+      500: components['responses']['Internal']
+    }
+  }
+  getSelf: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The caller. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Self']
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
       500: components['responses']['Internal']
     }
   }

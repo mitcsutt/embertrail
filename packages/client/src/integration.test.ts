@@ -273,6 +273,19 @@ describe('the Admin and self-management API', () => {
     expect(missing.status).toBe(404)
   })
 
+  it('getSelf tells who you are, your Scopes and your Teams', async () => {
+    const solo = recordCalls(await clientFor(t, 'solo', ['otel:read']), called).client
+    await expect(solo.getSelf()).resolves.toEqual({
+      user: { id: 'solo', name: 'solo', email: null, admin: false },
+      scopes: ['otel:read'],
+      teams: [],
+    })
+    // Alice edits the `crew` Team, created for the store tests above.
+    const me = await alice.getSelf()
+    expect(me.scopes).toEqual(expect.arrayContaining([...scopes]))
+    expect(me.teams).toEqual([{ id: 'crew', name: 'crew', editor: true }])
+  })
+
   it('manages your own Sources, Tokens, Accounts and Grants', async () => {
     const { source, token } = await root.createSource({ body: { name: 'laptop' } })
     expect(token.record).toMatchObject({ kind: 'ingest', source_id: source.id })

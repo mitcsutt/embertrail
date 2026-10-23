@@ -44,6 +44,18 @@ const bootstrapOutput = z.object({
   token: z.string().describe('`et_<id>_<secret>`'),
 })
 
+/** `Self` in spec/query-api.yaml. */
+const selfOutput = z.object({
+  user: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().nullable(),
+    admin: z.boolean(),
+  }),
+  scopes: z.array(z.string()),
+  teams: z.array(z.object({ id: z.string(), name: z.string(), editor: z.boolean() })),
+})
+
 /** `SqlResult` in spec/query-api.yaml. */
 const sqlOutput = z.object({
   columns: z.array(z.object({ name: z.string(), type: z.string() })),
@@ -148,6 +160,41 @@ const ownOps: readonly HubOp[] = [
       )
       if (first === null) throw HubError.unauthenticated('The Hub is already bootstrapped')
       return first
+    },
+  },
+  {
+    kind: 'typed',
+    module: 'core',
+    key: 'getSelf',
+    method: 'GET',
+    path: '/api/v1/self',
+    summary: 'Who you are: your User, the Scopes of your Token and your Teams',
+    description:
+      'Answers any authenticated caller, whatever Scopes the Token holds, with only the caller’s own memberships. A Token bound to a Source is refused.',
+    tags: ['self'],
+    auth: { kind: 'caller', source: 'refuse' },
+    transaction: 'privileged',
+    input: z.object({}),
+    output: selfOutput,
+    headers: {},
+    statuses: [200],
+    etag: false,
+    stamped: 'strip',
+    ownerHeader: false,
+    async run(_, call) {
+      const caller = needs(call.caller, 'a caller')
+      const directory = call.hub.directory.in(needs(call.db, 'a transaction'))
+      const user = await directory.user(caller.userId)
+      if (user === null) throw HubError.unauthenticated('Unknown User')
+      return {
+        user: { id: user.id, name: user.name, email: user.email, admin: user.admin },
+        scopes: [...caller.scopes],
+        teams: (await directory.teamsOf(caller.userId)).map((t) => ({
+          id: t.id,
+          name: t.name,
+          editor: t.role === 'editor',
+        })),
+      }
     },
   },
   {

@@ -91,9 +91,9 @@ tags:
       one-time bootstrap. The `embertrail` CLI is its client.
   - name: self
     description: |
-      Your own Sources, Tokens, Accounts and Grants, and the export of your
-      data (`self:manage` Scope). Every User has it; nobody reaches another
-      User's records through it.
+      Who you are (any authenticated caller), and your own Sources, Tokens,
+      Accounts and Grants and the export of your data (`self:manage` Scope).
+      Every User has it; nobody reaches another User's records through it.
   - name: ingest
     description: OTLP/HTTP JSON ingest. Paths follow the OTLP spec, outside `/api/v1`.
   - name: meta
@@ -843,6 +843,28 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/Internal' }
+
+  /api/v1/self:
+    get:
+      tags: [self]
+      operationId: getSelf
+      summary: Who you are
+      description: |
+        Your User, the Scopes your Token holds and the Teams you belong to,
+        and for each whether you edit it. Any authenticated caller may ask,
+        whatever Scopes their Token holds, and it answers only about the
+        caller: a Dashboard shows Team controls from `teams` and hides edit
+        mode without `store:write`. A Token bound to a Source is refused.
+      x-embertrail-module: core
+      responses:
+        '200':
+          description: The caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Self' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/Internal' }
 
   /api/v1/self/sources:
@@ -2063,6 +2085,27 @@ components:
         admin:
           type: boolean
           description: An Admin, who alone may hold the `admin` Scope.
+    Self:
+      type: object
+      required: [user, scopes, teams]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        scopes:
+          type: array
+          items: { type: string }
+          description: The Scopes the calling Token holds.
+        teams:
+          type: array
+          description: The Teams the caller belongs to, oldest first. Empty for a solo User.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Team'
+              - type: object
+                required: [editor]
+                properties:
+                  editor:
+                    type: boolean
+                    description: Whether the caller may write documents the Team owns.
     Team:
       type: object
       required: [id, name]
