@@ -50,6 +50,23 @@ describe('selectQueryData', () => {
     })
   })
 
+  it('puts a limited bucketed query, which arrives newest first, back in time order', () => {
+    const data = selectQueryData(
+      { ...base, chart: 'series', bucket: 'hour', limit: 2 },
+      answer([
+        { bucket: '2026-03-29T03:00:00+02:00', group: {}, value: 3 },
+        { bucket: '2026-03-29T01:00:00+01:00', group: {}, value: 1 },
+      ]),
+      ctx,
+    )
+    expect(data).toMatchObject({
+      points: [
+        { x: '2026-03-29T01:00:00+01:00', value: 1 },
+        { x: '2026-03-29T03:00:00+02:00', value: 3 },
+      ],
+    })
+  })
+
   it('puts the first key on the x axis for bars without a bucket, the rest in the series', () => {
     const data = selectQueryData(
       { ...base, chart: 'bars', groupBy: ['model', 'type'] },

@@ -11,8 +11,9 @@ import {
 import { foldWeek } from '#features/widgets/utils/localHours'
 
 /**
- * Turns a Query Widget's rows into the shape its chart kind draws. Group keys that a row lacks read
- * `Unknown`. A kind the rows cannot draw (`chartAvailability` says which) never gets here: the
+ * Turns a Query Widget's rows into the shape its chart kind draws; a bucketed query's rows come
+ * back newest first when it has a limit, so they are put in time order here. Group keys that a
+ * row lacks read `Unknown`. A kind the rows cannot draw (`chartAvailability` says which) never gets here: the
  * editor refuses to save it and the Board refuses to run it.
  */
 export function selectQueryData(
@@ -20,11 +21,20 @@ export function selectQueryData(
   response: unknown,
   ctx: Pick<QueryContext, 'tz'>,
 ): QueryData {
-  const rows = aggregateRows(response)
+  const ordered =
+    config.bucket === undefined
+      ? response
+      : {
+          ...(response as object),
+          rows: [...aggregateRows(response)].sort(
+            (a, b) => Date.parse(a.bucket ?? '') - Date.parse(b.bucket ?? ''),
+          ),
+        }
+  const rows = aggregateRows(ordered)
   const unit = (response as Partial<OperationOutput<'queryMetrics'>>).meta?.unit ?? null
   const { groupBy, bucket } = config
-  const withValue = valuedRows(response)
-  const timed = bucketedRows(response)
+  const withValue = valuedRows(ordered)
+  const timed = bucketedRows(ordered)
   const labelOf = (row: (typeof rows)[number], keys: readonly string[]) =>
     keys.length === 0 ? 'Value' : keys.map((key) => groupLabel(row, key)).join(' · ')
   const base = { unit, ...(bucket !== undefined && { bucket }) }

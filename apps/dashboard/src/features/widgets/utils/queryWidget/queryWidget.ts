@@ -158,9 +158,9 @@ export class InvalidQueryError extends Error {
  * refuse: a configuration `validateQueryConfig` objects to throws `InvalidQueryError` instead.
  *
  * A Board's Source, Account and model filters (`ctx.filter`) join the Widget's own. With no time
- * bucket and a limit, rows are ranked by value so the limit keeps the largest (a top-N); in any
- * other case the Hub's default order applies, so a limit never drops the newest buckets silently
- * unless the author asked for it.
+ * bucket and a limit, rows are ranked by value so the limit keeps the largest (a top-N). With a
+ * bucket and a limit the rows come newest first so the limit keeps the newest buckets, and
+ * `selectQueryData` puts them back in time order.
  */
 export function buildQueryRequest(config: QueryWidgetConfig, ctx: QueryContext): WidgetRequest {
   const issues = validateQueryConfig(config)
@@ -168,13 +168,15 @@ export function buildQueryRequest(config: QueryWidgetConfig, ctx: QueryContext):
 
   const { source, groupBy, bucket, limit } = config
   const ranked = limit !== undefined && bucket === undefined && groupBy.length > 0
+  const newestFirst = bucket !== undefined && limit !== undefined
+  const order = ranked ? 'value' : newestFirst ? 'bucket' : undefined
   const shape = {
     from: ctx.from,
     to: ctx.to,
     tz: ctx.tz,
     ...(bucket !== undefined && { bucket }),
     ...(groupBy.length > 0 && { group_by: groupBy }),
-    ...(ranked && { order: { by: 'value' as const, direction: 'desc' as const } }),
+    ...(order !== undefined && { order: { by: order, direction: 'desc' as const } }),
     ...(limit !== undefined && { limit }),
   }
 

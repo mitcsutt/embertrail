@@ -98,13 +98,15 @@ describe('buildQueryRequest', () => {
     })
   })
 
-  it('keeps the Hub order for a bucketed query, so a limit cannot drop the newest buckets unasked', () => {
+  it('asks for the newest buckets first when a bucketed query has a limit', () => {
     const request = buildQueryRequest(
       { ...toolCalls, bucket: 'hour', chart: 'series', limit: 500 },
       ctx,
     )
     expect(request.op === 'queryEvents' && request.body).toMatchObject({ limit: 500 })
-    expect(request.op === 'queryEvents' && 'order' in request.body).toBe(false)
+    expect(request.op === 'queryEvents' && request.body).toMatchObject({
+      order: { by: 'bucket', direction: 'desc' },
+    })
   })
 
   it('carries the aggregated attribute for an Event aggregation that needs one', () => {

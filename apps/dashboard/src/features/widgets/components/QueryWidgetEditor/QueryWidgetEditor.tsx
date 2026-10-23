@@ -29,7 +29,6 @@ import {
 import type { QueryIssue, QueryWidgetConfig } from '#features/widgets/types/queryWidget'
 import type { WidgetKind } from '#features/widgets/types/widget'
 import {
-  filterValueText,
   makeFilter,
   newQueryConfig,
   withDrawableChart,
@@ -48,8 +47,6 @@ export interface QueryWidgetEditorProps {
   onOpenChange: (open: boolean) => void
   /** What the pickers offer; the editor still works, with typed names, while it loads. */
   inventory: Inventory | undefined
-  /** The Widget to change; a new Query Widget starts empty. */
-  initial?: QueryWidgetValue | undefined
   onSave: (value: QueryWidgetValue) => void
   /** Where focus goes when the sheet closes, instead of back to the trigger. */
   onCloseAutoFocus?: (event: Event) => void
@@ -107,22 +104,14 @@ const messageFor = (issues: readonly QueryIssue[], field: QueryIssue['field'], s
   show ? issues.find((issue) => issue.field === field)?.message : undefined
 
 interface FormProps extends Pick<QueryWidgetEditorProps, 'inventory' | 'onSave'> {
-  initial: QueryWidgetValue | undefined
   onCancel: () => void
 }
 
-function QueryWidgetForm({ inventory, initial, onSave, onCancel }: FormProps) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [base, setBase] = useState<QueryWidgetConfig>(() => initial?.query ?? newQueryConfig())
-  const [rows, setRows] = useState<FilterRow[]>(() =>
-    (initial?.query.filter ?? []).map((filter, id) => ({
-      id,
-      key: filter.key,
-      op: filter.op,
-      text: filterValueText(filter),
-    })),
-  )
-  const [nextRowId, setNextRowId] = useState(rows.length)
+function QueryWidgetForm({ inventory, onSave, onCancel }: FormProps) {
+  const [title, setTitle] = useState('')
+  const [base, setBase] = useState<QueryWidgetConfig>(() => newQueryConfig())
+  const [rows, setRows] = useState<FilterRow[]>([])
+  const [nextRowId, setNextRowId] = useState(0)
   // Errors appear once Save has been tried, not while a blank form is being filled in.
   const [tried, setTried] = useState(false)
 
@@ -446,21 +435,19 @@ export function QueryWidgetEditor({
   open,
   onOpenChange,
   inventory,
-  initial,
   onSave,
   onCloseAutoFocus,
 }: QueryWidgetEditorProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <Sheet.Content
-        title={initial === undefined ? 'Add a Query Widget' : 'Edit Query Widget'}
+        title="Add a Query Widget"
         description="Ask the Query API for any Metric or Event and pick how to draw the answer."
         size="lg"
         {...(onCloseAutoFocus !== undefined && { onCloseAutoFocus })}
       >
         <QueryWidgetForm
           inventory={inventory}
-          initial={initial}
           onSave={onSave}
           onCancel={() => {
             onOpenChange(false)
