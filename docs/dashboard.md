@@ -129,7 +129,16 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 
 ## Widgets
 
-A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue. Ten Widgets exist so far, in #16's order: **Cost today** and **Cost this week** (stats; the week is a fixed window), **Each day by model** (a stacked `Bars` chart pivoted by model), **Cost by Account** (`Bars`, an Account named by its Inventory label), **Sessions today** (a stat), **Top sessions** (a `Table` linking to `/sessions/$sessionId`), **Sessions per day** (`Bars` stacked by `start_type`), **Model mix** (`Share`), **Cache share** (a stat: cacheRead ÷ (input + cacheRead + cacheCreation), empty when no input was counted) and **Tokens by type** (a stacked `TimeSeries`). The two `session.count` Widgets leave `model` out of their `filters`: that metric has no model.
+A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue. Ten Widgets from the first batches are the models for a new one, in #16's order: **Cost today** and **Cost this week** (stats; the week is a fixed window), **Each day by model** (a stacked `Bars` chart pivoted by model), **Cost by Account** (`Bars`, an Account named by its Inventory label), **Sessions today** (a stat), **Top sessions** (a `Table` linking to `/sessions/$sessionId`), **Sessions per day** (`Bars` stacked by `start_type`), **Model mix** (`Share`), **Cache share** (a stat: cacheRead ÷ (input + cacheRead + cacheCreation), empty when no input was counted) and **Tokens by type** (a stacked `TimeSeries`). The two `session.count` Widgets leave `model` out of their `filters`: that metric has no model.
+
+Batch B adds ten more, following #16's table:
+
+| Group         | Widgets                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools`       | **Top tools** (`BarList`, ten at most), **Tool failures** (a `Table` with a failure rate), **Edit acceptance** (`Share`)               |
+| `output`      | **Lines changed per day** (stacked `Bars`), **Commits per day** (`Bars`)                                                               |
+| `rhythm`      | **Today by hour vs typical** (`Chart`, a dashed typical line), **When you work** (`Heatmap`), **Active time per day** (stacked `Bars`) |
+| `reliability` | **API errors** (stacked `Bars` by status), **Request latency** (p95 `TimeSeries` by model)                                             |
 
 ```
 features/widgets/
@@ -140,7 +149,8 @@ features/widgets/
   constants/catalogue/       # catalogue: WidgetDefinition[], getWidget(id)
   data/runRequest/           # a switch over WidgetRequest.op onto the client
   hooks/useWidgetData/       # the only path from a Widget to the Hub (lint enforces it)
-  utils/                     # formats, chartColorOrder, describeError, asCatalogueEntry
+  utils/                     # formats, chartColorOrder, describeError, asCatalogueEntry,
+                             # aggregateRows, chartBucket, localHours
 ```
 
 - **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried; a 5xx or a network failure is retried once.
@@ -149,6 +159,10 @@ features/widgets/
 - **The Hub client** is `useHub().client` (`#lib/hub`), read only inside `useWidgetData`. ESLint stops anything else under `features/widgets` (tests aside) from importing `#lib/hub` or `runRequest`, so a Widget cannot reach the Hub another way. A test mounts a `HubContext` with the client it wants.
 - **Formats** (`utils/formats`) write dollars, token counts, percentages and durations in the browser's locale. `chartColorOrder({ models, types })` is the `order` for the Board-wide `ChartColorScope`, so a model keeps its colour in every chart.
 - **A Widget's window and filters** are already resolved into the `QueryContext` it gets. `toQueryContext` (`features/filters`) is the only code that builds one, in the app and in tests: `request(ctx)` uses `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` and leaves a `filter` out when it is empty.
+
+- **Aggregate answers** (`utils/aggregateRows`) are the `rows` of a `queryMetrics` or an `aggregate`-mode `queryEvents` response; every Widget that reads them selects through it. An Events request keeps its `event.name` filter first and appends `ctx.filter`, and an Event Widget lists a Board filter only if the Event carries that attribute (`tool_result` has no `model`, `api_request` and `api_error` do).
+- **Time charts pick their bucket from the window** (`utils/chartBucket`): hours for a window of two days or less, days beyond. Empty buckets are omitted and charts space points evenly, so hourly points over a week would be mostly gaps.
+- **Local hours** (`utils/localHours`) is how the two Rhythm Widgets read hourly buckets. A bucket's local day, hour and weekday come from its instant in the zone (`@date-fns/tz`), never from its string. `foldWeek` sums buckets into Monday-first weekday × hour cells ("When you work"). `todayVsTypical` gives each local hour today's total (blank for hours not reached) and the mean of the window's other days; on a 23 hour day the skipped hour is left out of that hour's mean (the day does not count as zero), and on a 25 hour day the repeated hour adds both occurrences.
 
 ### Writing a Widget
 
@@ -170,7 +184,9 @@ Do not call the client from a Widget. `useWidgetData` does, and nothing else und
 
 1. assert the selected data against `demo.facts` on the demo Hub (`test/widgets.test.ts`),
 2. add the Widget to the Catalogue so `test/widgets-empty.test.ts` asserts it is empty on a Hub that only holds a non-Claude sender, and the spec check covers its request,
-3. render its `View` from a stub client in `Widget.test.tsx` when it draws something new.
+3. render its `View` from a stub client in `Widget.test.tsx` (or `Widget.views.test.tsx`, which covers the Tools, Output, Rhythm and Reliability Widgets) when it draws something new.
+
+`test/otlp.ts` reads the dataset's own OTLP back (`pointsOf`, `eventsOf`) and `wallClock` reads an instant on a zone's clock with `Intl` alone, so a test can work out what a Widget should show from what was sent without going through the Hub or the Widget. `test/widgets-tools-output-reliability.test.ts` does that for ten Widgets; `test/widgets-rhythm.test.ts` runs the two Rhythm Widgets in Europe/Berlin and America/New_York on a Hub whose data spans the spring clock changes (a 23 hour day) and one that spans the autumn ones (25 hours).
 
 kiln-charts needs `ResizeObserver` and `matchMedia`, which jsdom lacks; `test/vitest.setup.ts` stubs both, so a chart renders its frame and hidden data table but is never laid out. Assert on the table, and check pointer behaviour in the browser.
 
@@ -248,7 +264,7 @@ const { rows } = await client.queryMetrics({
 
 ### Test time
 
-`pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts`, `filters.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass.
+`pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts`, `filters.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass. The exception is `widgets-rhythm.test.ts`, which boots two (data across the spring and the autumn clock changes) and takes about 17 s alone; with Catalogue batch B the Dashboard's 37 files run in about 29 s.
 
 ## End-to-end tests
 
