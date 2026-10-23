@@ -1,5 +1,7 @@
 import base from '@mitcsutt/kiln-eslint-config/base'
 import node from '@mitcsutt/kiln-eslint-config/node'
+import react from '@mitcsutt/kiln-eslint-config/react'
+import kilnStructure from '@mitcsutt/kiln-structure/eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 // One config for the whole workspace. Each package runs `eslint .` from its
@@ -11,6 +13,8 @@ export default defineConfig(
     '**/worker-configuration.d.ts',
     // Generated from spec/query-api.yaml; typecheck and the drift test cover them.
     'packages/client/src/generated/',
+    // Written by the TanStack Router plugin on every dev or build run.
+    'apps/dashboard/src/routeTree.gen.ts',
   ]),
   {
     name: 'embertrail/workspace/type-aware',
@@ -71,11 +75,29 @@ export default defineConfig(
     },
   },
   {
+    name: 'embertrail/dashboard/react',
+    files: ['apps/dashboard/**'],
+    extends: [react],
+  },
+  // Kiln's app structure (ADR 0037) for the Dashboard's src/. The feature graph is the one in
+  // docs/dashboard.md; a new feature folder must be declared here first.
+  ...kilnStructure({
+    features: {
+      boards: ['widgets', 'filters'],
+      widgets: ['filters'],
+      sessions: ['filters'],
+      filters: [],
+    },
+    router: 'tanstack',
+    srcDir: 'apps/dashboard/src',
+    rootDir: import.meta.dirname,
+  }),
+  {
     // The Dashboard reaches the Hub only through @mitcsutt/embertrail-client, which is generated
     // from spec/query-api.yaml (#27): no other workspace package, no hand-written requests.
     name: 'embertrail/dashboard/client-only',
     files: ['apps/dashboard/src/**'],
-    ignores: ['**/*.test.ts'],
+    ignores: ['**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',

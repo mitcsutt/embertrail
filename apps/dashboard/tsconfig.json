@@ -2,7 +2,8 @@
   "extends": "@mitcsutt/kiln-tsconfig/react-app",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node", "vite/client", "@testing-library/jest-dom/vitest"]
   },
-  "include": ["src", "*.config.ts"]
+  "include": ["src", "test", "*.config.ts"]
 }
