@@ -60,7 +60,7 @@ apps/dashboard/
     config/runtimeConfig/  # config.json: load and validate
     lib/                   # configured clients, one module each (hub, queryClient)
     features/
-      filters/types/       # BoardFilters, QueryContext
+      filters/             # types, utils (resolveWindow, toQueryContext), hooks, data, components
       widgets/             # the Widget framework and the first Catalogue entries, see Widgets
       boards/{types,schemas,utils,data,pages}  # BoardDocument and its schema, Presets, the store, BoardPage
       sessions/pages/      # SessionGroupsPage, SessionPage
@@ -92,7 +92,19 @@ The types that let tasks run in parallel are committed first and later tasks fil
 - `features/widgets/types/widget`: `WidgetDefinition` and the unions it uses (`WidgetKind`, `WidgetGroup`, `WidgetWindow`, `WidgetRequest`).
 - `features/boards/types/board`: `BoardDocument`, `BoardItem`, `QueryWidgetConfig`, `boardNamespace` (`embertrail-dashboard`) and the reserved Preset ids.
 
-Do not change a shape without a tidy-pass decision (#72). `test/contracts.test.ts` runs them against the test Hub and the client: a `QueryContext` feeds one `WidgetRequest` of each op (`queryMetrics`, `queryEvents`, `listSessions`), `getSelf` answers for the Dashboard's Token, and a `BoardDocument` is created, replaced and refused on a stale `ETag` in the `embertrail-dashboard` namespace.
+An absolute `TimeRange` is two `YYYY-MM-DD` calendar dates, both inclusive, read in the Dashboard's zone. Do not change a shape without a tidy-pass decision (#72). `test/contracts.test.ts` runs them against the test Hub and the client: a `QueryContext` feeds one `WidgetRequest` of each op (`queryMetrics`, `queryEvents`, `listSessions`), `getSelf` answers for the Dashboard's Token, and a `BoardDocument` is created, replaced and refused on a stale `ETag` in the `embertrail-dashboard` namespace.
+
+## Filters
+
+`features/filters` owns what a Board is filtered by: a time range and one Source, Account and model. It imports no other feature.
+
+- **`resolveWindow(range, now, tz)`** turns a `TimeRange` into `{ from, to }`, UTC instants with `from` inclusive and `to` exclusive. Days are local calendar days in `tz`, so a day across a clock change is 23 or 25 hours; weeks start on Monday. Every range that includes today ends at the start of tomorrow, not at `now`, so a Widget's request stays the same all day and TanStack Query does not refetch it. `last-7-days` is today and the six days before it. `resolveFixedWindow` does the same for a Widget's fixed `window` (`today`, `this-week`, `last-28-days`, `last-12-weeks`); `absoluteRange` gives the dates a relative range covers (what the custom picker starts from). Never send a fixed offset as `tz`: the Hub answers 422. `browserTimeZone()` reads the IANA zone once at the edge.
+- **`toQueryContext(filters, override, widget, now, tz)`** builds a Widget's `QueryContext`. A pinned override wins field by field (a field it leaves unset follows the Board). A Widget with a fixed `window` ignores the Board's range, even a pinned one. Source, Account and model become `embertrail.source_id`, `embertrail.account_id` and `model` `eq` filters, and the same values in `sessions` for `listSessions`; a filter the Widget does not list in `filters` is left out of both. It takes a `WidgetScope` (`window` and `filters`), which a `WidgetDefinition` satisfies.
+- **The URL is the live state.** `useBoardFilters(saved)` reads the filters from the search params over the Board's `saved` ones and writes changes back, replacing the history entry and keeping other params. Keys: `range` (a relative range, or `custom` with `from` and `to`), `source`, `account` and `model`. A bare URL shows the saved filters; a value is written only where it differs from them, and an empty string means "all" for a pick the Board saved. A param that does not validate is ignored on its own (`filterSearchSchema`). Routes need no `validateSearch` for it, and the hook leaves other params alone. The hook returns `{ filters, setFilters, reset, changed, tz }`.
+- **`data/inventory`** is `getInventory` for the current window, keyed `['inventory', from, to]`. `useInventory(client, window)` takes the client as an argument until the Hub provider lands (#72 D2); the Board page will pass `useHub()`'s.
+- **`FilterBar`** is the control: a range `Select` (with "Custom…" opening a `DateRangePickerField`) and `Combobox` pickers for Source, Account and model, single-select because `GET /sessions` takes one of each. It is controlled (`filters`, `onChange(patch)`, `inventory`) and keyboard-operable: Tab between the controls, Enter or the arrow keys in each. The custom picker keeps its own draft and reports only a whole range whose start is not after its end. Account options use `Inventory.accounts[].label` with the email under it; a Source shows its name; the Owner is shown only when the Inventory holds more than one, and is an id until the Hub names it. A pick the window no longer holds is still offered, so it never disappears from the bar.
+
+Tests: unit tests next to each module, including every relative range in Europe/Berlin and America/New_York on both clock-change days of 2026 (`resolveWindow.test.ts`), and `test/filters.test.ts` against the test Hub (the Inventory, and the filters `toQueryContext` maps against the demo facts).
 
 ## Boards
 
@@ -206,4 +218,4 @@ const { rows } = await client.queryMetrics({
 
 ### Test time
 
-`pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass.
+`pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts`, `filters.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass.
