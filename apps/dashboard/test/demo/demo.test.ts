@@ -71,8 +71,7 @@ const all = {
   to: facts.today.to,
 }
 
-// The queries read a month of data on PGLite; the headroom is for a busy machine, as in the other packages.
-describe('the demo dataset on a test Hub', { timeout: 30_000 }, () => {
+describe('the demo dataset on a test Hub', () => {
   let hub: DashboardTestHub
 
   beforeAll(async () => {
