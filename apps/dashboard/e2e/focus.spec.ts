@@ -112,7 +112,7 @@ test('focus returns to what opened a Sheet or Dialog when it closes', async ({ p
   )
 })
 
-test('focus returns to Save after Keep editing on the conflict dialog', async ({ page }) => {
+const changeElsewhere = async (page: Page) => {
   await customiseOverview(page)
   const id = /\/boards\/(b-[a-z0-9]+)/.exec(page.url())?.[1]
   if (id === undefined) throw new Error(`Not a stored Board: ${page.url()}`)
@@ -121,6 +121,10 @@ test('focus returns to Save after Keep editing on the conflict dialog', async ({
   await page.request.put(`/api/v1/store/embertrail-dashboard/${id}`, {
     data: { data: { ...data, name: 'Renamed elsewhere' } },
   })
+}
+
+test('focus returns to Save after Keep editing on the conflict dialog', async ({ page }) => {
+  await changeElsewhere(page)
 
   await page.getByRole('textbox', { name: 'Board name' }).fill('My rename')
   const save = page.getByRole('button', { name: 'Save' })
@@ -130,4 +134,17 @@ test('focus returns to Save after Keep editing on the conflict dialog', async ({
   await dialog.getByRole('button', { name: 'Keep editing' }).click()
   await expect(dialog).toBeHidden()
   await expect(save).toBeFocused()
+})
+
+test('focus returns to Delete Board after Keep editing on a delete conflict', async ({ page }) => {
+  await changeElsewhere(page)
+
+  const toolbarDelete = page.getByRole('button', { name: 'Delete Board' })
+  await toolbarDelete.click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete Board' }).click()
+  const dialog = page.getByRole('dialog', { name: 'This Board changed elsewhere' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(toolbarDelete).toBeFocused()
 })

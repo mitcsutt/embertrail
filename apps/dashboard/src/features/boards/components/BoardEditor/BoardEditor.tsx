@@ -69,6 +69,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   const added = useRef<string>(undefined)
   const leaving = useRef(false)
   const saveButton = useRef<HTMLButtonElement>(null)
+  const deleteButton = useRef<HTMLButtonElement>(null)
+  const conflictFrom = useRef(saveButton)
   // Each overlay below is opened by state, not a Trigger, so each puts focus back on its opener.
   const focusAdded = (event: Event) => {
     const id = added.current
@@ -80,8 +82,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   const pickerFocus = useReturnFocus(focusAdded)
   const sectionFocus = useReturnFocus()
   const deleteFocus = useReturnFocus()
-  // Save is disabled while it works, so nothing has focus when its conflict dialog opens.
-  const conflictFocus = useReturnFocus(undefined, () => saveButton.current)
+  // Save and the delete dialog's button are disabled or gone by then: return to the toolbar one.
+  const conflictFocus = useReturnFocus(undefined, () => conflictFrom.current.current)
   const discardFocus = useReturnFocus()
   const onExit = () => {
     leaving.current = true
@@ -114,6 +116,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
       onExit()
     },
     onError: (error) => {
+      conflictFrom.current = saveButton
       if (error instanceof BoardConflict) setConflict(error)
     },
   })
@@ -126,6 +129,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
     },
     onError: (error) => {
       setDeleting(false)
+      conflictFrom.current = deleteButton
       if (error instanceof BoardConflict) setConflict(error)
     },
   })
@@ -204,6 +208,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
               Use these filters as the default
             </Button>
             <Button
+              ref={deleteButton}
               variant="outline"
               tone="critical"
               onClick={() => {

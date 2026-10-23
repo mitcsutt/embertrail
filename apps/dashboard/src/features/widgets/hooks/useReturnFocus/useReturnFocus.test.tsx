@@ -47,7 +47,7 @@ describe('useReturnFocus', () => {
     expect(next).toHaveFocus()
   })
 
-  it('skips an opener that left the page, and uses the fallback when nothing had focus', () => {
+  it('uses the fallback when the opener left the page, is disabled, or nothing had focus', () => {
     const fallback = button('fallback')
     const gone = button('gone')
     const { result } = renderHook(() => useReturnFocus(undefined, () => fallback))
@@ -55,10 +55,29 @@ describe('useReturnFocus', () => {
     result.current.onOpenAutoFocus(new Event('focus'))
     gone.remove()
     result.current.onCloseAutoFocus(closing())
-    expect(document.body).toHaveFocus()
+    expect(fallback).toHaveFocus()
 
+    const busy = button('busy')
+    busy.focus()
+    result.current.onOpenAutoFocus(new Event('focus'))
+    busy.disabled = true
+    fallback.blur()
+    result.current.onCloseAutoFocus(closing())
+    expect(fallback).toHaveFocus()
+
+    fallback.blur()
     result.current.onOpenAutoFocus(new Event('focus'))
     result.current.onCloseAutoFocus(closing())
     expect(fallback).toHaveFocus()
+  })
+
+  it('leaves focus alone when neither the opener nor the fallback can take it', () => {
+    const fallback = button('fallback')
+    fallback.disabled = true
+    const { result } = renderHook(() => useReturnFocus(undefined, () => fallback))
+    const event = closing()
+    result.current.onOpenAutoFocus(new Event('focus'))
+    result.current.onCloseAutoFocus(event)
+    expect(event.defaultPrevented).toBe(false)
   })
 })
