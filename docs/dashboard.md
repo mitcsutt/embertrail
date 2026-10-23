@@ -184,7 +184,7 @@ Do not call the client from a Widget. `useWidgetData` does, and nothing else und
 
 1. assert the selected data against `demo.facts` on the demo Hub (`test/widgets.test.ts`),
 2. add the Widget to the Catalogue so `test/widgets-empty.test.ts` asserts it is empty on a Hub that only holds a non-Claude sender, and the spec check covers its request,
-3. render its `View` from a stub client in `Widget.test.tsx` (or `Widget.views.test.tsx`, which covers the Tools, Output, Rhythm and Reliability Widgets) when it draws something new.
+3. render its `View` from a stub client in `components/<Widget>/<Widget>.test.tsx` through `renderWidget(id, rows)` from `test/renderWidget.ts` when it draws something new.
 
 `test/otlp.ts` reads the dataset's own OTLP back (`pointsOf`, `eventsOf`) and `wallClock` reads an instant on a zone's clock with `Intl` alone, so a test can work out what a Widget should show from what was sent without going through the Hub or the Widget. `test/widgets-tools-output-reliability.test.ts` does that for ten Widgets; `test/widgets-rhythm.test.ts` runs the two Rhythm Widgets in Europe/Berlin and America/New_York on a Hub whose data spans the spring clock changes (a 23 hour day) and one that spans the autumn ones (25 hours).
 

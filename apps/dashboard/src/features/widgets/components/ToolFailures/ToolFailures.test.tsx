@@ -21,4 +21,13 @@ describe('Tool failures', () => {
     expect(bash).toHaveTextContent(/Bash.*100.*12.*12%/)
     expect(read).toHaveTextContent(/Read.*30.*0.*0%/)
   })
+
+  it('counts the string "false" Claude Code sends as a failure', async () => {
+    renderWidget('tool-failures', [
+      { group: { tool_name: 'Bash', success: 'true' }, value: 90 },
+      { group: { tool_name: 'Bash', success: 'false' }, value: 10 },
+    ])
+    const table = await screen.findByRole('table')
+    expect(within(table).getAllByRole('row')[1]).toHaveTextContent(/Bash.*100.*10.*10%/)
+  })
 })

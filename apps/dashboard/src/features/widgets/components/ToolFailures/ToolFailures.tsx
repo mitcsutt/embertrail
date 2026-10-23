@@ -44,7 +44,7 @@ export const toolFailures: WidgetDefinition<ToolFailuresData> = {
       const tool = String(row.group.tool_name ?? 'Unknown')
       const outcome = byTool.get(tool) ?? { tool, calls: 0, failures: 0 }
       outcome.calls += row.value
-      if (row.group.success === false) outcome.failures += row.value
+      if (String(row.group.success) === 'false') outcome.failures += row.value
       byTool.set(tool, outcome)
     }
     return {
