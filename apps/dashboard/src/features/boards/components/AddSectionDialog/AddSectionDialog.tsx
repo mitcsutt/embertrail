@@ -5,10 +5,18 @@ export interface AddSectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAdd: (title: string) => void
+  onOpenAutoFocus: (event: Event) => void
+  onCloseAutoFocus: (event: Event) => void
 }
 
 /** Asks for the heading of a new section, then adds it. */
-export function AddSectionDialog({ open, onOpenChange, onAdd }: AddSectionDialogProps) {
+export function AddSectionDialog({
+  open,
+  onOpenChange,
+  onAdd,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+}: AddSectionDialogProps) {
   const [title, setTitle] = useState('')
   const trimmed = title.trim()
   return (
@@ -23,6 +31,8 @@ export function AddSectionDialog({ open, onOpenChange, onAdd }: AddSectionDialog
         title="Add a section"
         description="A heading across the full width."
         size="sm"
+        onOpenAutoFocus={onOpenAutoFocus}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <form
           onSubmit={(event) => {

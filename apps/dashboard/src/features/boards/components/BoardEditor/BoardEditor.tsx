@@ -32,6 +32,7 @@ import { useBoardFilters } from '#features/filters/hooks/useBoardFilters'
 import { useResolvedWindow } from '#features/filters/hooks/useResolvedWindow'
 import { AddQueryWidget } from '#features/widgets/components/AddQueryWidget'
 import { WidgetColorScope } from '#features/widgets/components/WidgetColorScope'
+import { useReturnFocus } from '#features/widgets/hooks/useReturnFocus'
 import { useHub } from '#lib/hub'
 
 export interface BoardEditorProps {
@@ -67,6 +68,21 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   const [handles] = useState(() => new Map<string, HTMLButtonElement>())
   const added = useRef<string>(undefined)
   const leaving = useRef(false)
+  const saveButton = useRef<HTMLButtonElement>(null)
+  // Each overlay below is opened by state, not a Trigger, so each puts focus back on its opener.
+  const focusAdded = (event: Event) => {
+    const id = added.current
+    added.current = undefined
+    if (id === undefined) return
+    event.preventDefault()
+    handles.get(id)?.focus()
+  }
+  const pickerFocus = useReturnFocus(focusAdded)
+  const sectionFocus = useReturnFocus()
+  const deleteFocus = useReturnFocus()
+  // Save is disabled while it works, so nothing has focus when its conflict dialog opens.
+  const conflictFocus = useReturnFocus(undefined, () => saveButton.current)
+  const discardFocus = useReturnFocus()
   const onExit = () => {
     leaving.current = true
     exit()
@@ -168,13 +184,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
                 setDraft(result.board)
                 added.current = result.id
               }}
-              onCloseAutoFocus={(event) => {
-                const id = added.current
-                added.current = undefined
-                if (id === undefined) return
-                event.preventDefault()
-                handles.get(id)?.focus()
-              }}
+              onCloseAutoFocus={focusAdded}
             />
             <Button
               variant="outline"
@@ -206,6 +216,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
               Cancel
             </Button>
             <Button
+              ref={saveButton}
               disabled={!dirty || draft.name.trim() === '' || save.isPending}
               onClick={() => {
                 save.mutate()
@@ -260,13 +271,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
           added.current = result.id
           setPicking(false)
         }}
-        onCloseAutoFocus={(event) => {
-          const id = added.current
-          added.current = undefined
-          if (id === undefined) return
-          event.preventDefault()
-          handles.get(id)?.focus()
-        }}
+        onOpenAutoFocus={pickerFocus.onOpenAutoFocus}
+        onCloseAutoFocus={pickerFocus.onCloseAutoFocus}
       />
       <AddSectionDialog
         open={sectioning}
@@ -275,6 +281,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
           setDraft(addSectionItem(draft, title).board)
           setSectioning(false)
         }}
+        onOpenAutoFocus={sectionFocus.onOpenAutoFocus}
+        onCloseAutoFocus={sectionFocus.onCloseAutoFocus}
       />
       <Dialog open={deleting} onOpenChange={setDeleting}>
         <Dialog.Content
@@ -282,6 +290,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
           description={`"${stored.board.name}" is removed for good.`}
           size="sm"
           hideClose
+          onOpenAutoFocus={deleteFocus.onOpenAutoFocus}
+          onCloseAutoFocus={deleteFocus.onCloseAutoFocus}
         >
           <Dialog.Footer>
             <Dialog.Close asChild>
@@ -305,6 +315,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
         onKeepEditing={() => {
           setConflict(undefined)
         }}
+        onOpenAutoFocus={conflictFocus.onOpenAutoFocus}
+        onCloseAutoFocus={conflictFocus.onCloseAutoFocus}
       />
       <Dialog
         open={blocker.status === 'blocked'}
@@ -317,6 +329,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
           description="This Board has changes that are not saved."
           size="sm"
           hideClose
+          onOpenAutoFocus={discardFocus.onOpenAutoFocus}
+          onCloseAutoFocus={discardFocus.onCloseAutoFocus}
         >
           <Dialog.Footer>
             <Button

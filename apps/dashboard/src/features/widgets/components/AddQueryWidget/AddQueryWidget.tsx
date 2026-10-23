@@ -2,6 +2,7 @@ import { Button } from '@mitcsutt/kiln-ui'
 import { useState } from 'react'
 
 import type { Inventory } from '#features/filters/data/inventory'
+import { useReturnFocus } from '#features/widgets/hooks/useReturnFocus'
 import { QueryWidgetEditor } from '#features/widgets/components/QueryWidgetEditor'
 import type { QueryWidgetValue } from '#features/widgets/components/QueryWidgetEditor'
 import { queryWidgetSize } from '#features/widgets/utils/queryWidgetDefinition'
@@ -10,7 +11,7 @@ export interface AddQueryWidgetProps {
   inventory: Inventory | undefined
   /** Called with the saved Query Widget and the Layout size its chart kind starts at. */
   onAdd: (value: QueryWidgetValue & { size: { w: number; h: number } }) => void
-  /** Where focus goes when the editor closes after an add, instead of back to the button. */
+  /** Where focus goes when the editor closes after an add; otherwise it goes back to the button. */
   onCloseAutoFocus?: (event: Event) => void
 }
 
@@ -20,6 +21,7 @@ export interface AddQueryWidgetProps {
  */
 export function AddQueryWidget({ inventory, onAdd, onCloseAutoFocus }: AddQueryWidgetProps) {
   const [open, setOpen] = useState(false)
+  const returnFocus = useReturnFocus(onCloseAutoFocus)
   return (
     <>
       <Button
@@ -38,7 +40,8 @@ export function AddQueryWidget({ inventory, onAdd, onCloseAutoFocus }: AddQueryW
           setOpen(false)
           onAdd({ ...value, size: queryWidgetSize(value.query.chart) })
         }}
-        {...(onCloseAutoFocus !== undefined && { onCloseAutoFocus })}
+        onOpenAutoFocus={returnFocus.onOpenAutoFocus}
+        onCloseAutoFocus={returnFocus.onCloseAutoFocus}
       />
     </>
   )
