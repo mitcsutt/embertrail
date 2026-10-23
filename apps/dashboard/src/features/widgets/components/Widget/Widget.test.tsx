@@ -14,8 +14,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { QueryContext } from '#features/filters/types/filters'
 import { formatUsd as formatUsdRaw } from '#features/widgets/utils/formats'
-import { WidgetClientProvider } from '#features/widgets/components/WidgetClientProvider'
 import { catalogue, getWidget } from '#features/widgets/constants/catalogue'
+import { HubContext } from '#lib/hub'
 
 import { Widget } from './Widget'
 
@@ -44,9 +44,9 @@ async function renderWidget(id: string, client: EmbertrailClient) {
   const root = createRootRoute({
     component: () => (
       <QueryClientProvider client={queryClient}>
-        <WidgetClientProvider client={client}>
+        <HubContext value={{ client, hubUrl: '', display: 'http://localhost' }}>
           <Widget definition={definition} ctx={ctx} />
-        </WidgetClientProvider>
+        </HubContext>
       </QueryClientProvider>
     ),
   })

@@ -101,7 +101,7 @@ An absolute `TimeRange` is two `YYYY-MM-DD` calendar dates, both inclusive, read
 - **`resolveWindow(range, now, tz)`** turns a `TimeRange` into `{ from, to }`, UTC instants with `from` inclusive and `to` exclusive. Days are local calendar days in `tz`, so a day across a clock change is 23 or 25 hours; weeks start on Monday. Every range that includes today ends at the start of tomorrow, not at `now`, so a Widget's request stays the same all day and TanStack Query does not refetch it. `last-7-days` is today and the six days before it. `resolveFixedWindow` does the same for a Widget's fixed `window` (`today`, `this-week`, `last-28-days`, `last-12-weeks`); `absoluteRange` gives the dates a relative range covers (what the custom picker starts from). Never send a fixed offset as `tz`: the Hub answers 422. `browserTimeZone()` reads the IANA zone once at the edge.
 - **`toQueryContext(filters, override, widget, now, tz)`** builds a Widget's `QueryContext`. A pinned override wins field by field (a field it leaves unset follows the Board). A Widget with a fixed `window` ignores the Board's range, even a pinned one. Source, Account and model become `embertrail.source_id`, `embertrail.account_id` and `model` `eq` filters, and the same values in `sessions` for `listSessions`; a filter the Widget does not list in `filters` is left out of both. It takes a `WidgetScope` (`window` and `filters`), which a `WidgetDefinition` satisfies.
 - **The URL is the live state.** `useBoardFilters(saved)` reads the filters from the search params over the Board's `saved` ones and writes changes back, replacing the history entry and keeping other params. Keys: `range` (a relative range, or `custom` with `from` and `to`), `source`, `account` and `model`. A bare URL shows the saved filters; a value is written only where it differs from them, and an empty string means "all" for a pick the Board saved. A param that does not validate is ignored on its own (`filterSearchSchema`). Routes need no `validateSearch` for it, and the hook leaves other params alone. The hook returns `{ filters, setFilters, tz }`.
-- **`data/inventory`** is `getInventory` for the current window, keyed `['inventory', from, to]`. `useInventory(client, window)` takes the client as an argument until the Hub provider lands (#72 D2); the Board page will pass `useHub()`'s.
+- **`data/inventory`** is `getInventory` for the current window, keyed `['inventory', from, to]`. `useInventory(client, window)` takes the client as an argument; the Board page will pass `useHub()`'s.
 - **`FilterBar`** is the control: a range `Select` (with "Custom…" opening a `DateRangePickerField`) and `Combobox` pickers for Source, Account and model, single-select because `GET /sessions` takes one of each. It is controlled (`filters`, `onChange(patch)`, `inventory`) and keyboard-operable: Tab between the controls, Enter or the arrow keys in each. The custom picker keeps its own draft and reports only a whole range whose start is not after its end. Account options use `Inventory.accounts[].label` with the email under it; a Source shows its name; the Owner is shown only when the Inventory holds more than one, and is an id until the Hub names it. A pick the window no longer holds is still offered, so it never disappears from the bar.
 
 Tests: unit tests next to each module, including every relative range in Europe/Berlin and America/New_York on both clock-change days of 2026 (`resolveWindow.test.ts`), and `test/filters.test.ts` against the test Hub (the Inventory, and the filters `toQueryContext` maps against the demo facts).
@@ -124,23 +124,35 @@ features/widgets/
   components/
     Widget/                  # useWidgetData + WidgetFrame + the definition's View: what a Board renders
     WidgetFrame/             # the Card, and loading, empty and error in place of the View
-    WidgetClientProvider/    # gives Widgets the Hub client
     CostToday/ EachDayByModel/ TopSessions/   # one module per Widget: definition and View together
   constants/catalogue/       # catalogue: WidgetDefinition[], getWidget(id)
   data/runRequest/           # a switch over WidgetRequest.op onto the client
-  hooks/useWidgetData/       # the only path from a Widget to the Hub
+  hooks/useWidgetData/       # the only path from a Widget to the Hub (lint enforces it)
   utils/                     # formats, chartColorOrder, describeError, asCatalogueEntry
 ```
 
 - **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried; a 5xx or a network failure is retried once.
 - **The frame** maps `loading`, `empty` and `error` onto kiln-charts' `ChartFrame`. An error shows the Hub's `detail` when it sent one, with a Retry; `empty` is what `isEmpty(data)` says (no rows, or a sender that sends no cost). The `View` is drawn only when the status is `ready`. A `stat` leaves the title to its `Stat`.
-- **The Hub client** comes from `WidgetClientProvider`. Until the runtime config and `HubStatus` gate land (#72 D2) nothing mounts it; the app will mount it with the client it builds from the config.
+- **The Hub client** is `useHub().client` (`#lib/hub`), read only inside `useWidgetData`. ESLint stops anything else under `features/widgets` (tests aside) from importing `#lib/hub` or `runRequest`, so a Widget cannot reach the Hub another way. A test mounts a `HubContext` with the client it wants.
 - **Formats** (`utils/formats`) write dollars, token counts, percentages and durations in the browser's locale. `chartColorOrder({ models, types })` is the `order` for the Board-wide `ChartColorScope`, so a model keeps its colour in every chart.
-- **A Widget's window and filters** are already resolved into the `QueryContext` it gets: `request(ctx)` uses `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` and leaves a `filter` out when it is empty.
+- **A Widget's window and filters** are already resolved into the `QueryContext` it gets. `toQueryContext` (`features/filters`) is the only code that builds one, in the app and in tests: `request(ctx)` uses `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` and leaves a `filter` out when it is empty.
+
+### Writing a Widget
+
+Adding a Widget to the Catalogue is mechanical. Take `CostToday` (a stat), `EachDayByModel` (a chart) or `TopSessions` (a table) as the model for its kind.
+
+1. **Add a module** `features/widgets/components/<WidgetName>/` with `<WidgetName>.tsx` and an `index.ts` that exports the definition and its data type. The module holds the whole Widget: `export const widgetName: WidgetDefinition<WidgetNameData>` and its `View`. Folders inside it are rejected by the structure lint.
+2. **Fill the definition.** `id` is stable and kebab-case (Boards store it, so never rename it); `group`, `title`, `kind`, `size` (and `minSize`) place it. Set `window` to `board`, or to a fixed window if the Widget ignores the Board's range, and list in `filters` only the Board filters the Widget's metric carries: `session.count` has no `model`, so `model` stays out of its list.
+3. **`request(ctx)`** returns a `WidgetRequest` built from `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` (leave `filter` out when it is empty); `listSessions` Widgets use `ctx.sessions`. Copy the body from `packages/otel/src/query/widgets.test.ts`, which proves it against the Hub. Never build a `QueryContext` yourself, never send a fixed offset as `tz`, and keep a request free of anything that changes while the page is open, because the query is keyed on it.
+4. **`select(response, ctx)`** turns the response into the data the View needs, `isEmpty(data)` says when there is nothing to draw (no rows, or a sender that sends no such metric: never draw zeros), and `View` draws it. Use `utils/formats` for numbers and `chartColorOrder` for series colours.
+5. **Register it** in `constants/catalogue/catalogue.ts` with `asCatalogueEntry(widgetName)`, in the order of #16's table. `everythingPreset` picks it up.
+6. **Test it** (see below): one block in `test/widgets.test.ts` for the data, nothing else for the empty state and the spec check, which run over the Catalogue.
+
+Do not call the client from a Widget. `useWidgetData` does, and nothing else under `features/widgets` may.
 
 ### Testing a Widget
 
-`test/spec.ts` checks a request against `spec/query-api.yaml` itself: a body against the operation's request schema, `listSessions`' query against its parameters (an unknown parameter fails). `test/widget.ts` is the template: `testContext(window)` builds a `QueryContext`, `loadWidget(client, definition, ctx)` validates the request, sends it through the real client and returns the selected data. A Widget's tests then:
+`test/spec.ts` checks a request against `spec/query-api.yaml` itself: a body against the operation's request schema, `listSessions`' query against its parameters (an unknown parameter fails). `test/widget.ts` is the template: `testContext(widget, now, filters?)` builds the Widget's `QueryContext` with `toQueryContext` (the Board's range is the last 90 days, which holds the demo dataset; a fixed window is the Widget's own, and `filters` are Board filters), `loadWidget(client, definition, ctx)` validates the request, sends it through the real client and returns the selected data. A Widget's tests then:
 
 1. assert the selected data against `demo.facts` on the demo Hub (`test/widgets.test.ts`),
 2. add the Widget to the Catalogue so `test/widgets-empty.test.ts` asserts it is empty on a Hub that only holds a non-Claude sender, and the spec check covers its request,

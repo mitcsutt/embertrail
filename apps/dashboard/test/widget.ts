@@ -5,25 +5,30 @@
 
 import type { EmbertrailClient } from '@mitcsutt/embertrail-client'
 
-import type { QueryContext } from '#features/filters/types/filters'
+import type { BoardFilters, QueryContext } from '#features/filters/types/filters'
+import { toQueryContext, type WidgetScope } from '#features/filters/utils/toQueryContext'
 import { runRequest } from '#features/widgets/data/runRequest'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 
 import { assertSpecRequest } from './spec.ts'
 
-/** A QueryContext for tests: Berlin, no filters, and `now` at the end of the window. */
+/**
+ * A Widget's QueryContext for tests, built by `toQueryContext` like the app builds it (the one
+ * owner, in `features/filters`). The Board's range is the last 90 days, which holds the whole demo
+ * dataset; a Widget with a fixed window gets its own. `filters` are the Board's filters on top.
+ */
 export function testContext(
-  window: { from: string; to: string },
-  rest: Partial<QueryContext> = {},
+  widget: WidgetScope,
+  now: Date,
+  filters: Partial<BoardFilters> = {},
 ): QueryContext {
-  return {
-    tz: 'Europe/Berlin',
-    filter: [],
-    sessions: {},
-    now: new Date(window.to),
-    ...window,
-    ...rest,
-  }
+  return toQueryContext(
+    { time: { kind: 'relative', range: 'last-90-days' }, ...filters },
+    undefined,
+    widget,
+    now,
+    'Europe/Berlin',
+  )
 }
 
 /** Runs the Widget the way the app does and returns what its `select` makes of the response. */

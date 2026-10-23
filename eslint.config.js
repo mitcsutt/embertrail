@@ -4,6 +4,23 @@ import react from '@mitcsutt/kiln-eslint-config/react'
 import kilnStructure from '@mitcsutt/kiln-structure/eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// What the Dashboard may import from the workspace: the client and nothing else.
+const dashboardImportPatterns = [
+  {
+    group: [
+      '@mitcsutt/embertrail-hub',
+      '@mitcsutt/embertrail-hub/*',
+      '@mitcsutt/embertrail-otel',
+      '@mitcsutt/embertrail-otel/*',
+      '@mitcsutt/embertrail-store',
+      '@mitcsutt/embertrail-store/*',
+      '@mitcsutt/embertrail-server',
+      '@mitcsutt/embertrail-worker',
+    ],
+    message: 'The Dashboard reaches the Hub only through @mitcsutt/embertrail-client.',
+  },
+]
+
 // One config for the whole workspace. Each package runs `eslint .` from its
 // own directory and picks this file up, so lint stays cached per package.
 export default defineConfig(
@@ -102,21 +119,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            {
-              group: [
-                '@mitcsutt/embertrail-hub',
-                '@mitcsutt/embertrail-hub/*',
-                '@mitcsutt/embertrail-otel',
-                '@mitcsutt/embertrail-otel/*',
-                '@mitcsutt/embertrail-store',
-                '@mitcsutt/embertrail-store/*',
-                '@mitcsutt/embertrail-server',
-                '@mitcsutt/embertrail-worker',
-              ],
-              message: 'The Dashboard reaches the Hub only through @mitcsutt/embertrail-client.',
-            },
-          ],
+          patterns: dashboardImportPatterns,
         },
       ],
       'no-restricted-globals': [
@@ -136,6 +139,28 @@ export default defineConfig(
         {
           name: 'WebSocket',
           message: 'Call the Hub through @mitcsutt/embertrail-client.',
+        },
+      ],
+    },
+  },
+  {
+    // A Widget reaches the Hub only through useWidgetData, so the query key, retry and error
+    // handling stay in one place. Restating the client-only imports: a later block replaces them.
+    name: 'embertrail/dashboard/widgets-via-useWidgetData',
+    files: ['apps/dashboard/src/features/widgets/**'],
+    ignores: ['**/*.test.{ts,tsx}', 'apps/dashboard/src/features/widgets/hooks/useWidgetData/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...dashboardImportPatterns,
+            {
+              // Escaped: a pattern starting with # is a comment.
+              group: ['\\#lib/hub', '\\#features/widgets/data/runRequest'],
+              message: 'A Widget gets its data from useWidgetData, the only path to the Hub.',
+            },
+          ],
         },
       ],
     },

@@ -19,7 +19,7 @@ catalog:
   '@mitcsutt/kiln-prettier-config': ^0.1.0
   '@mitcsutt/kiln-structure': ^0.1.0
   '@mitcsutt/kiln-tsconfig': ^0.2.0
-  '@mitcsutt/kiln-ui': ^0.7.0
+  '@mitcsutt/kiln-ui': ^0.8.0
   '@redocly/cli': ^2.67.1
   '@secretlint/secretlint-rule-preset-recommend': ^13.0.7
   '@standard-schema/spec': ^1.1.0
@@ -79,3 +79,4 @@ minimumReleaseAgeExclude:
   - '@tanstack/router-core@1.171.39'
   - '@tanstack/router-generator@1.167.46'
   - '@tanstack/router-plugin@1.168.48'
+  - '@mitcsutt/kiln-ui@0.8.0'

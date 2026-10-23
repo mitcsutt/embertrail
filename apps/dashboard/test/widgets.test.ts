@@ -25,28 +25,26 @@ afterAll(async () => {
 
 const facts = () => (hub.demo ?? failed('demo')).facts
 
-/** Every day of the dataset, with room either side. */
-const wholeDataset = () => ({
-  from: new Date(Date.parse(facts().today.from) - 40 * 86_400_000).toISOString(),
-  to: facts().today.to,
-})
+const now = () => (hub.demo ?? failed('demo')).options.now
 
 describe('Cost today', () => {
   it("selects today's cost, as the generator made it", async () => {
-    const data = await loadWidget(hub.client, costToday, testContext(facts().today))
+    const data = await loadWidget(hub.client, costToday, testContext(costToday, now()))
     expect(data.cost).toBeCloseTo(facts().costToday, 6)
   })
 
   it('honours the Source filter it declares', async () => {
-    const filter = [{ key: 'embertrail.source_id', op: 'eq' as const, value: 'embertrail-demo' }]
-    const data = await loadWidget(hub.client, costToday, testContext(facts().today, { filter }))
+    const data = await loadWidget(
+      hub.client,
+      costToday,
+      testContext(costToday, now(), { sourceId: 'embertrail-demo' }),
+    )
     expect(data.cost).toBeCloseTo(facts().costToday, 6)
 
-    const other = [{ key: 'embertrail.source_id', op: 'eq' as const, value: 'nobody' }]
     const none = await loadWidget(
       hub.client,
       costToday,
-      testContext(facts().today, { filter: other }),
+      testContext(costToday, now(), { sourceId: 'nobody' }),
     )
     expect(costToday.isEmpty(none)).toBe(true)
   })
@@ -54,7 +52,7 @@ describe('Cost today', () => {
 
 describe('Each day by model', () => {
   it('selects one row per day and model that add up to the model totals', async () => {
-    const data = await loadWidget(hub.client, eachDayByModel, testContext(wholeDataset()))
+    const data = await loadWidget(hub.client, eachDayByModel, testContext(eachDayByModel, now()))
 
     const byModel: Record<string, number> = {}
     for (const row of data.rows) byModel[row.model] = (byModel[row.model] ?? 0) + row.cost
@@ -71,7 +69,7 @@ describe('Each day by model', () => {
 
 describe('Top sessions', () => {
   it('selects the ten most expensive Sessions, most expensive first', async () => {
-    const data = await loadWidget(hub.client, topSessions, testContext(wholeDataset()))
+    const data = await loadWidget(hub.client, topSessions, testContext(topSessions, now()))
 
     const expected = facts()
       .sessionFacts.toSorted((a, b) => b.cost - a.cost)
@@ -87,7 +85,7 @@ describe('the spec check', () => {
   it('accepts every Catalogue request', () => {
     expect(catalogue.length).toBeGreaterThan(0)
     for (const widget of catalogue) {
-      assertSpecRequest(widget.request(testContext(facts().today)))
+      assertSpecRequest(widget.request(testContext(widget, now())))
     }
   })
 

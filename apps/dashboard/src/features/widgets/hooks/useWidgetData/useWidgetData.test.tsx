@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { QueryContext } from '#features/filters/types/filters'
-import { WidgetClientProvider } from '#features/widgets/components/WidgetClientProvider'
 import { costToday } from '#features/widgets/components/CostToday'
+import { HubContext } from '#lib/hub'
 
 import { useWidgetData } from './useWidgetData'
 
@@ -19,13 +19,15 @@ const ctx: QueryContext = {
   sessions: {},
 }
 
+const hubFor = (client: EmbertrailClient) => ({ client, hubUrl: '', display: 'http://localhost' })
+
 function setup() {
   const queryMetrics = vi.fn().mockResolvedValue({ rows: [{ group: {}, value: 5 }], meta: {} })
   const client = { queryMetrics } as unknown as EmbertrailClient
   const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000 } } })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <WidgetClientProvider client={client}>{children}</WidgetClientProvider>
+      <HubContext value={hubFor(client)}>{children}</HubContext>
     </QueryClientProvider>
   )
   return { queryMetrics, wrapper }
@@ -82,7 +84,7 @@ describe('useWidgetData', () => {
         <QueryClientProvider
           client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
         >
-          <WidgetClientProvider client={failing}>{children}</WidgetClientProvider>
+          <HubContext value={hubFor(failing)}>{children}</HubContext>
         </QueryClientProvider>
       ),
     })

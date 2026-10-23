@@ -5,8 +5,8 @@ import { useMemo } from 'react'
 
 import type { QueryContext } from '#features/filters/types/filters'
 import { runRequest } from '#features/widgets/data/runRequest'
-import { useWidgetClient } from '#features/widgets/hooks/useWidgetClient'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { useHub } from '#lib/hub'
 
 export interface WidgetData<Data> {
   status: ChartStatus
@@ -24,7 +24,7 @@ export function useWidgetData<Data>(
   definition: WidgetDefinition<Data>,
   ctx: QueryContext,
 ): WidgetData<Data> {
-  const client = useWidgetClient()
+  const { client } = useHub()
   const request = definition.request(ctx)
   const query = useQuery({
     queryKey: ['widget', request],
