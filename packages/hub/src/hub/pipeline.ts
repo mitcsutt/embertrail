@@ -50,7 +50,7 @@ export interface Call {
   /** The request's time. */
   now: Date
   requestId: string
-  /** The op's transaction, for `transaction: 'scoped'`. */
+  /** The op's transaction, for `transaction: 'scoped'` or `'privileged'`. */
   db: ScopedDb | undefined
   hub: Services
 }
