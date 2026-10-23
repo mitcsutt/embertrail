@@ -512,6 +512,63 @@ describe('events', () => {
   })
 })
 
+describe('attribute keys that name Object.prototype members', () => {
+  const inherited = ['constructor', 'toString', '__proto__'] as const
+
+  beforeEach(async () => {
+    await ok(
+      ingest,
+      '/v1/metrics',
+      sumOf('m', [
+        { time: '2026-10-02T10:00:00Z', value: 1, attributes: { constructor: 'x' } },
+        { time: '2026-10-02T11:00:00Z', value: 2 },
+      ]),
+    )
+    await ok(
+      ingest,
+      '/v1/logs',
+      eventsOf([
+        { time: '2026-10-02T10:00:00Z', attributes: { constructor: 'x' } },
+        { time: '2026-10-02T11:00:00Z', attributes: { model: 'a' } },
+      ]),
+    )
+  })
+
+  it.each(inherited)('treats %s as an absent attribute on metrics', async (key) => {
+    const filtered = await metrics(alice, {
+      metric: 'm',
+      tz: 'UTC',
+      filter: [{ key, op: 'eq', value: 'x' }],
+    })
+    expect(filtered.rows).toEqual(key === 'constructor' ? [{ group: {}, value: 1 }] : [])
+    const grouped = await metrics(alice, { metric: 'm', tz: 'UTC', group_by: [key] })
+    // The response schema's record drops a `__proto__` key from `group`, so only the rows count.
+    expect(grouped.rows).toHaveLength(key === 'constructor' ? 2 : 1)
+  })
+
+  it.each(inherited)('treats %s as an absent attribute on events', async (key) => {
+    const filtered = await events(alice, {
+      mode: 'list',
+      filter: [{ key, op: 'eq', value: 'x' }],
+    })
+    expect(filtered.items).toHaveLength(key === 'constructor' ? 1 : 0)
+    const aggregated = await events(alice, {
+      mode: 'aggregate',
+      aggregation: { fn: 'count_distinct', key },
+      group_by: [key],
+    })
+    expect(aggregated.rows).toHaveLength(key === 'constructor' ? 2 : 1)
+  })
+
+  it('finds a stored attribute named constructor and groups on it', async () => {
+    const grouped = await metrics(alice, { metric: 'm', tz: 'UTC', group_by: ['constructor'] })
+    expect(grouped.rows).toEqual([
+      { group: { constructor: 'x' }, value: 1 },
+      { group: { constructor: null }, value: 2 },
+    ])
+  })
+})
+
 describe('limits', () => {
   it('takes group_by of 3 and refuses 4', async () => {
     const query = { metric: 'm', aggregation: 'sum', ...window, tz: 'UTC' }

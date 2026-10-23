@@ -65,7 +65,8 @@ const asNumber = (text: SQL) =>
   sql`(case when ${text} ~ ${numeric} then (${text})::double precision end)`
 
 export function dimension(signal: Signal, key: string): Dimension {
-  const column = promoted[signal][key]
+  // `key` is request input: an inherited member such as `constructor` is not a column.
+  const column = isPromoted(signal, key) ? promoted[signal][key] : undefined
   if (column === 'event_sequence') {
     const c = sql.raw('t.event_sequence')
     return {
