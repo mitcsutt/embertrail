@@ -4,7 +4,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { useBoardList } from '#features/boards/data/boards'
-import { presetSummaries } from '#features/boards/constants/presetSummaries'
+import { presetIds } from '#features/boards/types/board'
+import { presetBoard } from '#features/boards/utils/presets'
+import { catalogue } from '#features/widgets/constants/catalogue'
 import { useHub } from '#lib/hub'
 
 /** ⌘K (Ctrl+K elsewhere): jump to any Board, or to the Session Groups. */
@@ -23,7 +25,7 @@ export function JumpPalette() {
       },
     })
     return [
-      ...presetSummaries.map(({ id, name }) => board(id, name, 'Presets')),
+      ...presetIds.map((id) => board(id, presetBoard(id, catalogue).name, 'Presets')),
       ...(data?.boards ?? []).map(({ id, name }) => board(id, name, 'Boards')),
       {
         id: 'sessions',

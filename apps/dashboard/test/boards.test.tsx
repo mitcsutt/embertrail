@@ -153,7 +153,7 @@ describe('BoardPage', () => {
     expect(await screen.findByText('This Board cannot be shown')).toBeVisible()
   })
 
-  it('offers Customise on a Preset and Edit on a stored Board', async () => {
+  it('offers Customise on a Preset', async () => {
     openBoard('/boards/overview', fakeHub().client)
     expect(await screen.findByRole('button', { name: 'Customise' })).toBeDisabled()
   })

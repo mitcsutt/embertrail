@@ -228,10 +228,7 @@ export function boardQueryOptions(hub: EmbertrailClient, id: string) {
   })
 }
 
-/** A stored Board; `id` is `undefined` while the page shows a Preset, which is not fetched. */
-export function useBoard(hub: EmbertrailClient, id: string | undefined) {
-  return useQuery({
-    ...boardQueryOptions(hub, id ?? ''),
-    enabled: id !== undefined,
-  })
+/** A stored Board. */
+export function useBoard(hub: EmbertrailClient, id: string) {
+  return useQuery(boardQueryOptions(hub, id))
 }
