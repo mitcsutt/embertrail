@@ -413,6 +413,15 @@ importers:
         specifier: 'catalog:'
         version: 4.6.7
     devDependencies:
+      '@hono/node-server':
+        specifier: 'catalog:'
+        version: 2.1.5(hono@4.13.13)
+      '@mitcsutt/embertrail-hub':
+        specifier: workspace:*
+        version: link:../../packages/hub
+      '@mitcsutt/embertrail-modules':
+        specifier: workspace:*
+        version: link:../../packages/modules
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
