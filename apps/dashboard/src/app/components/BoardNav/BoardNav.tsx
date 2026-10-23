@@ -22,15 +22,13 @@ export function BoardNav() {
 
   return (
     <NavLinks label="Board list" orientation="vertical" size="sm">
-      {[...presets, ...(data?.boards ?? []), newBoard].map(
-        ({ id, name }) => (
-          <NavLinks.Item key={id} asChild active={current === id}>
-            <Link to="/boards/$boardId" params={{ boardId: id }}>
-              {name}
-            </Link>
-          </NavLinks.Item>
-        ),
-      )}
+      {[...presets, ...(data?.boards ?? []), newBoard].map(({ id, name }) => (
+        <NavLinks.Item key={id} asChild active={current === id}>
+          <Link to="/boards/$boardId" params={{ boardId: id }}>
+            {name}
+          </Link>
+        </NavLinks.Item>
+      ))}
     </NavLinks>
   )
 }
