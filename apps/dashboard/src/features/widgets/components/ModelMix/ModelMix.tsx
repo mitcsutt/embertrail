@@ -43,12 +43,16 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
   }),
   isEmpty: ({ models }) => models.length === 0,
   View: ({ data, label }) => (
-    <Share
-      data={data.models.map((row) => ({ ...row }))}
-      pivot={{ by: 'model', value: 'cost' }}
-      label={label}
-      format={{ style: 'currency', currency: 'USD' }}
-      totalLabel="total"
-    />
+    // The legend lists every model and has no height of its own, so a short Widget scrolls it.
+    <div style={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
+      <Share
+        data={data.models.map((row) => ({ ...row }))}
+        pivot={{ by: 'model', value: 'cost' }}
+        label={label}
+        height="fill"
+        format={{ style: 'currency', currency: 'USD' }}
+        totalLabel="total"
+      />
+    </div>
   ),
 }
