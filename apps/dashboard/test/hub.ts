@@ -28,7 +28,7 @@ export interface DashboardTestHub {
   t: TestHub
   /** What the Dashboard holds: `otel:read`, `store:read` and `store:write`, no ingest. */
   client: EmbertrailClient
-  /** The ingest client, bound to the Source `demo`. */
+  /** The ingest client, bound to the Source `embertrail-demo`. */
   ingest: TestClient
   /** The dataset that was ingested, if any. */
   demo: DemoDataset | undefined

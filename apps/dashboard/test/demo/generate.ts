@@ -17,7 +17,7 @@ import type { CalendarDate } from './zone.ts'
 export const demoNow = new Date('2026-11-04T13:00:00Z')
 
 /** The name of the Source the seed command creates. */
-export const demoSource = 'demo'
+export const demoSource = 'embertrail-demo'
 
 export type AccountKey = 'work' | 'personal'
 

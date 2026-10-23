@@ -132,7 +132,7 @@ describe('the demo dataset on a test Hub', { timeout: 30_000 }, () => {
     expect(split[0]).toBeCloseTo(facts.costByAccount.personal, 6)
     expect(split[1]).toBeCloseTo(facts.costByAccount.work, 6)
     expect(inventory.models.length).toBeGreaterThanOrEqual(2)
-    expect(inventory.sources.map((source) => source.name)).toEqual(['demo'])
+    expect(inventory.sources.map((source) => source.name)).toEqual(['embertrail-demo'])
   })
 
   it('has a Session Group three levels deep, and a Label that moves one Session', async () => {

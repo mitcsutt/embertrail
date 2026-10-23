@@ -99,7 +99,7 @@ embertrail login --hub http://localhost:8787 --token <the Token the first start 
 pnpm --filter @mitcsutt/embertrail-dashboard seed
 ```
 
-`seed` takes the Hub and Token from `embertrail login`, or from `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` when both are set (`scripts/hub-config.ts`, the CLI's own rule). It deletes the Source `demo` if there is one (a hard delete removes every row it sent), creates it again, posts the dataset with the new Source's ingest Token, sets the Labels, and reads the counts back for that Source, failing if the Hub does not hold exactly what was sent. Running it again leaves the same rows. Other Sources on the Hub are never touched.
+`seed` takes the Hub and Token from `embertrail login`, or from `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` when both are set. It deletes the Source `embertrail-demo` if there is one (a hard delete removes every row it sent), creates it again, posts the dataset with the new Source's ingest Token, sets the Labels, and reads the counts back for that Source, failing if the Hub does not hold exactly what was sent. Running it again leaves the same rows. Other Sources on the Hub are never touched.
 
 | Flag          | Default                                                                          |
 | ------------- | -------------------------------------------------------------------------------- |
