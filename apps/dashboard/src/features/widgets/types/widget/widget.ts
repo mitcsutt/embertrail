@@ -3,6 +3,7 @@ import type { ChartStatus } from '@mitcsutt/kiln-charts'
 import type { ReactNode } from 'react'
 
 import type { QueryContext } from '#features/filters/types/filters'
+import type { FixedWindow } from '#features/filters/types/window'
 
 export type WidgetKind = 'stat' | 'series' | 'bars' | 'bar-list' | 'share' | 'table' | 'heatmap'
 
@@ -10,7 +11,7 @@ export type WidgetGroup =
   'spend' | 'sessions' | 'models' | 'tools' | 'output' | 'rhythm' | 'reliability'
 
 /** `board` follows the Board's time range; the rest are fixed windows that ignore it. */
-export type WidgetWindow = 'board' | 'today' | 'this-week' | 'last-28-days' | 'last-12-weeks'
+export type WidgetWindow = 'board' | FixedWindow
 
 export type WidgetRequest =
   | { op: 'queryMetrics'; body: OperationInput<'queryMetrics'>['body'] }
