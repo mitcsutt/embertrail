@@ -21,6 +21,17 @@ pnpm --filter @mitcsutt/embertrail-dashboard test       # Vitest on jsdom
 
 `pnpm lint`, `pnpm typecheck` and `pnpm test` at the root cover it too.
 
+### The development loop
+
+```sh
+docker compose up -d                                              # the Hub, on 127.0.0.1:8787
+embertrail login --hub http://localhost:8787 --token <the Token the first start printed>
+pnpm --filter @mitcsutt/embertrail-dashboard seed                 # the demo dataset, see below
+pnpm --filter @mitcsutt/embertrail-dashboard dev                  # the Dashboard on Vite
+```
+
+The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. Until the dev proxy lands (#72 D2) the Dashboard makes no request to the Hub, so `dev` shows the shell and its placeholder pages only. When D2 lands it proxies `/api` to the Hub and injects the Token the CLI stored, so the loop needs no further setup; update this section then.
+
 ## Layout
 
 The layout follows Kiln's app structure ([ADR 0037](https://github.com/mitcsutt/kiln/blob/main/docs/adr/0037-app-structure.md)), enforced by `@mitcsutt/kiln-structure/eslint` from the root `eslint.config.js`: a file lives with its closest common owner, children are grouped by kind folder (`components`, `hooks`, `stores`, `utils`, `constants`, `types`, `schemas`), and every module is a folder with a narrow `index.ts`. Imports use `#` (`#features/boards/pages/BoardPage`, `#lib/queryClient`), never `../`.
@@ -43,6 +54,11 @@ apps/dashboard/
 
 Routes: `/` redirects to `/boards/overview`; `/boards/$boardId`, `/sessions` and `/sessions/$sessionId` render placeholder pages for now.
 
+What the structure rule allows, so a new folder does not fail lint after the code is written:
+
+- Inside a feature (`src/features/<name>/`), a module folder sits inside one of `components`, `hooks`, `stores`, `utils`, `constants`, `types`, `schemas`, `pages` or `data`. Nothing else is a folder name there, and a module folder cannot hold another module folder. (`src/app`, `src/config`, `src/lib` and `src/routes` are the top-level folders.) A Catalogue of 20 Widgets is therefore flat module folders (one per Widget) in `features/widgets/utils/` or `components/`, not a `catalogue/` folder.
+- `test/`, `scripts/` and `e2e/` sit outside `src/`, so the structure rule and the client-only rule do not apply to them; the React and base lint rules do. `tsconfig.json` includes all three (the type-aware lint needs a file in a tsconfig), so a new top-level folder of code needs adding there too.
+
 ### Feature graph
 
 A feature imports another only along a declared edge (the `features` option in `eslint.config.js`; add a new feature there first):
@@ -62,7 +78,7 @@ The types that let tasks run in parallel are committed first and later tasks fil
 - `features/widgets/types/widget`: `WidgetDefinition` and the unions it uses (`WidgetKind`, `WidgetGroup`, `WidgetWindow`, `WidgetRequest`).
 - `features/boards/types/board`: `BoardDocument`, `BoardItem`, `QueryWidgetConfig`, `boardNamespace` (`embertrail-dashboard`) and the reserved Preset ids.
 
-Do not change a shape without a tidy-pass decision (#72).
+Do not change a shape without a tidy-pass decision (#72). `test/contracts.test.ts` runs them against the test Hub and the client: a `QueryContext` feeds one `WidgetRequest` of each op (`queryMetrics`, `queryEvents`, `listSessions`), `getSelf` answers for the Dashboard's Token, and a `BoardDocument` is created, replaced and refused on a stale `ETag` in the `embertrail-dashboard` namespace.
 
 ## Demo data
 
@@ -131,3 +147,7 @@ const { rows } = await client.queryMetrics({
 - `demo: false` leaves the Hub empty; `demo: { sender: 'other' }` gives the empty-state data; `labels: false` holds the Labels back until `applyLabels()`.
 - Boot one Hub per test file in `beforeAll` and seed it once: booting PGLite and ingesting the dataset takes several seconds.
 - `test/demo/demo.test.ts` is the reference: it checks the facts against what the Hub reads back, the group totals, the Label moves, and runs all 20 curated Widget requests (the ones in `packages/otel/src/query/widgets.test.ts`) against the dataset. `test/seed.test.ts` runs `pnpm seed` twice against a Hub over HTTP on a random port.
+
+### Test time
+
+`pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass.

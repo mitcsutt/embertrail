@@ -7,6 +7,8 @@
 import type { OperationInput } from '@mitcsutt/embertrail-client'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import type { WidgetRequest } from '#features/widgets/types/widget'
+
 import { dashboardTestHub } from '../hub.ts'
 import type { DashboardTestHub } from '../hub.ts'
 import { addDays, dayBounds, demoDataset, demoNow, localDate, zonedTime } from './index.ts'
@@ -197,19 +199,19 @@ describe('the demo dataset on a test Hub', { timeout: 30_000 }, () => {
       to: dayBounds(tz, today).to.toISOString(),
     })
 
-    type Request =
-      | { op: 'metrics'; body: OperationInput<'queryMetrics'>['body'] }
-      | { op: 'events'; body: OperationInput<'queryEvents'>['body'] }
-      | { op: 'sessions'; query: OperationInput<'listSessions'>['query'] }
-
-    const widgets = (): [string, Request][] => {
+    // The same shape a Widget's `request()` returns (the Dashboard's contract).
+    const widgets = (): [string, WidgetRequest][] => {
       const month = window(29, tz)
-      const metric = (name: string, range: { from: string; to: string }, rest = {}): Request => ({
-        op: 'metrics',
+      const metric = (
+        name: string,
+        range: { from: string; to: string },
+        rest = {},
+      ): WidgetRequest => ({
+        op: 'queryMetrics',
         body: { metric: `claude_code.${name}`, aggregation: 'sum', ...range, tz, ...rest },
       })
-      const event = (name: string, aggregation: object, rest = {}): Request => ({
-        op: 'events',
+      const event = (name: string, aggregation: object, rest = {}): WidgetRequest => ({
+        op: 'queryEvents',
         body: {
           mode: 'aggregate',
           ...month,
@@ -225,7 +227,7 @@ describe('the demo dataset on a test Hub', { timeout: 30_000 }, () => {
         ['Each day by model', metric('cost.usage', month, { bucket: 'day', group_by: ['model'] })],
         ['Cost by Account', metric('cost.usage', month, { group_by: ['embertrail.account_id'] })],
         ['Sessions today', metric('session.count', facts.today)],
-        ['Top sessions', { op: 'sessions', query: { sort: '-cost_usd', limit: 10 } }],
+        ['Top sessions', { op: 'listSessions', query: { sort: '-cost_usd', limit: 10 } }],
         [
           'Sessions per day',
           metric('session.count', month, { bucket: 'day', group_by: ['start_type'] }),
@@ -281,9 +283,9 @@ describe('the demo dataset on a test Hub', { timeout: 30_000 }, () => {
       async (name, index) => {
         const request = defined(widgets()[index], name)[1]
         const answer =
-          request.op === 'metrics'
+          request.op === 'queryMetrics'
             ? await hub.client.queryMetrics({ body: request.body })
-            : request.op === 'events'
+            : request.op === 'queryEvents'
               ? await hub.client.queryEvents({ body: request.body })
               : await hub.client.listSessions({ query: request.query })
         const found = answer as { rows?: unknown[]; items?: unknown[] }
