@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { useBoardList } from '#features/boards/data/boards'
+import { useBoardSections } from '#features/boards/hooks/useBoardSections'
 import { usePresetList } from '#features/boards/hooks/usePresetList'
 import { useHub } from '#lib/hub'
 
@@ -11,6 +12,7 @@ import { useHub } from '#lib/hub'
 export function JumpPalette() {
   const { client } = useHub()
   const { data } = useBoardList(client)
+  const sections = useBoardSections(data?.boards)
   const presets = usePresetList()
   const navigate = useNavigate()
 
@@ -25,7 +27,9 @@ export function JumpPalette() {
     })
     return [
       ...presets.map(({ id, name }) => board(id, name, 'Presets')),
-      ...(data?.boards ?? []).map(({ id, name }) => board(id, name, 'Boards')),
+      ...sections.flatMap(({ label, boards }) =>
+        boards.map(({ id, name }) => board(id, name, label)),
+      ),
       {
         id: 'sessions',
         label: 'Session Groups',
@@ -35,7 +39,7 @@ export function JumpPalette() {
         },
       },
     ]
-  }, [data?.boards, presets, navigate])
+  }, [sections, presets, navigate])
 
   return (
     <CommandPalette

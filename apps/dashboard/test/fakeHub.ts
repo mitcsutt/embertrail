@@ -14,6 +14,10 @@ export interface FakeHubOptions {
   /** Stored Boards by id; a value that is not a Board is served as it is. */
   boards?: Record<string, BoardDocument | object>
   scopes?: string[]
+  /** The Teams the caller belongs to, as `getSelf` reports them; none for a solo User. */
+  teams?: Schemas['Self']['teams']
+  /** Who owns a stored Board; a Board not listed is the caller's own. */
+  owners?: Record<string, { kind: 'user' | 'team'; id: string }>
   /** The Sessions `listSessions` answers with, and `getSession` looks up (children by parent). */
   sessions?: Schemas['SessionSummary'][]
   /** The Events a list query pages through, `eventPageSize` at a time, whatever the filter. */
@@ -24,11 +28,13 @@ export interface FakeHubOptions {
 export interface FakeHub {
   client: EmbertrailClient
   /** Every request, in order, as `METHOD /path?query` with the parsed JSON body. */
-  requests: { line: string; path: string; body?: unknown }[]
+  requests: { line: string; path: string; body?: unknown; owner?: string }[]
   /** The Query API requests a Widget sends. */
   widgetRequests(): FakeHub['requests']
   /** The stored Board with this id, as the Hub holds it now. */
   board(id: string): unknown
+  /** Who owns the stored Board with this id. */
+  ownerOf(id: string): { kind: string; id: string } | undefined
   /** Another client saves a Board: it moves to its next version, as a concurrent save would. */
   saveElsewhere(id: string, data: unknown): void
   /** Another client deletes a Board. */
@@ -49,10 +55,10 @@ const problem = (status: number, type: string) =>
 
 const owner = { kind: 'user', id: 'u1' }
 
-const document = (id: string, data: unknown, version: number) => ({
+const document = (id: string, data: unknown, version: number, by = owner) => ({
   namespace: boardNamespace,
   id,
-  owner,
+  owner: by,
   version,
   created_at: '2026-11-01T00:00:00Z',
   updated_at: '2026-11-01T00:00:00Z',
@@ -62,13 +68,17 @@ const document = (id: string, data: unknown, version: number) => ({
 interface Stored {
   data: unknown
   version: number
+  owner: { kind: string; id: string }
 }
 
 const etagOf = (version: number) => `"${String(version)}"`
 
 export function fakeHub(options: FakeHubOptions = {}): FakeHub {
   const boards = new Map<string, Stored>(
-    Object.entries(options.boards ?? {}).map(([id, data]) => [id, { data, version: 1 }]),
+    Object.entries(options.boards ?? {}).map(([id, data]) => [
+      id,
+      { data, version: 1, owner: options.owners?.[id] ?? owner },
+    ]),
   )
   const requests: FakeHub['requests'] = []
 
@@ -78,7 +88,7 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
       return json({
         user: { id: 'u1', name: 'Dana', email: null, admin: false },
         scopes: options.scopes ?? ['otel:read', 'store:read', 'store:write'],
-        teams: [],
+        teams: options.teams ?? [],
       })
     }
     if (path === '/api/v1/inventory') {
@@ -127,7 +137,9 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
     const id = store[1]
     if (method === 'GET' && id === undefined) {
       return json({
-        items: [...boards].map(([key, { data, version }]) => document(key, data, version)),
+        items: [...boards].map(([key, { data, version, owner: by }]) =>
+          document(key, data, version, by),
+        ),
         next_cursor: null,
       })
     }
@@ -136,11 +148,19 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
     if (method === 'GET') {
       return current === undefined
         ? problem(404, 'not-found')
-        : json(document(id, current.data, current.version), {
+        : json(document(id, current.data, current.version, current.owner), {
             headers: { ETag: etagOf(current.version) },
           })
     }
     const ifMatch = request.headers.get('if-match')
+    // Acting for a Team takes its editor; a Team's document is written only when acting for it.
+    const acting = /^team:(.+)$/.exec(request.headers.get('embertrail-owner') ?? '')?.[1]
+    const editor = (teamId: string) =>
+      (options.teams ?? []).some((team) => team.id === teamId && team.editor)
+    if (acting !== undefined && !editor(acting)) return problem(403, 'forbidden')
+    if (current?.owner.kind === 'team' && acting !== current.owner.id) {
+      return problem(403, 'forbidden')
+    }
     if (method === 'PUT') {
       if (request.headers.get('if-none-match') === '*' && current !== undefined) {
         return problem(412, 'precondition-failed')
@@ -151,8 +171,9 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
       }
       const version = (current?.version ?? 0) + 1
       const { data } = body as { data: unknown }
-      boards.set(id, { data, version })
-      return json(document(id, data, version), {
+      const by = current?.owner ?? (acting === undefined ? owner : { kind: 'team', id: acting })
+      boards.set(id, { data, version, owner: by })
+      return json(document(id, data, version, by), {
         status: current === undefined ? 201 : 200,
         headers: { ETag: etagOf(version) },
       })
@@ -179,6 +200,9 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         line: `${request.method} ${url.pathname}${url.search}`,
         path: url.pathname,
         ...(body === undefined ? {} : { body }),
+        ...(request.headers.has('embertrail-owner')
+          ? { owner: request.headers.get('embertrail-owner') ?? '' }
+          : {}),
       })
       return respond(request.method, url, request, body)
     },
@@ -192,8 +216,13 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         ['/api/v1/metrics/query', '/api/v1/events/query', '/api/v1/sessions'].includes(path),
       ),
     board: (id) => boards.get(id)?.data,
+    ownerOf: (id) => boards.get(id)?.owner,
     saveElsewhere(id, data) {
-      boards.set(id, { data, version: (boards.get(id)?.version ?? 0) + 1 })
+      boards.set(id, {
+        data,
+        version: (boards.get(id)?.version ?? 0) + 1,
+        owner: boards.get(id)?.owner ?? owner,
+      })
     },
     deleteElsewhere(id) {
       boards.delete(id)

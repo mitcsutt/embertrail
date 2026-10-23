@@ -8,7 +8,8 @@ export {
   listBoards,
   newBoardId,
   saveBoard,
+  teamOf,
   useBoard,
   useBoardList,
 } from './boards'
-export type { BoardSummary, StoredBoard } from './boards'
+export type { BoardSummary, StoredBoard, WriteOptions } from './boards'
