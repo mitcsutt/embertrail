@@ -11,7 +11,7 @@ import { HubError } from '../module/errors'
 import { ledger } from '../testing/ledger'
 import { pgliteDb } from '../testing/pglite'
 import type { ClosableDbPort } from '../testing/pglite'
-import { lifecycle } from './lifecycle'
+import { lifecycle, tables } from './lifecycle'
 
 // The lifecycle on PGLite with real migrations and real row-level security, never over HTTP.
 
@@ -252,5 +252,22 @@ describe('lifecycle', () => {
         expect(await free(t)).toEqual([{ ok: 1 }])
       })
     })
+  })
+})
+
+describe('tables', () => {
+  it('walks each Module in order with every table it declares', () => {
+    const walked = [...tables([ledger, ledger])].map(({ module, table }) => [
+      module.name,
+      table.name,
+    ])
+    const own = Object.keys(ledger.tables).length
+    expect(walked).toHaveLength(own * 2)
+    expect(walked.slice(0, own)).toEqual(walked.slice(own))
+    expect(walked.every(([module]) => module === ledger.name)).toBe(true)
+  })
+
+  it('yields nothing for no Modules', () => {
+    expect([...tables([])]).toEqual([])
   })
 })

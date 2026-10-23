@@ -42,6 +42,13 @@ export interface Lifecycle {
 const exportPage = 500
 const day = 86_400_000
 
+/** Every table the Modules declare, in load order: the one walk retention, removal, export use. */
+export function* tables(modules: readonly Module[]) {
+  for (const module of modules) {
+    for (const table of declaredTables(module)) yield { module, table }
+  }
+}
+
 const tableOf = (module: Module, table: string) => sql.raw(`${ident(module.name)}.${ident(table)}`)
 
 /** Deletes the rows each Module's tables hold for `value`, counting them. */
@@ -52,16 +59,14 @@ async function deleteRows(
   value: string,
 ) {
   let deleted = 0
-  for (const module of modules) {
-    for (const table of declaredTables(module)) {
-      if (column === 'source_id' && !table.signal) continue
-      const [count] = await rows<{ count: number }>(
-        tx,
-        sql`with d as (delete from ${tableOf(module, table.name)}
-          where ${sql.raw(column)} = ${value} returning 1) select count(*)::int as count from d`,
-      )
-      deleted += count?.count ?? 0
-    }
+  for (const { module, table } of tables(modules)) {
+    if (column === 'source_id' && !table.signal) continue
+    const [count] = await rows<{ count: number }>(
+      tx,
+      sql`with d as (delete from ${tableOf(module, table.name)}
+        where ${sql.raw(column)} = ${value} returning 1) select count(*)::int as count from d`,
+    )
+    deleted += count?.count ?? 0
   }
   return deleted
 }
@@ -69,7 +74,8 @@ async function deleteRows(
 /** JSON Lines of every row the Owner owns, one `{ table, row }` object per line. */
 function defaultExporter(module: Module): Exporter {
   return async function* exportRows(ctx) {
-    for (const { name } of declaredTables(module)) {
+    for (const { table: declared } of tables([module])) {
+      const name = declared.name
       const table = tableOf(module, name)
       let after: string | undefined
       for (;;) {
@@ -161,19 +167,16 @@ export function lifecycle(options: LifecycleOptions): Lifecycle {
       const cutoff = new Date(clock().getTime() - days * day).toISOString()
       return db.privileged(async (tx) => {
         let deleted = 0
-        for (const module of modules) {
+        for (const { module, table } of tables(modules)) {
           const column = module.retention?.column
-          if (column === undefined) continue
-          for (const table of declaredTables(module)) {
-            if (!table.columns.includes(column)) continue
-            const [count] = await rows<{ count: number }>(
-              tx,
-              sql`with d as (delete from ${tableOf(module, table.name)}
-                where ${sql.raw(ident(column))} < ${cutoff}::timestamptz returning 1)
-                select count(*)::int as count from d`,
-            )
-            deleted += count?.count ?? 0
-          }
+          if (column === undefined || !table.columns.includes(column)) continue
+          const [count] = await rows<{ count: number }>(
+            tx,
+            sql`with d as (delete from ${tableOf(module, table.name)}
+              where ${sql.raw(ident(column))} < ${cutoff}::timestamptz returning 1)
+              select count(*)::int as count from d`,
+          )
+          deleted += count?.count ?? 0
         }
         return { deleted }
       })
