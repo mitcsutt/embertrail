@@ -1,24 +1,7 @@
-import type { Schemas } from '@mitcsutt/embertrail-client'
-
 import type { BoardFilters, FilterOverride } from '#features/filters/types/filters'
-import type { WidgetKind } from '#features/widgets/types/widget'
+import type { QueryWidgetConfig } from '#features/widgets/types/queryWidget'
 
-/** The configuration behind a Query Widget; its editor owns the details (#72 D10). */
-export interface QueryWidgetConfig {
-  source:
-    | {
-        kind: 'metric'
-        name: string
-        aggregation: 'sum' | 'avg' | 'min' | 'max' | 'count' | 'last'
-      }
-    | { kind: 'event'; name: string; aggregation: { fn: string; key?: string } }
-  /** At most 3. */
-  groupBy: string[]
-  bucket?: 'minute' | 'hour' | 'day' | 'week' | 'month'
-  filter: Schemas['Filter'][]
-  chart: WidgetKind
-  limit?: number
-}
+export type { QueryWidgetConfig }
 
 export type BoardItem =
   | { i: string; type: 'widget'; widget: string; override?: FilterOverride }

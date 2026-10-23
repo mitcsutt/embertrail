@@ -1,0 +1,1 @@
+export { QueryWidgetView } from './QueryWidgetView'

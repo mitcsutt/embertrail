@@ -135,6 +135,39 @@ describe('adding and removing', () => {
     expect(cell(savedBoard(hub), 'tokens-by-type')?.y).toBeGreaterThanOrEqual(5)
   })
 
+  it('adds a Query Widget, focuses its handle, and saves it', async () => {
+    const hub = hubWithBoard()
+    const user = userEvent.setup()
+    openBoard(`/boards/${id}?edit=true`, hub.client)
+
+    await user.click(await screen.findByRole('button', { name: 'Add Query Widget' }))
+    const sheet = within(await screen.findByRole('dialog', { name: 'Add a Query Widget' }))
+    await user.type(sheet.getByRole('textbox', { name: 'Title' }), 'Spend')
+    await user.type(
+      sheet.getByRole('combobox', { name: 'Metric' }),
+      'claude_code.cost.usage{Enter}',
+    )
+    await user.click(sheet.getByRole('button', { name: 'Save Query Widget' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Move Spend/ })).toHaveFocus()
+    })
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(savedBoard(hub).items.map(({ i }) => i)).toEqual(['head', 'a', 'b', 'query-spend'])
+    })
+    expect(savedBoard(hub).items.at(-1)).toMatchObject({
+      type: 'query',
+      title: 'Spend',
+      query: {
+        source: { kind: 'metric', name: 'claude_code.cost.usage', aggregation: 'sum' },
+        chart: 'stat',
+      },
+    })
+    expect(cell(savedBoard(hub), 'query-spend')).toMatchObject({ w: 3, h: 2 })
+  })
+
   it('adds a section and removes a Widget', async () => {
     const hub = hubWithBoard()
     const user = userEvent.setup()

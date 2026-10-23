@@ -1,4 +1,5 @@
 export {
+  addQueryItem,
   addSectionItem,
   addWidgetItem,
   pinnedFilters,

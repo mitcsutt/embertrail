@@ -2,6 +2,7 @@ import { appendItem, removeItem } from '@mitcsutt/kiln-dnd'
 
 import type { BoardDocument, BoardItem, BoardLayoutItem } from '#features/boards/types/board'
 import type { BoardFilters, FilterOverride } from '#features/filters/types/filters'
+import type { QueryWidgetConfig } from '#features/widgets/types/queryWidget'
 
 const columns = 12
 const itemIdLength = 64
@@ -62,6 +63,25 @@ export function addWidgetItem(
       layout: stored(
         appendItem(board.layout, { i: id, w: widget.size.w, h: widget.size.h }, { columns }),
       ),
+    },
+  }
+}
+
+/** Appends a Query Widget at the size its chart kind starts at, below everything else. */
+export function addQueryItem(
+  board: BoardDocument,
+  title: string,
+  query: QueryWidgetConfig,
+  size: { w: number; h: number },
+): { board: BoardDocument; id: string } {
+  const id = uniqueItemId(board, `query-${slug(title) || 'widget'}`)
+  const item: BoardItem = { i: id, type: 'query', title, query }
+  return {
+    id,
+    board: {
+      ...board,
+      items: [...board.items, item],
+      layout: stored(appendItem(board.layout, { i: id, w: size.w, h: size.h }, { columns })),
     },
   }
 }

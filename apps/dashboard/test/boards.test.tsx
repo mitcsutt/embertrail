@@ -94,7 +94,8 @@ describe('BoardPage', () => {
   })
 
   it('draws a stored Board with its sections, unknown Widgets and Query Widgets', async () => {
-    openBoard('/boards/b-spend00001', fakeHub({ boards: { 'b-spend00001': storedBoard } }).client)
+    const hub = fakeHub({ boards: { 'b-spend00001': storedBoard } })
+    openBoard('/boards/b-spend00001', hub.client)
 
     expect(await screen.findByRole('heading', { level: 1, name: 'My spend' })).toBeVisible()
     const grid = within(await screen.findByRole('group', { name: 'My spend' }))
@@ -102,6 +103,12 @@ describe('BoardPage', () => {
     expect(grid.getByRole('group', { name: 'Cost today' })).toBeVisible()
     expect(grid.getByRole('group', { name: 'Unknown Widget' })).toBeVisible()
     expect(grid.getByRole('group', { name: 'My query' })).toBeVisible()
+    // The Query Widget asks the Hub for what its configuration says, like any Widget.
+    await waitFor(() => {
+      expect(hub.widgetRequests().map((request) => request.body)).toContainEqual(
+        expect.objectContaining({ metric: 'claude_code.cost.usage', aggregation: 'sum' }),
+      )
+    })
   })
 
   it('says so when the Board does not exist', async () => {

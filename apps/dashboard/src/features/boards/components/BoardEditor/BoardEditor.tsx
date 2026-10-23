@@ -16,6 +16,7 @@ import {
 import type { StoredBoard } from '#features/boards/data/boards'
 import type { BoardDocument } from '#features/boards/types/board'
 import {
+  addQueryItem,
   addSectionItem,
   addWidgetItem,
   removeBoardItem,
@@ -28,6 +29,7 @@ import { FilterBar } from '#features/filters/components/FilterBar'
 import { useInventory } from '#features/filters/data/inventory'
 import { useBoardFilters } from '#features/filters/hooks/useBoardFilters'
 import { useResolvedWindow } from '#features/filters/hooks/useResolvedWindow'
+import { AddQueryWidget } from '#features/widgets/components/AddQueryWidget'
 import { WidgetColorScope } from '#features/widgets/components/WidgetColorScope'
 import { useHub } from '#lib/hub'
 
@@ -156,6 +158,21 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
             >
               Add Widget
             </Button>
+            <AddQueryWidget
+              inventory={inventory.data}
+              onAdd={({ title, query, size }) => {
+                const result = addQueryItem(draft, title, query, size)
+                setDraft(result.board)
+                added.current = result.id
+              }}
+              onCloseAutoFocus={(event) => {
+                const id = added.current
+                added.current = undefined
+                if (id === undefined) return
+                event.preventDefault()
+                handles.get(id)?.focus()
+              }}
+            />
             <Button
               variant="outline"
               onClick={() => {

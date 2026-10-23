@@ -4,6 +4,7 @@ import { Card, Heading, Text } from '@mitcsutt/kiln-ui'
 import type { Inventory } from '#features/filters/data/inventory'
 import type { BoardFilters, FilterOverride } from '#features/filters/types/filters'
 import { useQueryContext } from '#features/filters/hooks/useQueryContext'
+import { QueryWidget } from '#features/widgets/components/QueryWidget'
 import { Widget } from '#features/widgets/components/Widget'
 import { getWidget } from '#features/widgets/constants/catalogue'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
@@ -110,9 +111,14 @@ function BoardItemView({
       )
     case 'query':
       return (
-        <Unavailable title={item.title}>
-          Query Widgets cannot be shown by this Dashboard yet.
-        </Unavailable>
+        <QueryWidget
+          title={item.title}
+          config={item.query}
+          override={item.override}
+          filters={filters}
+          now={now}
+          tz={tz}
+        />
       )
   }
 }
