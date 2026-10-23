@@ -28,6 +28,7 @@ server {
         if ($refuse_api) { return 404; }
         set $hub_upstream "${EMBERTRAIL_HUB_UPSTREAM}";
         proxy_pass $hub_upstream;
+        proxy_ssl_server_name on;
         proxy_set_header Authorization $hub_authorization;
         proxy_read_timeout 120s;
     }
