@@ -160,7 +160,7 @@ describe('Widget', () => {
     expect(screen.getByText('Cost this week')).toBeInTheDocument()
   })
 
-  it('shows Sessions today as a count and asks for no model filter', async () => {
+  it('shows Sessions today as a count and forwards the resolved filter', async () => {
     const queryMetrics = vi
       .fn<Call>()
       .mockResolvedValue({ rows: [{ group: {}, value: 7 }], meta: {} })

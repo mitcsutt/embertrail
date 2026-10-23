@@ -19,6 +19,10 @@ export interface WidgetData<Data> {
   refetch: () => void
 }
 
+// A 4xx rejection will be rejected again; a network failure or a 5xx may not be.
+const retryOnce = (count: number, error: unknown) =>
+  !(isProblemError(error) && error.status < 500) && count < 1
+
 /**
  * Runs a Widget's request and selects its data. The query is keyed on the exact request, so a
  * filter change that leaves it unchanged (a Widget's pinned filter, say) neither refetches nor
@@ -37,14 +41,14 @@ export function useWidgetData<Data>(
   const query = useQuery({
     queryKey: ['widget', request],
     queryFn: ({ signal }) => runRequest(client, request, signal),
-    // A 4xx rejection will be rejected again; a network failure or a 5xx may not be.
-    retry: (count, error) => !(isProblemError(error) && error.status < 500) && count < 1,
+    retry: retryOnce,
   })
 
   const wantsInventory = definition.inventory === true
   const inventory = useQuery({
     ...inventoryQueryOptions(client, { from: ctx.from, to: ctx.to }),
     enabled: wantsInventory,
+    retry: retryOnce,
   })
 
   const data = useMemo(
