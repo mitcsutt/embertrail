@@ -85,12 +85,16 @@ const hub = createHub({
   modules: hubModules, // @mitcsutt/embertrail-modules: otel, store; the one list every Platform and test shares
 })
 // hub.fetch(request), hub.migrate(), hub.boot(), hub.runRetention(),
-// hub.deleteBySource(id), hub.deleteByOwner(id), hub.exportOwner(module, ownerId),
+// hub.exportOwner(module, ownerId),
 // hub.directory (Users, Teams, Sources, Tokens, Accounts, Grants; createFirstUser)
 ```
 
 - **Docker** (`apps/server`, #37; [`self-hosting.md`](self-hosting.md)): config from env, `embertrail migrate` in the image's entrypoint, then `boot()` before listening, `fetch` through `@hono/node-server`, `runRetention()` hourly when `RETENTION_DAYS` is set.
 - **Cloudflare** (`apps/worker`, #38): config from bindings, `fetch` from the Worker handler, `runRetention()` from a cron trigger. Its entry imports `hubModules` from `@mitcsutt/embertrail-modules` (`apps/worker` has a `workerd` test that does). `embertrail migrate` runs before deploy, never at Worker startup.
+
+### The data lifecycle
+
+Retention, removal and export live in one module, `packages/hub/src/lifecycle/lifecycle.ts`, built from the Db Port, the checked Modules and the clock. It owns the one walk over each Module's declared tables. `createHub` only composes it: `hub.runRetention()` and `hub.exportOwner()` are its methods, and the Admin and self-management API reaches `remove.user`, `remove.team`, `remove.source` and `exportOwner` through the core op context. A removal deletes the `core` record and every row it owns or sent in one privileged transaction; there is no removal of Module rows alone, so a Platform that needs one outside HTTP calls the full one. Its tests run on PGLite without HTTP.
 
 `createHub` throws `HubBootError` when a Module breaks the contract; `boot()` checks the database ([what fails boot](writing-a-module.md#what-fails-boot)). `fetch` runs `boot()` once before the first op that reaches the database.
 

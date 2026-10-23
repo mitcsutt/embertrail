@@ -1,8 +1,6 @@
-import { sql } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { DbPort } from '../db/port'
-import type { Ctx } from '../module/define'
 import { noEdgeIdentity } from '../identity/edge'
 import { ledger } from '../testing/ledger'
 import { pgliteDb } from '../testing/pglite'
@@ -84,113 +82,6 @@ describe('createHub', () => {
       status: 404,
       detail: 'No route for GET /api/v1/nowhere',
     })
-  })
-
-  it('sweeps only rows older than retentionDays, across Owners', async () => {
-    const now = new Date('2026-10-19T00:00:00Z')
-    const hub = await start({ config: { retentionDays: 30 }, clock: () => now })
-    await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'new' })
-    await hub.as('bob', write).post('/api/v1/ledger/entries', { note: 'old' })
-    await hub.sql(sql`update ledger.entries set created_at = '2026-09-01' where note = 'old'`)
-    expect(await hub.hub.runRetention()).toEqual({ deleted: 1 })
-    expect(await hub.sql(sql`select note from ledger.entries`)).toEqual([{ note: 'new' }])
-  })
-
-  it('keeps everything when retentionDays is unset', async () => {
-    const hub = await start()
-    await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'kept' })
-    await hub.sql(sql`update ledger.entries set created_at = '2000-01-01'`)
-    expect(await hub.hub.runRetention()).toEqual({ deleted: 0 })
-  })
-
-  it('deletes by Source across Signal tables only, and by Owner across every table', async () => {
-    const hub = await start()
-    const laptop = hub.as('alice', write, { sourceId: 'laptop' })
-    await laptop.post('/api/v1/ledger/readings', { value: 1 })
-    await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'kept' })
-    await hub
-      .as('alice', write, { sourceId: 'desktop' })
-      .post('/api/v1/ledger/readings', { value: 2 })
-    await hub.as('bob', write).post('/api/v1/ledger/entries', { note: 'bob' })
-
-    expect(await hub.hub.deleteBySource('laptop')).toBe(1)
-    expect(await hub.sql(sql`select source_id from ledger.readings`)).toEqual([
-      { source_id: 'desktop' },
-    ])
-    expect(await hub.hub.deleteByOwner('alice')).toBe(2)
-    expect(await hub.sql(sql`select owner_id from ledger.entries`)).toEqual([{ owner_id: 'bob' }])
-  })
-
-  it('exports one Owner’s rows of one Module as JSON Lines', async () => {
-    const hub = await start()
-    await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'mine' })
-    await hub.as('bob', write).post('/api/v1/ledger/entries', { note: 'not mine' })
-    const lines = (await new Response(hub.hub.exportOwner('ledger', 'alice')).text())
-      .trimEnd()
-      .split('\n')
-    expect(lines.map((line) => JSON.parse(line) as unknown)).toEqual([
-      {
-        table: 'entries',
-        row: expect.objectContaining({ note: 'mine', owner_id: 'alice' }) as unknown,
-      },
-    ])
-  })
-
-  it.each([500, 501, 1001])('exports %i rows across pages, each exactly once', async (count) => {
-    const hub = await start()
-    await hub.sql(
-      sql`insert into ledger.entries (note, owner_id)
-        select 'n' || g, 'alice' from generate_series(1, ${count}::int) g`,
-    )
-    await hub.sql(sql`insert into ledger.entries (note, owner_id) values ('other', 'bob')`)
-    const lines = (await new Response(hub.hub.exportOwner('ledger', 'alice')).text())
-      .trimEnd()
-      .split('\n')
-    const notes = lines.map((line) => (JSON.parse(line) as { row: { note: string } }).row.note)
-    expect(notes).toHaveLength(count)
-    expect(new Set(notes).size).toBe(count)
-  })
-
-  it('streams an export, holding its transaction only until the stream ends', async () => {
-    let produced = 0
-    let released = 0
-    const endless = {
-      ...ledger,
-      async *export(ctx: Ctx) {
-        try {
-          for (;;) {
-            await ctx.db.execute(sql`select 1`)
-            produced += 1
-            if (produced === 10) throw new Error('export failed')
-            yield JSON.stringify({ n: produced })
-          }
-        } finally {
-          released += 1
-        }
-      },
-    }
-    const hub = await start({ modules: [endless] })
-    const decoder = new TextDecoder()
-
-    const reader = hub.hub.exportOwner('ledger', 'alice').getReader()
-    const lines: string[] = []
-    for (let i = 0; i < 3; i++) {
-      const { value } = await reader.read()
-      lines.push(decoder.decode(value))
-    }
-    expect(lines).toEqual(['{"n":1}\n', '{"n":2}\n', '{"n":3}\n'])
-    expect(produced).toBeLessThanOrEqual(4)
-    await reader.cancel()
-    expect(released).toBe(1)
-    expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
-
-    expect(hub.errors).toEqual([])
-
-    produced = 0
-    await expect(new Response(hub.hub.exportOwner('ledger', 'alice')).text()).rejects.toThrow()
-    expect(released).toBe(2)
-    expect(hub.errors).toEqual([expect.objectContaining({ message: 'export failed' })])
-    expect((await hub.as('alice', write).get('/api/v1/ledger/entries')).status).toBe(200)
   })
 
   it('reports an unexpected error with its request id and Module', async () => {
