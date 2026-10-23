@@ -9,6 +9,8 @@ export interface ConflictDialogProps {
   onReload: () => void
   /** Close the dialog and go on editing the draft. */
   onKeepEditing: () => void
+  onOpenAutoFocus: (event: Event) => void
+  onCloseAutoFocus: (event: Event) => void
 }
 
 function describe(conflict: BoardConflict): string {
@@ -22,7 +24,13 @@ function describe(conflict: BoardConflict): string {
 }
 
 /** Shown when a save or a delete loses to another change. The Board is never overwritten silently. */
-export function ConflictDialog({ conflict, onReload, onKeepEditing }: ConflictDialogProps) {
+export function ConflictDialog({
+  conflict,
+  onReload,
+  onKeepEditing,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+}: ConflictDialogProps) {
   return (
     <Dialog
       open={conflict !== undefined}
@@ -34,6 +42,8 @@ export function ConflictDialog({ conflict, onReload, onKeepEditing }: ConflictDi
         title="This Board changed elsewhere"
         description={conflict === undefined ? undefined : describe(conflict)}
         hideClose
+        onOpenAutoFocus={onOpenAutoFocus}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <Dialog.Footer>
           <Button variant="outline" onClick={onKeepEditing}>

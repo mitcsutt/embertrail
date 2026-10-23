@@ -46,6 +46,8 @@ export interface QueryWidgetEditorProps {
   onSave: (value: QueryWidgetValue) => void
   /** Where focus goes when the sheet closes, instead of back to the trigger. */
   onCloseAutoFocus?: (event: Event) => void
+  /** Runs as the sheet opens, while focus is still on what opened it. */
+  onOpenAutoFocus?: (event: Event) => void
 }
 
 const chartLabels: Record<WidgetKind, string> = {
@@ -433,6 +435,7 @@ export function QueryWidgetEditor({
   inventory,
   onSave,
   onCloseAutoFocus,
+  onOpenAutoFocus,
 }: QueryWidgetEditorProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -441,6 +444,7 @@ export function QueryWidgetEditor({
         description="Ask the Query API for any Metric or Event and pick how to draw the answer."
         size="lg"
         {...(onCloseAutoFocus !== undefined && { onCloseAutoFocus })}
+        {...(onOpenAutoFocus !== undefined && { onOpenAutoFocus })}
       >
         <QueryWidgetForm
           inventory={inventory}

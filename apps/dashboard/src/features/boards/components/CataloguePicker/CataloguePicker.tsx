@@ -9,7 +9,9 @@ export interface CataloguePickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAdd: (widget: WidgetDefinition) => void
-  /** Where focus goes when the sheet closes, instead of back to the trigger. */
+  /** Runs as the sheet opens, while focus is still on what opened it. */
+  onOpenAutoFocus: (event: Event) => void
+  /** Where focus goes when the sheet closes. */
   onCloseAutoFocus: (event: Event) => void
 }
 
@@ -24,6 +26,7 @@ export function CataloguePicker({
   open,
   onOpenChange,
   onAdd,
+  onOpenAutoFocus,
   onCloseAutoFocus,
 }: CataloguePickerProps) {
   const [query, setQuery] = useState('')
@@ -41,6 +44,7 @@ export function CataloguePicker({
       <Sheet.Content
         title="Add a Widget"
         description="Pick a Widget from the Catalogue to put at the bottom of the Board."
+        onOpenAutoFocus={onOpenAutoFocus}
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <Stack gap={4}>
