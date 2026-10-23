@@ -102,7 +102,7 @@ Retention, removal and export live in one module, `packages/hub/src/lifecycle/li
 
 Every route `fetch` serves is an op in one list ([`hub/ops.ts`](../packages/hub/src/hub/ops.ts), #79): the core's own (`openapi.json`, `docs`, `llms.txt`, `bootstrap`, `sql`), the Admin and self-management ops, then each Module's. An op (`HubOp` in [`hub/pipeline.ts`](../packages/hub/src/hub/pipeline.ts)) declares:
 
-- **who may call it:** anyone (`public`), the holder of `BOOTSTRAP_TOKEN` (`bootstrap`), or a caller holding a Scope (`scope`), with its rule for a Token bound to a Source (require, accept or refuse);
+- **who may call it:** anyone (`public`), the holder of `BOOTSTRAP_TOKEN` (`bootstrap`), a caller holding a Scope (`scope`), or any authenticated caller whatever their Scopes (`caller`, `getSelf`), each with its rule for a Token bound to a Source (require, accept or refuse);
 - **its schemas:** a typed op's input and output, or a raw op's own `Request`, `Response` and Operation Object;
 - **its transaction:** `scoped` (one transaction as the caller, under row-level security: every Module op), `privileged` (one `db.privileged` transaction, outside row-level security: the core's own ops, through `hub.directory.in(tx)`) or `none` (the op reaches the database itself: `bootstrap`, and `sql` as the readonly role).
 

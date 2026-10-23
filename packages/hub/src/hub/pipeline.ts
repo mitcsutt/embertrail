@@ -13,14 +13,15 @@ import { OutputError, parseOutput, readInput, validate } from './http'
 import type { OpenApiDocument } from './openapi'
 
 /**
- * Who may call an op: `anyone` (the op never reaches the database), the holder of
- * `BOOTSTRAP_TOKEN`, or a caller holding `scope`, with the op's rule for a Token bound to a
- * Source (#74).
+ * Who may call an op: `public` (the op never reaches the database), the holder of
+ * `BOOTSTRAP_TOKEN`, a caller holding `scope`, or any authenticated `caller` whatever their
+ * Scopes, each with the op's rule for a Token bound to a Source (#74).
  */
 export type Auth =
   | { kind: 'public' }
   | { kind: 'bootstrap' }
   | { kind: 'scope'; scope: Scope; source: SourceBinding }
+  | { kind: 'caller'; source: SourceBinding }
 
 /**
  * What the pipeline opens around an op: `scoped` is one transaction as the caller, under
@@ -159,7 +160,9 @@ export function pipeline(deps: PipelineDeps) {
       return undefined
     }
     const caller = await resolveCaller(request, edgeIdentity, resolver)
-    if (!caller.scopes.includes(auth.scope)) throw HubError.forbidden(`Needs Scope ${auth.scope}`)
+    if (auth.kind === 'scope' && !caller.scopes.includes(auth.scope)) {
+      throw HubError.forbidden(`Needs Scope ${auth.scope}`)
+    }
     if (auth.source === 'require' && caller.sourceId === undefined) {
       throw HubError.forbidden('Needs a Token bound to a Source')
     }

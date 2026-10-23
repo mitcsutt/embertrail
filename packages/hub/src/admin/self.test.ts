@@ -90,6 +90,61 @@ describe('self-management', () => {
     )
   })
 
+  describe('who you are', () => {
+    it('answers a solo User with no Teams and the Scopes of a read Token', async () => {
+      const alice = t.as('alice', ['alpha:read'])
+      const response = await alice.get('/api/v1/self')
+      expect(response.status).toBe(200)
+      expect(await body(response)).toEqual({
+        user: { id: 'alice', name: 'alice', email: null, admin: false },
+        scopes: ['alpha:read'],
+        teams: [],
+      })
+    })
+
+    it('lists the Teams you belong to, and whether you edit each', async () => {
+      await t.team('crew', { editors: ['carol'], members: ['dave'] })
+      await t.team('ops', { members: ['carol'] })
+      await t.team('other', { editors: ['erin'] })
+      const carol = await body<{ teams: unknown[] }>(
+        t.as('carol', ['alpha:read']).get('/api/v1/self'),
+      )
+      expect(carol.teams).toEqual([
+        { id: 'crew', name: 'crew', editor: true },
+        { id: 'ops', name: 'ops', editor: false },
+      ])
+      const dave = await body<{ teams: unknown[] }>(
+        t.as('dave', ['alpha:read']).get('/api/v1/self'),
+      )
+      expect(dave.teams).toEqual([{ id: 'crew', name: 'crew', editor: false }])
+    })
+
+    it('needs no Scope, only a caller', async () => {
+      await t.user('frank', { admin: true, email: 'Frank@Example.com' })
+      const frank = await body<{ user: unknown }>(
+        t.as('frank', ['admin', 'self:manage']).get('/api/v1/self'),
+      )
+      expect(frank.user).toEqual({
+        id: 'frank',
+        name: 'frank',
+        email: 'frank@example.com',
+        admin: true,
+      })
+      expect(await problem(t.anonymous.get('/api/v1/self'))).toEqual({
+        status: 401,
+        type: 'unauthenticated',
+      })
+    })
+
+    it('refuses a Token bound to a Source', async () => {
+      const ingest = t.as('alice', ['alpha:write'], { sourceId: 'laptop' })
+      expect(await problem(ingest.get('/api/v1/self'))).toEqual({
+        status: 403,
+        type: 'forbidden',
+      })
+    })
+  })
+
   describe('Sources', () => {
     it('creates, lists, renames and deletes your Sources', async () => {
       const alice = t.as('alice', ['self:manage', 'alpha:read', 'alpha:write'])

@@ -46,7 +46,7 @@ describe('the Admin and self-management API’s OpenAPI', () => {
     },
   )
 
-  it('lists every core admin and self operation the spec has, and bootstrap', () => {
+  it('lists every core admin and self operation the spec has, and bootstrap and getSelf', () => {
     const specified = Object.entries(spec.paths).flatMap(([path, item]) =>
       Object.entries(item ?? {})
         .filter(([, operation]) => {
@@ -56,7 +56,11 @@ describe('the Admin and self-management API’s OpenAPI', () => {
         .map(([method]) => `${method.toUpperCase()} ${path}`),
     )
     expect(specified.sort()).toEqual(
-      [...coreOps.map((op) => `${op.method} ${op.path}`), 'POST /api/v1/bootstrap'].sort(),
+      [
+        ...coreOps.map((op) => `${op.method} ${op.path}`),
+        'GET /api/v1/self',
+        'POST /api/v1/bootstrap',
+      ].sort(),
     )
     expect(served.paths['/api/v1/bootstrap']?.post).toBeDefined()
   })

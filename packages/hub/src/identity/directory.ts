@@ -148,6 +148,10 @@ export interface Directory {
   users(): Promise<User[]>
   /** Every Team with its members, oldest first. */
   teams(): Promise<(Team & { members: TeamMember[] })[]>
+  /** One User, or null when there is none. */
+  user(userId: string): Promise<User | null>
+  /** The Teams a User belongs to with their role in each, oldest first. */
+  teamsOf(userId: string): Promise<(Team & { role: TeamRole })[]>
   /** One User's Sources, or every Source when `userId` is omitted, oldest first. */
   sources(userId?: string): Promise<Source[]>
   renameSource(sourceId: string, name: string): Promise<Source>
@@ -582,6 +586,23 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
           tx.select().from(users).orderBy(asc(users.createdAt), asc(users.id)),
         )
         return found.map(toUser)
+      },
+
+      async user(userId) {
+        const [row] = await run((tx) => tx.select().from(users).where(eq(users.id, userId)))
+        return row === undefined ? null : toUser(row)
+      },
+
+      async teamsOf(userId) {
+        const found = await run((tx) =>
+          tx
+            .select({ team: teams, role: teamMembers.role })
+            .from(teamMembers)
+            .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+            .where(eq(teamMembers.userId, userId))
+            .orderBy(asc(teams.createdAt), asc(teams.id)),
+        )
+        return found.map((f) => ({ id: f.team.id, name: f.team.name, role: f.role }))
       },
 
       async teams() {
