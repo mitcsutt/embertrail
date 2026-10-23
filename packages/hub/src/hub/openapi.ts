@@ -1,9 +1,7 @@
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec'
 
-import type { CoreOp } from '../admin/core-op'
-import { opScope } from '../module/define'
-import type { Module, TypedOp } from '../module/define'
 import { HubBootError } from '../module/errors'
+import type { HubOp, TypedHubOp } from './pipeline'
 
 type Json = Record<string, unknown>
 
@@ -45,26 +43,18 @@ const ownerHeader = {
   schema: { type: 'string', pattern: '^team:[A-Za-z0-9_-]{1,64}$' },
 }
 
-/** Ingest takes a Token bound to a Source; an Edge Identity alone cannot send. */
-const sourceBoundSecurity = { security: [{ bearerToken: [] }] }
+/** Ingest and bootstrap take a bearer Token; an Edge Identity alone cannot call them. */
+const tokenOnly = { security: [{ bearerToken: [] }] }
 
 const statusDescriptions = { 200: 'OK', 201: 'Created', 204: 'No Content' } as const
 
 /**
- * A typed op's Operation Object: path, header and (for GET and DELETE) query parameters, or a
- * body; one response per status.
+ * A typed op's Operation Object, from the schemas that validate it: path, header and (for GET
+ * and DELETE) query parameters, or a body; one response per status.
  */
-function typedOperation(
-  subject: Subject,
-  key: string,
-  op: Pick<
-    TypedOp,
-    'kind' | 'method' | 'path' | 'input' | 'output' | 'headers' | 'statuses' | 'etag'
-  > &
-    Partial<Pick<TypedOp, 'source'>>,
-) {
-  const input = jsonSchema(op.input, 'input', subject, key)
-  const output = jsonSchema(op.output, 'output', subject, key)
+function typedOperation(subject: Subject, op: TypedHubOp) {
+  const input = jsonSchema(op.input, 'input', subject, op.key)
+  const output = jsonSchema(op.output, 'output', subject, op.key)
   const properties = isRecord(input.properties) ? input.properties : {}
   const required = Array.isArray(input.required) ? (input.required as string[]) : []
   const inPath = [...op.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1] ?? '')
@@ -83,7 +73,7 @@ function typedOperation(
     })
   }
   // The core reads this header before any op runs, so every write can name a Team.
-  if (op.kind === 'mutate') parameters.push(ownerHeader)
+  if (op.ownerHeader) parameters.push(ownerHeader)
   const rest = Object.keys(properties).filter(
     (name) => !inPath.includes(name) && !Object.hasOwn(op.headers, name),
   )
@@ -102,39 +92,66 @@ function typedOperation(
     requestBody = { required: true, content: { 'application/json': { schema: input } } }
   } else if (rest.length > 0) {
     const bodyRequired = required.filter((name) => rest.includes(name))
+    const schema = Object.fromEntries(Object.entries(input).filter(([k]) => k !== 'required'))
     requestBody = {
       required: bodyRequired.length > 0,
       content: {
         'application/json': {
           schema: {
-            ...input,
+            ...schema,
             properties: Object.fromEntries(rest.map((name) => [name, properties[name]])),
-            required: bodyRequired,
+            ...(bodyRequired.length > 0 ? { required: bodyRequired } : {}),
           },
         },
       },
     }
   }
+  const problem = { default: { $ref: '#/components/responses/Problem' } }
   return {
-    ...(op.kind === 'ingest' ? sourceBoundSecurity : {}),
     ...(parameters.length > 0 ? { parameters } : {}),
     ...(requestBody === undefined ? {} : { requestBody }),
-    responses: {
-      ...Object.fromEntries(
-        op.statuses.map((status) => [
-          String(status),
-          {
-            description: statusDescriptions[status],
-            ...(op.etag ? { headers: { ETag: { $ref: '#/components/headers/ETag' } } } : {}),
-            ...(status === 204 ? {} : { content: { 'application/json': { schema: output } } }),
-          },
-        ]),
-      ),
-      ...(op.source === 'refuse'
-        ? { '403': { $ref: '#/components/responses/SourceRefused' } }
-        : {}),
-      default: { $ref: '#/components/responses/Problem' },
-    },
+    responses:
+      op.responses === undefined
+        ? {
+            ...Object.fromEntries(
+              op.statuses.map((status) => [
+                String(status),
+                {
+                  description: statusDescriptions[status],
+                  ...(op.etag ? { headers: { ETag: { $ref: '#/components/headers/ETag' } } } : {}),
+                  ...(status === 204
+                    ? {}
+                    : { content: { 'application/json': { schema: output } } }),
+                },
+              ]),
+            ),
+            ...(op.auth.kind === 'scope' && op.auth.source === 'refuse'
+              ? { '403': { $ref: '#/components/responses/SourceRefused' } }
+              : {}),
+            ...problem,
+          }
+        : { ...op.responses, ...problem },
+  }
+}
+
+/** Who may call the op, as OpenAPI security; omitted, the document's default applies. */
+function security(op: HubOp) {
+  if (op.auth.kind === 'public') return { security: [] }
+  if (op.auth.kind === 'bootstrap' || op.auth.source === 'require') return tokenOnly
+  return {}
+}
+
+function operation(op: HubOp) {
+  const subject = op.module === 'core' ? 'Hub core' : `Module "${op.module}"`
+  return {
+    operationId: `${op.module}.${op.key}`,
+    summary: op.summary,
+    ...(op.description === undefined ? {} : { description: op.description }),
+    ...(op.tags === undefined ? {} : { tags: op.tags }),
+    'x-embertrail-module': op.module,
+    ...(op.auth.kind === 'scope' ? { 'x-embertrail-scope': op.auth.scope } : {}),
+    ...security(op),
+    ...(op.kind === 'raw' ? op.openapi : typedOperation(subject, op)),
   }
 }
 
@@ -161,198 +178,14 @@ const problemSchema = {
   },
 }
 
-/** `POST /api/v1/sql` (#34), as `runSql` in spec/query-api.yaml. */
-const sqlOperation = {
-  operationId: 'core.sql',
-  summary: 'Run one read-only SQL statement',
-  description:
-    'Runs a single `SELECT` as the read-only database role, with the caller’s row-level security applied. 10 s statement timeout; at most 10,000 rows, and `truncated` says whether more existed.',
-  'x-embertrail-module': 'core',
-  'x-embertrail-scope': 'sql:read',
-  requestBody: {
-    required: true,
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          required: ['sql'],
-          additionalProperties: false,
-          properties: {
-            sql: { type: 'string', minLength: 1, maxLength: 20_000 },
-            params: {
-              type: 'array',
-              maxItems: 100,
-              items: { type: ['string', 'number', 'boolean', 'null'] },
-            },
-          },
-        },
-      },
-    },
-  },
-  responses: {
-    '200': {
-      description: 'The result set',
-      content: {
-        'application/json': {
-          schema: {
-            type: 'object',
-            required: ['columns', 'rows', 'truncated'],
-            properties: {
-              columns: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  required: ['name', 'type'],
-                  properties: { name: { type: 'string' }, type: { type: 'string' } },
-                },
-              },
-              rows: { type: 'array', maxItems: 10_000, items: { type: 'array' } },
-              truncated: { type: 'boolean' },
-            },
-          },
-        },
-      },
-    },
-    default: { $ref: '#/components/responses/Problem' },
-  },
-}
-
 /**
- * Assembles the Hub's OpenAPI 3.1 document from every op (#25) and the core's own ops (#30),
- * served at `/api/v1/openapi.json`. Built at boot, so a schema that can't convert fails boot.
+ * Assembles the Hub's OpenAPI 3.1 document from every op it serves (#79), served at
+ * `/api/v1/openapi.json`. Built at boot, so a schema that can't convert fails boot.
  */
-export function buildOpenApi(modules: readonly Module[], coreOps: readonly CoreOp[] = []) {
-  const paths: Record<string, Json> = {
-    '/api/v1/openapi.json': {
-      get: {
-        operationId: 'core.openapi',
-        summary: 'This document',
-        security: [],
-        'x-embertrail-module': 'core',
-        responses: {
-          '200': {
-            description: 'The OpenAPI document',
-            content: { 'application/json': { schema: { type: 'object' } } },
-          },
-        },
-      },
-    },
-    '/api/v1/docs': {
-      get: {
-        operationId: 'core.docs',
-        summary: 'Human-readable API reference rendered from `openapi.json`',
-        security: [],
-        'x-embertrail-module': 'core',
-        responses: {
-          '200': {
-            description: 'HTML page.',
-            content: { 'text/html': { schema: { type: 'string' } } },
-          },
-        },
-      },
-    },
-    '/llms.txt': {
-      get: {
-        operationId: 'core.llmsTxt',
-        summary: 'Plain-text pointer to the API for AI agents',
-        security: [],
-        'x-embertrail-module': 'core',
-        responses: {
-          '200': {
-            description: 'Markdown text.',
-            content: { 'text/markdown': { schema: { type: 'string' } } },
-          },
-        },
-      },
-    },
-    '/api/v1/bootstrap': {
-      post: {
-        operationId: 'core.bootstrap',
-        summary: 'Exchange BOOTSTRAP_TOKEN for the first User and an admin Token, once',
-        description:
-          'Authenticates with `Authorization: Bearer <BOOTSTRAP_TOKEN>`, not a Token. Answers 401 once an admin User exists or bootstrap has been used, and when BOOTSTRAP_TOKEN is unset or wrong.',
-        security: [{ bearerToken: [] }],
-        'x-embertrail-module': 'core',
-        requestBody: {
-          required: false,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                additionalProperties: false,
-                properties: {
-                  name: { type: 'string', minLength: 1, maxLength: 200 },
-                  email: { type: 'string', format: 'email' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': {
-            description: 'The first User and its admin Token, shown once',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['user', 'token'],
-                  properties: {
-                    user: {
-                      type: 'object',
-                      required: ['id', 'name', 'email', 'admin'],
-                      properties: {
-                        id: { type: 'string' },
-                        name: { type: 'string' },
-                        email: { type: ['string', 'null'] },
-                        admin: { type: 'boolean' },
-                      },
-                    },
-                    token: { type: 'string', description: '`et_<id>_<secret>`' },
-                  },
-                },
-              },
-            },
-          },
-          default: { $ref: '#/components/responses/Problem' },
-        },
-      },
-    },
-    '/api/v1/sql': { post: sqlOperation },
-  }
-  for (const module of modules) {
-    for (const [key, op] of Object.entries(module.ops)) {
-      const operation = {
-        operationId: `${module.name}.${key}`,
-        summary: op.summary,
-        'x-embertrail-module': module.name,
-        'x-embertrail-scope': opScope(module.name, op),
-        ...(op.kind === 'raw'
-          ? { ...(op.source === 'require' ? sourceBoundSecurity : {}), ...op.openapi }
-          : typedOperation(`Module "${module.name}"`, key, op)),
-      }
-      paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
-    }
-  }
-  for (const op of coreOps) {
-    const generated = typedOperation('Hub core', op.key, {
-      ...op,
-      kind: 'query',
-      headers: {},
-      etag: false,
-    })
-    const operation = {
-      operationId: `core.${op.key}`,
-      summary: op.summary,
-      ...(op.description === undefined ? {} : { description: op.description }),
-      tags: [op.tag],
-      'x-embertrail-module': 'core',
-      'x-embertrail-scope': op.scope,
-      ...generated,
-      ...(op.responses === undefined
-        ? {}
-        : { responses: { ...op.responses, default: generated.responses.default } }),
-    }
-    paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation }
+export function buildOpenApi(ops: readonly HubOp[]) {
+  const paths: Record<string, Json> = {}
+  for (const op of ops) {
+    paths[op.path] = { ...paths[op.path], [op.method.toLowerCase()]: operation(op) }
   }
   return {
     openapi: '3.1.0',

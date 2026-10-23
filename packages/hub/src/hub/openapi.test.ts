@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { defineModule, op } from '../module/define'
 import { buildOpenApi } from './openapi'
+import { hubOps } from './ops'
 
 type Operation = Record<string, unknown>
 
@@ -47,7 +48,7 @@ const unionModule = defineModule({
 })
 
 describe('buildOpenApi', () => {
-  const document = buildOpenApi([unionModule])
+  const document = buildOpenApi(hubOps([unionModule]))
 
   it('uses the whole schema as the body of an op whose input is a union', () => {
     expect(operation(document, '/api/v1/shapes/query', 'post')?.requestBody).toMatchObject({

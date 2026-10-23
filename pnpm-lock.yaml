@@ -518,6 +518,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
       eslint:
         specifier: 'catalog:'
         version: 10.13.0(jiti@2.6.1)(supports-color@10.2.2)

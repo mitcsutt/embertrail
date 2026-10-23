@@ -1,10 +1,10 @@
 import { getTableConfig } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
-import { coreOps } from '../admin/ops'
 import { contractVersion, ownedTableInfo } from '../module/define'
-import type { HttpMethod, Module } from '../module/define'
+import type { Module } from '../module/define'
 import { HubBootError } from '../module/errors'
+import type { HubOp } from './pipeline'
 import { routeKey } from './router'
 
 /** The Hub's config, built by each Platform's entry file and validated at boot. */
@@ -38,16 +38,6 @@ export function parseConfig(config: HubConfig) {
   }
   return result.data
 }
-
-/** Routes the core serves itself, the Admin API's included; no op may take them. */
-export const coreRoutes: readonly { method: HttpMethod; path: string }[] = [
-  { method: 'GET', path: '/api/v1/openapi.json' },
-  { method: 'GET', path: '/api/v1/docs' },
-  { method: 'GET', path: '/llms.txt' },
-  { method: 'POST', path: '/api/v1/bootstrap' },
-  { method: 'POST', path: '/api/v1/sql' },
-  ...coreOps.map(({ method, path }) => ({ method, path })),
-]
 
 const namePattern = /^[a-z][a-z0-9_]{0,62}$/
 const reservedNames = new Set(['core', 'public', 'information_schema'])
@@ -125,21 +115,20 @@ function checkModule(module: Module) {
   }
 }
 
-function checkPaths(modules: readonly Module[]) {
-  const taken = new Map<string, string>(coreRoutes.map((r) => [routeKey(r.method, r.path), 'core']))
-  for (const module of modules) {
-    for (const [key, op] of Object.entries(module.ops)) {
-      const route = routeKey(op.method, op.path)
-      const owner = taken.get(route)
-      if (owner !== undefined) {
-        throw new HubBootError(
-          `Module "${module.name}"`,
-          'duplicate path',
-          `op "${key}" (${op.method} ${op.path}) collides with a route of ${owner === 'core' ? 'the core' : `Module "${owner}"`}`,
-        )
-      }
-      taken.set(route, module.name)
+/** Boot's duplicate-path check over every route the Hub serves, the core's first. */
+export function checkPaths(ops: readonly HubOp[]) {
+  const taken = new Map<string, string>()
+  for (const op of ops) {
+    const route = routeKey(op.method, op.path)
+    const owner = taken.get(route)
+    if (owner !== undefined) {
+      throw new HubBootError(
+        op.module === 'core' ? 'Hub core' : `Module "${op.module}"`,
+        'duplicate path',
+        `op "${op.key}" (${op.method} ${op.path}) collides with a route of ${owner === 'core' ? 'the core' : `Module "${owner}"`}`,
+      )
     }
+    taken.set(route, op.module)
   }
 }
 
@@ -178,7 +167,7 @@ function order(modules: readonly Module[]) {
   return ordered
 }
 
-/** Boot's static checks. Returns the Modules in migration order. */
+/** Boot's static checks of each Module. Returns the Modules in migration order. */
 export function checkModules(modules: readonly Module[]): Module[] {
   const names = new Set<string>()
   for (const module of modules) {
@@ -192,6 +181,5 @@ export function checkModules(modules: readonly Module[]): Module[] {
     }
     names.add(module.name)
   }
-  checkPaths(modules)
   return order(modules)
 }

@@ -131,6 +131,8 @@ function simplify(node: Json) {
   ) {
     delete result.type
   }
+  // Items that accept anything are the same as leaving them out.
+  if (isRecord(result.items) && Object.keys(result.items).length === 0) delete result.items
   if (Array.isArray(result.required))
     result.required = [...new Set(result.required as string[])].sort()
   if (Array.isArray(result.type)) result.type = [...(result.type as string[])].sort()
