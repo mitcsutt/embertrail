@@ -44,8 +44,8 @@ export function BoardNav() {
   return (
     <Stack gap={3}>
       {list('Presets', presets)}
-      {sections.map(({ label, boards }) => (
-        <Stack key={label} gap={1}>
+      {sections.map(({ key, label, boards }) => (
+        <Stack key={key} gap={1}>
           <Text size="xs" tone="muted">
             {label}
           </Text>

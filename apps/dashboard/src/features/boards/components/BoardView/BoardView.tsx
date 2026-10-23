@@ -152,7 +152,7 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
             </Inline>
           ) : null}
         </Inline>
-        {owning !== undefined && !writable ? (
+        {owning !== undefined && canCreate && !writable ? (
           <Text size="sm" tone="muted">
             {owning.name} owns this Board and you cannot edit it. Customise copies it into your own
             Boards.
