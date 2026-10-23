@@ -135,7 +135,7 @@ describe('Widget', () => {
       'claude-opus-4-7',
       'claude-haiku-4-5',
     ])
-    expect(table.getByRole('row', { name: /3 Nov/ })).toHaveTextContent(
+    expect(table.getByRole('row', { name: /3 Nov|Nov 3/ })).toHaveTextContent(
       `${formatUsd(4)}${formatUsd(1)}`,
     )
   })
