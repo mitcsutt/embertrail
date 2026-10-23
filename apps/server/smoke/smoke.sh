@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Smoke test for the Docker Platform (#37): boots the compose stack from the repository root,
-# ingests a Claude Code fixture and queries it back. CI runs it; so can you:
+# runs the built CLI's `setup claude-code` against it, ingests Claude Code fixtures with the
+# credentials the CLI wrote and queries them back. CI runs it; so can you:
 #   apps/server/smoke/smoke.sh
 # It uses its own compose project and a random local port, and removes both volumes and image
-# containers when it ends. Needs docker, curl and jq.
+# containers when it ends. Needs docker, curl, jq and a built CLI (`pnpm --filter
+# @mitcsutt/embertrail-cli build`); the CLI runs with a temporary HOME, so your own
+# ~/.claude is never touched.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/../../.." && pwd)
@@ -14,8 +17,15 @@ hub="http://localhost:$EMBERTRAIL_PORT"
 
 compose() { docker compose --project-directory "$root" -p "$project" "$@"; }
 fail() { echo "smoke: FAIL: $*" >&2; compose logs --no-color hub >&2 || true; exit 1; }
-cleanup() { compose down --volumes --remove-orphans >/dev/null 2>&1 || true; }
+home=$(mktemp -d)
+cleanup() {
+  rm -rf "$home"
+  compose down --volumes --remove-orphans >/dev/null 2>&1 || true
+}
 trap cleanup EXIT
+
+cli="$root/packages/cli/dist/bin.js"
+[ -f "$cli" ] || { echo "smoke: build the CLI first: pnpm --filter @mitcsutt/embertrail-cli build" >&2; exit 1; }
 
 echo "smoke: starting $project on $hub"
 compose up --detach --build --wait
@@ -33,11 +43,24 @@ api() { # api METHOD PATH TOKEN [BODY-FILE]
     --header "authorization: Bearer $token" --header 'content-type: application/json' "$@"
 }
 
-echo "smoke: the printed Token manages the Hub"
-ingest=$(api POST /api/v1/self/sources "$management" --data '{"name":"smoke"}' | jq -r .token.token)
-[ -n "$ingest" ] && [ "$ingest" != null ] || fail "no ingest Token"
+echo "smoke: the printed Token manages the Hub, and the CLI sets up Claude Code with it"
+# HOME is a temporary directory and CLAUDE_CONFIG_DIR is unset, so the settings file lands in
+# $home/.claude and the real one is never read or written.
+env -u CLAUDE_CONFIG_DIR HOME="$home" EMBERTRAIL_CONFIG_DIR="$home/embertrail" \
+  EMBERTRAIL_HUB="$hub" EMBERTRAIL_TOKEN="$management" \
+  node "$cli" setup claude-code --source smoke >/dev/null || fail "embertrail setup claude-code failed"
+settings="$home/.claude/settings.json"
+[ -f "$settings" ] || fail "setup claude-code wrote no settings file at $settings"
+endpoint=$(jq -r '.env.OTEL_EXPORTER_OTLP_ENDPOINT // empty' "$settings")
+headers=$(jq -r '.env.OTEL_EXPORTER_OTLP_HEADERS // empty' "$settings")
+[ "$endpoint" = "$hub" ] || fail "the written env block has endpoint '$endpoint', expected $hub"
+case "$headers" in
+  'Authorization=Bearer et_'*) ;;
+  *) fail "the written env block has no Authorization header" ;;
+esac
+ingest=${headers#Authorization=Bearer }
 
-echo "smoke: ingesting the fixtures"
+echo "smoke: ingesting the fixtures with the credentials the CLI wrote"
 for pair in logs-startup:logs logs-turn:logs metrics-first:metrics metrics-second:metrics; do
   file=${pair%%:*}; signal=${pair##*:}
   api POST "/v1/$signal" "$ingest" --data-binary "@$fixtures/$file.json" >/dev/null
@@ -55,6 +78,6 @@ for _ in $(seq 60); do curl --silent --fail "$hub/api/v1/openapi.json" >/dev/nul
 curl --silent --fail "$hub/api/v1/openapi.json" >/dev/null || fail "the Hub did not come back after the restart"
 # The log may start empty after a restart, so only a Token other than the first is a failure.
 [ -z "$(tokens | grep -vxF "$management" || true)" ] || fail "a restart printed another Token"
-[ "$(api GET /api/v1/admin/users "$management" | jq 'length')" -eq 1 ] || fail "expected one User"
+[ "$(api GET /api/v1/admin/users "$management" | jq '.items | length')" -eq 1 ] || fail "expected one User"
 
 echo "smoke: ok"
