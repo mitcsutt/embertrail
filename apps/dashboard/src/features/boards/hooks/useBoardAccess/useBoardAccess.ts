@@ -20,10 +20,11 @@ export interface BoardAccess {
 
 /**
  * What the caller may do with Boards, from `getSelf`: their own, and those of the Teams they edit.
- * A Hub that does not answer leaves the write itself to report a refusal, as `useSelf` does.
+ * A Hub that errors leaves the write itself to report a refusal, as `useSelf` does; until it
+ * answers, a Team's Board is read-only.
  */
 export function useBoardAccess(): BoardAccess {
-  const { self, canEdit } = useSelf()
+  const { self, canEdit, pending } = useSelf()
   const teams = self?.teams ?? noTeams
   return {
     teams,
@@ -32,7 +33,7 @@ export function useBoardAccess(): BoardAccess {
     canWrite: (owner) =>
       canEdit &&
       (owner.kind === 'user' ||
-        self === undefined ||
+        (self === undefined && !pending) ||
         teams.some(({ id, editor }) => id === owner.id && editor)),
   }
 }

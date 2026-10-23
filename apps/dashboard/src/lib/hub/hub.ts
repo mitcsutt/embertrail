@@ -37,13 +37,21 @@ export function useHub(): Hub {
  * Who the Hub says is calling. A Hub without `getSelf`, or a Token it refuses, leaves `self`
  * undefined and `canEdit` true: the write itself reports a missing Scope.
  */
-export function useSelf(): { self: Schemas['Self'] | undefined; canEdit: boolean } {
+export function useSelf(): {
+  self: Schemas['Self'] | undefined
+  canEdit: boolean
+  pending: boolean
+} {
   const { client, hubUrl } = useHub()
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['hub', hubUrl, 'getSelf'],
     queryFn: ({ signal }) => client.getSelf({ signal }),
     retry: false,
     staleTime: Infinity,
   })
-  return { self: data, canEdit: data === undefined || data.scopes.includes('store:write') }
+  return {
+    self: data,
+    canEdit: data === undefined || data.scopes.includes('store:write'),
+    pending: isPending,
+  }
 }

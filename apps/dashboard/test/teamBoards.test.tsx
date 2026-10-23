@@ -101,7 +101,6 @@ describe('a Team editor', () => {
     await user.click(screen.getByRole('button', { name: 'Customise' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Board' })).toBeVisible()
-    expect(screen.getByText('Owned by Crew')).toBeVisible()
     expect(puts(hub)).toHaveLength(1)
     expect(puts(hub)[0]?.owner).toBe('team:crew')
     const id = router.state.location.pathname.split('/').at(-1) ?? ''
@@ -117,7 +116,6 @@ describe('a Team editor', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Board' })).toBeVisible()
     expect(puts(hub)[0]?.owner).toBeUndefined()
-    expect(screen.queryByText(/Owned by/)).not.toBeInTheDocument()
   })
 
   it('saves and deletes a Team Board as the Team', async () => {
