@@ -62,7 +62,7 @@ apps/dashboard/
     features/
       filters/             # types, utils (resolveWindow, toQueryContext), hooks, data, components
       widgets/             # the Widget framework and the first Catalogue entries, see Widgets
-      boards/{types,schemas,utils,constants,data,components,pages}  # BoardDocument and its schema, Presets, the store, BoardView and BoardGrid, BoardPage
+      boards/{types,schemas,utils,constants,data,hooks,components,pages}  # BoardDocument and its schema, Presets, the store, BoardView and BoardGrid, BoardPage
       sessions/pages/      # SessionGroupsPage, SessionPage
 ```
 
@@ -124,7 +124,7 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 - **`BoardGrid`** (`components/BoardGrid`) draws the stored 12-column Layout with kiln-dnd's `GridLayout` (`columns` 4, 8 and 12 by width, narrower ones generated from the stored one). View mode has no `DragHandle` and `resizable={false}`, so nothing moves. A `section` is an `h2`; a `widget` is a `Widget` with its own `QueryContext` (pinned `override` applied); a Widget id the Catalogue does not have is an "Unknown Widget" frame, and a `query` item a frame saying Query Widgets cannot be shown yet, so one item never takes the Board down.
 - **Edit is not here yet.** "Customise" (Presets) and "Edit" (stored Boards) are disabled buttons shown when `useSelf().canEdit`; the Board editor replaces them (#72 D7).
 - **Navigation** (`app/components`): `BoardNav` is the sidebar list (Presets, then stored Boards, then "New Board", which is the empty Preset), and `JumpPalette` is the `CommandPalette` on ⌘K or Ctrl+K (and a "Jump to…" button) over the same Boards and the Session Groups page. A Hub that refuses the Board list leaves the Presets. Both list `presetIds` in order, named by each Preset's own `name`.
-- Features import each other's public kinds only, so `app` and `boards` reach `filters` and `widgets` through hooks and components (`useQueryContext`, `useResolvedWindow`, `WidgetColorScope`), not their `utils`.
+- Features import each other's public kinds only, so `app` and `boards` reach `filters` and `widgets` through hooks and components (`useQueryContext`, `useResolvedWindow`, `usePresetList`, `WidgetColorScope`), not their `utils`.
 
 ## Widgets
 

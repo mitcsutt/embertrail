@@ -4,15 +4,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { useBoardList } from '#features/boards/data/boards'
-import { presetIds } from '#features/boards/types/board'
-import { presetBoard } from '#features/boards/utils/presets'
-import { catalogue } from '#features/widgets/constants/catalogue'
+import { usePresetList } from '#features/boards/hooks/usePresetList'
 import { useHub } from '#lib/hub'
 
 /** ⌘K (Ctrl+K elsewhere): jump to any Board, or to the Session Groups. */
 export function JumpPalette() {
   const { client } = useHub()
   const { data } = useBoardList(client)
+  const presets = usePresetList()
   const navigate = useNavigate()
 
   const actions = useMemo<CommandAction[]>(() => {
@@ -25,7 +24,7 @@ export function JumpPalette() {
       },
     })
     return [
-      ...presetIds.map((id) => board(id, presetBoard(id, catalogue).name, 'Presets')),
+      ...presets.map(({ id, name }) => board(id, name, 'Presets')),
       ...(data?.boards ?? []).map(({ id, name }) => board(id, name, 'Boards')),
       {
         id: 'sessions',
@@ -36,7 +35,7 @@ export function JumpPalette() {
         },
       },
     ]
-  }, [data?.boards, navigate])
+  }, [data?.boards, presets, navigate])
 
   return (
     <CommandPalette
