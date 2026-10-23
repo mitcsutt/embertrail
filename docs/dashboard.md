@@ -140,7 +140,7 @@ A Board belongs to its `StoreDocument.owner`: the User, or a Team. Team Boards f
 - **Writing.** `createBoard`, `saveBoard` and `deleteBoard` take `{ team }` and then send `Embertrail-Owner: team:<id>`; nothing else does (reads never, and a Board of one's own never). The Hub refuses a write to a Team's Board without it (and by a non-editor with it), so `BoardEditor` passes `teamOf(stored.owner)` on Save and Delete. The Owner of a Board never changes in edit mode.
 - **Creating.** **Customise** on a Preset (New Board included) shows an **Owner** select, "Yours" or a Team the caller edits (`useBoardAccess().editorTeams`), only when there is at least one editor Team. The copy is owned by the choice.
 - **Not an editor.** A Board of a Team the caller only belongs to is read-only: no Edit, `?edit=true` ignored, a note says who owns it, and **Customise** copies it into the caller's own Boards (never into the Team's). Without `store:write` nothing is offered at all.
-- A Hub that does not answer `getSelf` leaves `self` undefined: Team Boards are then offered as editable and the write reports its own 403, as for `canEdit`.
+- While `getSelf` is pending a Team's Board is read-only; a Hub that errors leaves `self` undefined and Team Boards are then offered as editable, the write reporting its own 403, as for `canEdit`.
 
 ## Session Groups
 
