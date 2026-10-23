@@ -48,7 +48,10 @@ describe('lifecycle', () => {
       clock,
     })
     const query = <T>(query: ReturnType<typeof sql>) => port.privileged((tx) => rows<T>(tx, query))
-    return { db: port, subject, directory, query, errors }
+    /** Removes on one privileged transaction, as a core op does. */
+    const remove = <T>(run: (remove: ReturnType<typeof subject.remove>) => Promise<T>) =>
+      port.privileged((tx) => run(subject.remove(tx)))
+    return { db: port, subject, directory, query, remove, errors }
   }
 
   /** A User with an ingest Token bound to one Source. */
@@ -98,14 +101,14 @@ describe('lifecycle', () => {
       await reading(t.db, 'alice', 'desktop', 2)
       await entry(t.db, 'alice', 'kept')
 
-      expect(await t.subject.remove.source('laptop')).toBe(true)
+      expect(await t.remove((r) => r.source('laptop'))).toBe(true)
       expect(await t.query(sql`select source_id from ledger.readings`)).toEqual([
         { source_id: 'desktop' },
       ])
       expect(await t.query(sql`select id from core.sources where id = 'laptop'`)).toEqual([])
       expect(await t.query(sql`select id from core.tokens where source_id = 'laptop'`)).toEqual([])
       expect(await t.query(sql`select note from ledger.entries`)).toHaveLength(1)
-      expect(await t.subject.remove.source('laptop')).toBe(false)
+      expect(await t.remove((r) => r.source('laptop'))).toBe(false)
     })
 
     it('removes a User with every row it owns, its record and its Tokens', async () => {
@@ -117,13 +120,13 @@ describe('lifecycle', () => {
       await reading(t.db, 'alice', 'laptop', 1)
       await entry(t.db, 'bob', 'b1')
 
-      expect(await t.subject.remove.user('alice')).toBe(true)
+      expect(await t.remove((r) => r.user('alice'))).toBe(true)
       expect(await t.query(sql`select owner_id from ledger.entries`)).toEqual([{ owner_id: 'bob' }])
       expect(await t.query(sql`select 1 from ledger.readings`)).toEqual([])
       expect(await t.query(sql`select id from core.users where id = 'alice'`)).toEqual([])
       expect(await t.query(sql`select id from core.sources where owner_id = 'alice'`)).toEqual([])
       expect(await t.query(sql`select id from core.tokens where user_id = 'alice'`)).toEqual([])
-      expect(await t.subject.remove.user('alice')).toBe(false)
+      expect(await t.remove((r) => r.user('alice'))).toBe(false)
     })
 
     it('removes a Team with every row it owns, its record and its memberships', async () => {
@@ -134,14 +137,14 @@ describe('lifecycle', () => {
       await entry(t.db, 'crew', 'shared')
       await entry(t.db, 'alice', 'mine')
 
-      expect(await t.subject.remove.team('crew')).toBe(true)
+      expect(await t.remove((r) => r.team('crew'))).toBe(true)
       expect(await t.query(sql`select owner_id from ledger.entries`)).toEqual([
         { owner_id: 'alice' },
       ])
       expect(await t.query(sql`select id from core.teams`)).toEqual([])
       expect(await t.query(sql`select 1 from core.team_members`)).toEqual([])
       expect(await t.query(sql`select id from core.users where id = 'alice'`)).toHaveLength(1)
-      expect(await t.subject.remove.team('crew')).toBe(false)
+      expect(await t.remove((r) => r.team('crew'))).toBe(false)
     })
   })
 
