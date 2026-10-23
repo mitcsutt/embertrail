@@ -72,6 +72,7 @@ packages/
   hub/         @mitcsutt/embertrail-hub        the Hub's core: Ports and the Module contract (private)
   otel/        @mitcsutt/embertrail-otel       the otel Module (private)
   store/       @mitcsutt/embertrail-store      the store Module (private)
+  modules/     @mitcsutt/embertrail-modules    the Module list every Platform loads, and `migrateDatabase` (private)
   client/      @mitcsutt/embertrail-client     typed Query API client (published later)
   cli/         @mitcsutt/embertrail-cli        the `embertrail` CLI (published later; docs/cli.md)
 spec/          the Query API as OpenAPI 3.1

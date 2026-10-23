@@ -1,9 +1,9 @@
 import { pgliteDb } from '@mitcsutt/embertrail-hub/testing'
+import { migrateDatabase } from '@mitcsutt/embertrail-modules'
 import { sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { run } from './cli.ts'
-import { migrateDatabase } from './migrate.ts'
 import { databaseUrl, skipWithoutPostgres, tempDatabase } from './testing/postgres.ts'
 
 describe('migrateDatabase', () => {

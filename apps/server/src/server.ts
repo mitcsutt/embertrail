@@ -7,7 +7,7 @@ import type { Hub } from '@mitcsutt/embertrail-hub'
 
 import { readConfig } from './config'
 import { dockerDb } from './db'
-import { hubModules } from './modules'
+import { hubModules } from '@mitcsutt/embertrail-modules'
 import { zeroConfigStart } from './zero-config'
 
 const retentionIntervalMs = 60 * 60 * 1000

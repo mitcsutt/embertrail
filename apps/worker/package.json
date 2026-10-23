@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
+    "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

@@ -4,8 +4,6 @@
 
 import type { Scope } from '@mitcsutt/embertrail-hub'
 import { testHub, type TestHub } from '@mitcsutt/embertrail-hub/testing'
-import { otel } from '@mitcsutt/embertrail-otel'
-import { store } from '@mitcsutt/embertrail-store'
 
 import { createClient, type ClientOptions, type EmbertrailClient } from '../src/index.ts'
 import { operationTable } from '../src/generated/operations.ts'
@@ -13,8 +11,6 @@ import { operationTable } from '../src/generated/operations.ts'
 export type { TestHub }
 
 const baseUrl = 'http://hub.test'
-
-export const hubModules = [otel, store]
 
 /** A client holding a real management Token for `userId` with `scopes`. */
 export async function clientFor(

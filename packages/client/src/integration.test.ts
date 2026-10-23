@@ -1,16 +1,10 @@
 import assert from 'node:assert/strict'
 
+import { hubModules } from '@mitcsutt/embertrail-modules'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { seedSession } from '../test/seed.ts'
-import {
-  clientFor,
-  hubModules,
-  operationIds,
-  recordCalls,
-  testHub,
-  type TestHub,
-} from '../test/test-hub.ts'
+import { clientFor, operationIds, recordCalls, testHub, type TestHub } from '../test/test-hub.ts'
 
 import { isProblemError, items, ProblemError, type EmbertrailClient } from './index.ts'
 

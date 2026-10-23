@@ -22,9 +22,9 @@
   "devDependencies": {
     "@mitcsutt/embertrail-client": "workspace:*",
     "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/embertrail-otel": "workspace:*",
     "@mitcsutt/embertrail-server": "workspace:*",
-    "@mitcsutt/embertrail-store": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",

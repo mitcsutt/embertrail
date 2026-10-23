@@ -4,10 +4,10 @@ import { join } from 'node:path'
 
 import { testHub } from '@mitcsutt/embertrail-hub/testing'
 import type { TestHub } from '@mitcsutt/embertrail-hub/testing'
+import { hubModules } from '@mitcsutt/embertrail-modules'
 
 import { run } from '../cli.ts'
 import type { Io } from '../io.ts'
-import { hubModules } from '../migrate.ts'
 
 export const hubUrl = 'http://hub.test'
 

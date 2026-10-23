@@ -1,3 +1,4 @@
+import { hubModules } from '@mitcsutt/embertrail-modules'
 import { exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
@@ -14,5 +15,9 @@ describe('@mitcsutt/embertrail-worker', () => {
   it('answers through its fetch handler', async () => {
     const response = await exports.default.fetch('https://hub.example/')
     expect(response.status).toBe(501)
+  })
+
+  it('can load the Modules the Docker Platform loads', () => {
+    expect(hubModules.map((m) => m.name)).toEqual(['otel', 'store'])
   })
 })

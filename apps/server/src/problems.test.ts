@@ -2,9 +2,8 @@ import { readFileSync } from 'node:fs'
 
 import { fakeEdgeIdentity, testHub } from '@mitcsutt/embertrail-hub/testing'
 import type { TestClient, TestHub } from '@mitcsutt/embertrail-hub/testing'
-import { otel } from '@mitcsutt/embertrail-otel'
+import { hubModules } from '@mitcsutt/embertrail-modules'
 import { assertProblem, postOtlp } from '@mitcsutt/embertrail-otel/testing'
-import { store } from '@mitcsutt/embertrail-store'
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
@@ -83,7 +82,7 @@ describe('problem types', () => {
 
   beforeAll(async () => {
     t = await testHub({
-      modules: [otel, store],
+      modules: hubModules,
       edgeIdentity: fakeEdgeIdentity({ bob: 'bob@example.com' }),
     })
     await t.user('bob', { email: 'bob@example.com' })

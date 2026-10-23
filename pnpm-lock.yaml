@@ -341,12 +341,12 @@ importers:
       '@mitcsutt/embertrail-hub':
         specifier: workspace:*
         version: link:../../packages/hub
+      '@mitcsutt/embertrail-modules':
+        specifier: workspace:*
+        version: link:../../packages/modules
       '@mitcsutt/embertrail-otel':
         specifier: workspace:*
         version: link:../../packages/otel
-      '@mitcsutt/embertrail-store':
-        specifier: workspace:*
-        version: link:../../packages/store
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.4(@electric-sql/pglite@0.5.10)(@types/pg@8.23.1)(pg@8.23.1)
@@ -390,6 +390,9 @@ importers:
       '@cloudflare/vitest-plugin':
         specifier: 'catalog:'
         version: 1.4.4(@types/node@24.19.2)(vitest@5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.6.1)(yaml@2.9.1)))
+      '@mitcsutt/embertrail-modules':
+        specifier: workspace:*
+        version: link:../../packages/modules
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
@@ -418,15 +421,15 @@ importers:
       '@mitcsutt/embertrail-hub':
         specifier: workspace:*
         version: link:../hub
+      '@mitcsutt/embertrail-modules':
+        specifier: workspace:*
+        version: link:../modules
       '@mitcsutt/embertrail-otel':
         specifier: workspace:*
         version: link:../otel
       '@mitcsutt/embertrail-server':
         specifier: workspace:*
         version: link:../../apps/server
-      '@mitcsutt/embertrail-store':
-        specifier: workspace:*
-        version: link:../store
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
@@ -460,12 +463,9 @@ importers:
       '@mitcsutt/embertrail-hub':
         specifier: workspace:*
         version: link:../hub
-      '@mitcsutt/embertrail-otel':
+      '@mitcsutt/embertrail-modules':
         specifier: workspace:*
-        version: link:../otel
-      '@mitcsutt/embertrail-store':
-        specifier: workspace:*
-        version: link:../store
+        version: link:../modules
       '@mitcsutt/kiln-tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
@@ -530,6 +530,34 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
+
+  packages/modules:
+    dependencies:
+      '@mitcsutt/embertrail-hub':
+        specifier: workspace:*
+        version: link:../hub
+      '@mitcsutt/embertrail-otel':
+        specifier: workspace:*
+        version: link:../otel
+      '@mitcsutt/embertrail-store':
+        specifier: workspace:*
+        version: link:../store
+    devDependencies:
+      '@mitcsutt/kiln-tsconfig':
+        specifier: 'catalog:'
+        version: 0.2.0(typescript@6.0.3)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      eslint:
+        specifier: 'catalog:'
+        version: 10.13.0(jiti@2.6.1)(supports-color@10.2.2)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.6.1)(yaml@2.9.1))
 
   packages/otel:
     dependencies:

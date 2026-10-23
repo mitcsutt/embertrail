@@ -57,7 +57,7 @@ Running it again is idempotent. For a Source that exists, when the settings alre
 
 ## `migrate`
 
-`embertrail migrate` builds the Hub with the Modules this repository ships (`hubModules` in `apps/server/src/modules.ts`, today `otel` and `store`) and calls `hub.migrate()`: one transaction, so a failure leaves the database as it was. Repeating it applies nothing. A database holding migrations the code doesn't know (it was migrated by a newer version) fails with `migrations ahead`, naming the migration. The Docker server boots with the same list, so adding a Module there updates both; the Cloudflare entry will import it too.
+`embertrail migrate` migrates the Modules this repository ships (`hubModules` in [`packages/modules`](../packages/modules/src/index.ts), today `otel` and `store`) through `migrateDatabase(db)`, which needs only a Db Port: no Hub config and no Edge Identity. It is one transaction, so a failure leaves the database as it was. Repeating it applies nothing. A database holding migrations the code doesn't know (it was migrated by a newer version) fails with `migrations ahead`, naming the migration. Every Platform boots with the same list, so a new Module is added to `hubModules` and nowhere else; the Docker server imports it and the Cloudflare entry will too. The CLI loads it, the Hub and the Postgres driver only for this command, and depends on a Platform only for its Db Adapter.
 
 The Docker image's entrypoint ([`self-hosting.md`](self-hosting.md)) and the Cloudflare deploy (before `wrangler deploy`) run it. It is the only command that needs a database, and it loads the Hub and the Postgres driver only when it runs.
 

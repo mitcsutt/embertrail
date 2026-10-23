@@ -103,6 +103,14 @@ function defaultExporter(module: Module): Exporter {
 }
 
 /**
+ * `Hub.migrate` without a Hub: the same Module checks and dependency order, needing only a Db
+ * Port. Throws `HubBootError` when a Module breaks the contract.
+ */
+export function migrateModules(db: DbPort, modules: readonly Module[]): Promise<MigrationReport> {
+  return migrate(db, checkModules(modules))
+}
+
+/**
  * Builds a Hub from a Platform's config and Ports and the Modules it loads. Throws
  * `HubBootError` when a Module breaks the contract; `boot()` adds the database's checks.
  */
