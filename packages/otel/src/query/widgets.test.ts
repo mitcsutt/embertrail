@@ -6,6 +6,7 @@ import type { TestClient, TestHub } from '@mitcsutt/embertrail-hub/testing'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { otel } from '../module'
+import { postOtlp } from '../testing'
 import { assertSpecResponse, seedSession } from './testing/support'
 
 const budgetMs = 500
@@ -99,15 +100,40 @@ beforeAll(async () => {
       await seedSession(ingest, { sessionId: `s-${String(day)}-${String(n)}`, start })
     }
   }
+  // The fixtures make no commits, so give "Commits per day" a delta sum point a day.
+  const commitPoints = Array.from({ length: days }, (_, day) => {
+    const time = String(BigInt(now.getTime() - (days - day) * 86_400_000 + 3_600_000) * 1_000_000n)
+    return { startTimeUnixNano: time, timeUnixNano: time, asDouble: 1 + (day % 3) }
+  })
+  const commits = await postOtlp(ingest, '/v1/metrics', {
+    resourceMetrics: [
+      {
+        resource: { attributes: [{ key: 'service.name', value: { stringValue: 'claude-code' } }] },
+        scopeMetrics: [
+          {
+            scope: { name: 'com.anthropic.claude_code' },
+            metrics: [
+              {
+                name: 'claude_code.commit.count',
+                unit: '',
+                sum: { aggregationTemporality: 1, isMonotonic: true, dataPoints: commitPoints },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  if (commits.status !== 200) throw new Error(`Seeding commits answered ${String(commits.status)}`)
   const sessionToday = new Date('2026-11-01T07:00:00Z')
   await seedSession(ingest, { sessionId: 'today', start: sessionToday })
   const [stored] = await t.sql<{ events: number; points: number }>(
     `select (select count(*)::int from otel.otel_logs) as events,
       (select count(*)::int from otel.otel_metrics_sum) as points`,
   )
-  // 56 Events and 20 points per Session.
+  // 56 Events and 20 points per Session, and a commit point a day.
   const sessions = days * sessionsPerDay + 1
-  if (stored?.events !== 56 * sessions || stored.points !== 20 * sessions) {
+  if (stored?.events !== 56 * sessions || stored.points !== 20 * sessions + days) {
     throw new Error(`Seeding stored ${JSON.stringify(stored)}`)
   }
 }, 300_000)
@@ -133,8 +159,7 @@ describe('the curated Widget queries', () => {
     const specPath = path.split('?')[0] ?? path
     assertSpecResponse(specPath, body === undefined ? 'get' : 'post', 200, response)
     const found = response as { rows?: unknown[]; items?: unknown[] }
-    // Every Widget except commits (the fixtures make none) has data to show.
-    expect((found.rows ?? found.items ?? []).length > 0, name).toBe(name !== 'Commits per day')
+    expect((found.rows ?? found.items ?? []).length, `${name} has data to show`).toBeGreaterThan(0)
     expect(best, `${name} took ${best.toFixed(1)} ms`).toBeLessThan(budgetMs)
     expect(t.errors).toEqual([])
   })
