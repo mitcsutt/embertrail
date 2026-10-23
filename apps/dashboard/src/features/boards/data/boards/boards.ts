@@ -27,7 +27,8 @@ export interface BoardSummary {
 
 /**
  * A write lost to another change: the stored Board is no longer the version it was based on.
- * `current` is the server's copy, or `undefined` when the Board has been deleted since.
+ * `current` is the server's copy. It is `undefined` when the Board has been deleted since (no `cause`),
+ * or when the new copy cannot be read (`cause` is the read error).
  */
 export class BoardConflict extends Error {
   readonly id: string
