@@ -50,8 +50,8 @@ function forging(client: TestClient): TestClient {
 
 /**
  * The contract every Module passes for free (#25): caller-supplied ownership is ignored, no
- * cross-Owner reads without a Grant, export covers every owned row, delete-by-Source and
- * delete-by-Owner leave nothing behind, and every op is in the OpenAPI document. Throws on
+ * cross-Owner reads without a Grant, export covers every owned row, removing a Source and
+ * removing an Owner leave nothing behind, and every op is in the OpenAPI document. Throws on
  * the first failure.
  */
 export async function assertModuleContract(module: Module, options: ModuleContractOptions) {
@@ -107,8 +107,8 @@ export async function assertModuleContract(module: Module, options: ModuleContra
       assert.ok(exported.length > 0, 'export is empty')
     }
 
-    // Deletes go through the Admin and self-management API (#30), which uses delete-by-Source
-    // and delete-by-Owner, so the suite proves what a User or an admin actually calls.
+    // Deletes go through the Admin and self-management API (#30), which uses the lifecycle's
+    // remove, so the suite proves what a User or an admin actually calls.
     const signalRows = seeded.filter((row) => row.source_id !== null).length
     const deletedSource = await t
       .as(owner, ['self:manage'])
@@ -118,12 +118,12 @@ export async function assertModuleContract(module: Module, options: ModuleContra
     assert.equal(
       afterSource.filter((row) => row.source_id === source).length,
       0,
-      'delete-by-Source left rows',
+      'removing a Source left rows',
     )
-    assert.equal(afterSource.length, seeded.length - signalRows, 'delete-by-Source count')
+    assert.equal(afterSource.length, seeded.length - signalRows, 'removing a Source count')
     const deletedOwner = await t.as(admin, ['admin']).delete(`/api/v1/admin/users/${owner}`)
     assert.equal(deletedOwner.status, 204, 'deleting the Owner through the Admin API')
-    assert.equal((await stamps()).length, 0, 'delete-by-Owner left rows')
+    assert.equal((await stamps()).length, 0, 'removing an Owner left rows')
     assert.deepEqual(t.errors, [], 'deleting answered with a 500')
 
     const document = JSON.parse(JSON.stringify(t.hub.openapi)) as typeof t.hub.openapi

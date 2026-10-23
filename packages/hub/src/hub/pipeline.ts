@@ -1,11 +1,11 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import type { CoreCtx } from '../admin/core-op'
 import type { DbPort, DbSession, ScopedDb } from '../db/port'
 import type { Directory, Resolver } from '../identity/directory'
 import type { EdgeIdentityPort } from '../identity/edge'
 import { bearer, resolveCaller } from '../identity/resolve'
 import { hashSecret, sameHash } from '../identity/tokens'
+import type { Lifecycle } from '../lifecycle/lifecycle'
 import { isReply } from '../module/define'
 import type { Caller, HttpMethod, OpStatus, Scope, SourceBinding } from '../module/define'
 import { HubError } from '../module/errors'
@@ -38,9 +38,8 @@ export interface Services {
   /** The loaded Modules' names. */
   modules: readonly string[]
   openapi: OpenApiDocument
-  /** The core's hard deletes on an op's transaction. */
-  remove(tx: ScopedDb): CoreCtx['remove']
-  exportOwner(module: string, ownerId: string, requestId: string): ReadableStream<Uint8Array>
+  remove: Lifecycle['remove']
+  exportOwner: Lifecycle['exportOwner']
 }
 
 /** One request to one op, after the pipeline has checked who sent it. */

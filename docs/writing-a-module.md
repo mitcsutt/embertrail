@@ -10,7 +10,7 @@ A Module declares tables, migrations and ops. It writes no code for any of this:
 - **Ownership.** Every row is stamped with its Owner (and Source, for Signals) by column defaults, and row-level security rejects any other value. Reads see only rows the caller may read: their own, their Teams', and the Accounts Grants give them.
 - **Transactions.** Each op runs in one transaction. A throw rolls it back.
 - **HTTP.** Your ops join the core's own in one list and go through one pipeline: caller, Scope, input validation, transaction, output parsing and the reply, `application/problem+json` errors, and the OpenAPI document at `/api/v1/openapi.json`, derived from the same schemas ([`ports-and-adapters.md`](ports-and-adapters.md#the-op-pipeline)).
-- **Data lifecycle.** Retention sweeps, hard delete by Source or by Owner, and export.
+- **Data lifecycle.** Retention sweeps, hard delete of a Source, User or Team, and export, all in the core's lifecycle module (`packages/hub/src/lifecycle`), which walks your declared tables so you write none of it ([`ports-and-adapters.md`](ports-and-adapters.md#the-data-lifecycle)).
 
 ## The shape
 

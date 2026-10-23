@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { Directory } from '../identity/directory'
+import type { Lifecycle } from '../lifecycle/lifecycle'
 import type { Caller, HttpMethod, OpStatus, Reply, Scope } from '../module/define'
 
 /**
@@ -16,15 +17,8 @@ export interface CoreCtx {
   scopes: readonly Scope[]
   /** The loaded Modules' names. */
   modules: readonly string[]
-  /**
-   * Hard deletes through the core's delete-by-Owner and delete-by-Source: the record and
-   * every row it owns (or sent) in every Module, on the op's transaction. False when it is absent.
-   */
-  remove: {
-    user(userId: string): Promise<boolean>
-    team(teamId: string): Promise<boolean>
-    source(sourceId: string): Promise<boolean>
-  }
+  /** Hard deletes of a record and every row it owns or sent, on the op's transaction. */
+  remove: ReturnType<Lifecycle['remove']>
   /** One Module's data for one Owner, streamed as JSON Lines. */
   exportOwner(module: string, ownerId: string): ReadableStream<Uint8Array>
 }
