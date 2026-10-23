@@ -30,6 +30,8 @@ Schema `otel`, in the Collector ClickHouse exporter's layout trimmed to what age
 
 A promoted attribute is read from the record's or point's attributes, falling back to the resource's, as the Query API's dimensions are.
 
+**The table of promoted attributes** is `packages/otel/src/promoted.ts`: per Signal, each attribute key with its column, SQL type, where ingest reads it (the record's own attributes, then the resource's, or the own only; `event.name`, `event.sequence`, `prompt.id`, `request_id` and `type` are own-only) and whether a reserved Label overrides it. Ingest (`map.ts`), the bulk insert (`store.ts`), the Query API's dimensions and the Session query (`query/sessions.ts`) all read it, so **a new promoted attribute is one row there plus a new migration** that adds the column (migrations are forward-only, so the SQL in `schema.ts` stays as it is, and the Drizzle column is added alongside). `src/promoted.test.ts` fails if the table, the Drizzle schema and the migrated database disagree on the columns, and round-trips every row through ingest, filter, `group_by` and the export.
+
 **Account:** the core Account `ctx.account` recognises from the Signal's `organization.id`, `user.account_uuid` and `user.email` (a point's own attribute wins over its resource's), in the order [`identity.md`](identity.md#accounts) gives: `organization.id` with `user.account_uuid`, else `user.email` (case-insensitive), else the Source's Unknown Account. So Grants apply to every row.
 
 ### De-duplication keys
@@ -57,7 +59,7 @@ The read side of [`spec/query-api.yaml`](../spec/query-api.yaml), in `src/query/
 | `PUT /api/v1/sessions/{id}/labels`      | `otel:write` | Replaces the caller's Owner's Labels for a Session; `{}` clears them                            |
 | `GET /api/v1/inventory`                 | `otel:read`  | Owners, Sources, Accounts, services, models, Metric and Event names, up to 1,000 attribute keys |
 
-- **Dimensions** (`src/query/dimensions.ts`): a promoted key reads its column; any other key matching the key pattern reads the record's attributes, falling back to the resource's. Equality and `in` compare text forms, so `200` matches a status code sent as a string or a number; `gt`…`lte` compare numbers when the value is a number. `neq`, `not_in` and `not_exists` also match rows that lack the key.
+- **Dimensions** (`src/query/dimensions.ts`): a promoted key (the table above) reads its column; any other key matching the key pattern reads the record's attributes, falling back to the resource's. Equality and `in` compare text forms, so `200` matches a status code sent as a string or a number; `gt`…`lte` compare numbers when the value is a number. `neq`, `not_in` and `not_exists` also match rows that lack the key.
 - **Labels override attributes:** the four reserved `embertrail.*` link keys read the Session's Label first, in summaries, filters and `group_by`. Only the reading Owner's own Labels count, so another Owner labelling the same `session.id` changes nothing for them.
 - **Buckets:** Postgres's `date_trunc(unit, time, tz)`, so days start at local midnight (23 or 25 hours across DST) and weeks on Monday. Bucket starts come back with the zone's offset at that instant (`Z` for a zero offset); empty buckets are omitted. An unknown zone, or a fixed offset such as `+05:00` (Postgres would read its sign reversed), is 422 `invalid`.
 - **Limits:** `group_by` ≤ 3 and Event and Session pages ≤ 1,000 are schema errors (400). An aggregate over 10,000 rows is 422 `too-many-rows`, unless the query sets its own `limit`.
@@ -65,7 +67,7 @@ The read side of [`spec/query-api.yaml`](../spec/query-api.yaml), in `src/query/
 - **Sessions** are grouped by (`owner_id`, `session.id`). `cost_usd` and `tokens` sum `claude_code.cost.usage` and `claude_code.token.usage` (per `type`). Without `from`/`to`, Sessions known only from Labels are listed too, with null Signal fields.
 - **Inventory names:** until core identity (#29) supplies them, an Owner's and a Source's `name` is its id, and an Account's `label` is its email domain or `Unknown`.
 
-Tests: `src/query/query.test.ts` validates every response against the spec document itself (Ajv over `spec/query-api.yaml`), across DST in Berlin and New York, week starts in two zones, each limit at and over its boundary, Labels and a Grant-less second User. `src/query/widgets.test.ts` runs the 20 curated Widget queries (#16) against a month of seeded Sessions on PGLite, each under 500 ms. `src/query/testing/support.ts` has the spec validator and `seedSession`, which moves the Claude Code fixtures onto another Session and time.
+Tests: `src/query/query.test.ts` validates every response against the spec document itself (Ajv over `spec/query-api.yaml`), across DST in Berlin and New York, week starts in two zones, each limit at and over its boundary, Labels and a Grant-less second User. `src/promoted.test.ts` holds the table to the schema, the database and every reader. `src/query/widgets.test.ts` runs the 20 curated Widget queries (#16) against a month of seeded Sessions on PGLite, each under 500 ms. `src/query/testing/support.ts` has the spec validator and `seedSession`, which moves the Claude Code fixtures onto another Session and time.
 
 ## Retention and export
 

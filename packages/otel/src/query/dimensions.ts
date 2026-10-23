@@ -6,7 +6,10 @@
 import { sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 
-export type Signal = 'metric' | 'event'
+import { promotionsOf } from '../promoted'
+import type { Promotion, Signal } from '../promoted'
+
+export type { Signal } from '../promoted'
 
 /** The spec's `AttributeKey` pattern. */
 export const keyPattern = /^[A-Za-z_][A-Za-z0-9_.\-/]{0,127}$/
@@ -14,38 +17,11 @@ export const keyPattern = /^[A-Za-z_][A-Za-z0-9_.\-/]{0,127}$/
 /** Matches a decimal number in text, so only numeric strings are cast. */
 const numeric = String.raw`^\s*-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?\s*$`
 
-/** Promoted to a column on every Signal. */
-const common: Record<string, string> = {
-  'embertrail.owner_id': 'owner_id',
-  'embertrail.source_id': 'source_id',
-  'embertrail.account_id': 'account_id',
-  'service.name': 'service_name',
-  'session.id': 'session_id',
-  'embertrail.group.id': 'group_id',
-  'embertrail.group.kind': 'group_kind',
-  'embertrail.parent.session_id': 'parent_session_id',
-  'embertrail.role': 'role',
-  model: 'model',
+/** The promoted keys of each Signal (`promoted.ts`), by key. */
+const promoted: Record<Signal, Record<string, Promotion>> = {
+  metric: Object.fromEntries(promotionsOf('metric').map((p) => [p.key, p])),
+  event: Object.fromEntries(promotionsOf('event').map((p) => [p.key, p])),
 }
-
-const promoted: Record<Signal, Record<string, string>> = {
-  metric: { ...common, type: 'type', unit: 'unit' },
-  event: {
-    ...common,
-    'event.name': 'event_name',
-    'event.sequence': 'event_sequence',
-    'prompt.id': 'prompt_id',
-    request_id: 'request_id',
-  },
-}
-
-/** Reserved Labels that override the matching column (ADR-0014). */
-export const linkLabels = [
-  'embertrail.group.id',
-  'embertrail.group.kind',
-  'embertrail.parent.session_id',
-  'embertrail.role',
-] as const
 
 /** Whether a key maps to a column for this Signal. */
 export function isPromoted(signal: Signal, key: string) {
@@ -66,9 +42,9 @@ const asNumber = (text: SQL) =>
 
 export function dimension(signal: Signal, key: string): Dimension {
   // `key` is request input: an inherited member such as `constructor` is not a column.
-  const column = isPromoted(signal, key) ? promoted[signal][key] : undefined
-  if (column === 'event_sequence') {
-    const c = sql.raw('t.event_sequence')
+  const promotion = isPromoted(signal, key) ? promoted[signal][key] : undefined
+  if (promotion?.type === 'bigint') {
+    const c = sql.raw(`t.${promotion.column}`)
     return {
       text: sql`${c}::text`,
       json: sql`to_jsonb(${c})`,
@@ -76,9 +52,9 @@ export function dimension(signal: Signal, key: string): Dimension {
       labels: false,
     }
   }
-  if (column !== undefined) {
-    const own = sql.raw(`t.${column}`)
-    const labelled = (linkLabels as readonly string[]).includes(key)
+  if (promotion !== undefined) {
+    const own = sql.raw(`t.${promotion.column}`)
+    const labelled = promotion.labelled === true
     const text = labelled ? sql`coalesce(l.labels ->> ${key}::text, ${own})` : own
     return { text, json: sql`to_jsonb(${text})`, number: asNumber(text), labels: labelled }
   }

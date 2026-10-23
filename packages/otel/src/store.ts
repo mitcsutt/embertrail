@@ -5,7 +5,9 @@ import type { ScopedDb } from '@mitcsutt/embertrail-hub'
 import { sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 
-import type { LogRow, MetricRow, SumRow } from './map'
+import type { LogRow, MetricRow, Promoted, SumRow } from './map'
+import { promotions } from './promoted'
+import type { Promotion } from './promoted'
 import { logs, metricsGauge, metricsSum } from './schema'
 
 interface Column<R> {
@@ -16,17 +18,16 @@ interface Column<R> {
 
 const json = (value: unknown) => (value === null ? null : JSON.stringify(value))
 
-function promoted<R extends LogRow | MetricRow>(): Column<R>[] {
+const columnOf = <R extends Promoted>(p: Promotion): Column<R>[] =>
+  p.field === undefined || p.from === 'core'
+    ? []
+    : [{ name: p.column, type: p.type, value: (r) => r[p.field as keyof R] }]
+
+/** The promoted columns (`promoted.ts`) and the ones every Signal's row holds as sent. */
+function promoted<R extends LogRow | MetricRow>(rows: readonly Promotion[]): Column<R>[] {
   return [
+    ...rows.flatMap(columnOf<R>),
     { name: 'time', type: 'timestamptz', value: (r) => r.time },
-    { name: 'service_name', type: 'text', value: (r) => r.serviceName },
-    { name: 'session_id', type: 'text', value: (r) => r.sessionId },
-    { name: 'account_id', type: 'text', value: (r) => r.accountId },
-    { name: 'group_id', type: 'text', value: (r) => r.groupId },
-    { name: 'group_kind', type: 'text', value: (r) => r.groupKind },
-    { name: 'parent_session_id', type: 'text', value: (r) => r.parentSessionId },
-    { name: 'role', type: 'text', value: (r) => r.role },
-    { name: 'model', type: 'text', value: (r) => r.model },
     { name: 'scope_name', type: 'text', value: (r) => r.scopeName },
     { name: 'scope_version', type: 'text', value: (r) => r.scopeVersion },
     { name: 'attributes', type: 'jsonb', value: (r) => json(r.attributes) },
@@ -35,12 +36,8 @@ function promoted<R extends LogRow | MetricRow>(): Column<R>[] {
 }
 
 const logColumns: Column<LogRow>[] = [
-  ...promoted<LogRow>(),
+  ...promoted<LogRow>(promotions.event),
   { name: 'observed_time', type: 'timestamptz', value: (r) => r.observedTime },
-  { name: 'event_name', type: 'text', value: (r) => r.eventName },
-  { name: 'event_sequence', type: 'bigint', value: (r) => r.eventSequence },
-  { name: 'prompt_id', type: 'text', value: (r) => r.promptId },
-  { name: 'request_id', type: 'text', value: (r) => r.requestId },
   { name: 'severity_number', type: 'integer', value: (r) => r.severityNumber },
   { name: 'severity_text', type: 'text', value: (r) => r.severityText },
   { name: 'body', type: 'jsonb', value: (r) => json(r.body) },
@@ -51,13 +48,11 @@ const logColumns: Column<LogRow>[] = [
 
 function metricColumns<R extends MetricRow>(): Column<R>[] {
   return [
-    ...promoted<R>(),
+    ...promoted<R>(promotions.metric),
     { name: 'start_time', type: 'timestamptz', value: (r) => r.startTime },
     { name: 'metric_name', type: 'text', value: (r) => r.metricName },
     { name: 'description', type: 'text', value: (r) => r.description },
-    { name: 'unit', type: 'text', value: (r) => r.unit },
     { name: 'value', type: 'double precision', value: (r) => r.value },
-    { name: 'type', type: 'text', value: (r) => r.type },
     { name: 'attributes_hash', type: 'text', value: (r) => r.attributesHash },
   ]
 }
