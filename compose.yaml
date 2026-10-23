@@ -1,4 +1,5 @@
 # The Hub on the Docker Platform: `docker compose up` (docs/self-hosting.md).
+# The Dashboard joins with `--profile dashboard`.
 # The first start prints your management Token once; read it with `docker compose logs hub`.
 services:
   hub:
@@ -18,6 +19,27 @@ services:
     ports:
       # Local only. Put a reverse proxy with TLS in front before exposing the Hub.
       - '127.0.0.1:${EMBERTRAIL_PORT:-8787}:8787'
+
+  # The Dashboard (`docker compose --profile dashboard up`): nginx serving the built app and
+  # proxying /api to the Hub with the Token you set. docs/self-hosting.md#the-dashboard.
+  dashboard:
+    profiles: [dashboard]
+    image: ghcr.io/mitcsutt/embertrail-dashboard:${EMBERTRAIL_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      hub:
+        condition: service_healthy
+    environment:
+      # A Token with otel:read, store:read and store:write that isn't bound to one Source; the
+      # Hub's management Token works. Without one, the Dashboard shows a 401.
+      EMBERTRAIL_DASHBOARD_TOKEN: ${EMBERTRAIL_DASHBOARD_TOKEN:-}
+      EMBERTRAIL_HUB_UPSTREAM: ${EMBERTRAIL_HUB_UPSTREAM:-http://hub:8787}
+    ports:
+      # Local only, like the Hub: this proxy writes as the Token's User to anyone who can reach it.
+      - '127.0.0.1:${DASHBOARD_PORT:-8080}:8080'
 
   postgres:
     image: postgres:17

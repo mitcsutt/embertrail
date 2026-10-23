@@ -22,14 +22,40 @@ embertrail setup claude-code --source laptop
 
 Without the CLI installed, the image carries one: `docker compose exec hub embertrail --help` (it reads `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN`).
 
+## The Dashboard
+
+The [Dashboard](dashboard.md) is a second, optional service. It needs a Token to read the Hub with: the management Token the first start printed works and is the one-step solo path. Put it in a `.env` file next to `compose.yaml`, then start the profile:
+
+```sh
+echo 'EMBERTRAIL_DASHBOARD_TOKEN=<the printed Token>' >> .env
+docker compose --profile dashboard up -d --wait    # the Dashboard on http://localhost:8080
+```
+
+To keep the management Token out of it, issue a narrower one with `embertrail tokens issue` (Scopes `otel:read store:read store:write`; a Token bound to one Source is refused). Without `EMBERTRAIL_DASHBOARD_TOKEN` the Dashboard starts and shows an unauthorized message. The Boards are empty until Claude Code has sent data; `pnpm --filter @mitcsutt/embertrail-dashboard seed` fills a Hub with the demo dataset to look around ([seeding](dashboard.md#seeding-a-hub)).
+
+nginx serves the built app and proxies `/api` to the Hub with `Authorization: Bearer <the Token>`, so the Token never reaches the browser, and refuses `/api` requests from a page on another origin (404). Like the Hub, it listens on `127.0.0.1` only (`DASHBOARD_PORT`, default 8080): anyone who can reach it reads and writes as the Token's User, so put a reverse proxy with authentication and TLS in front before exposing it.
+
+**Another Hub.** To point the Dashboard at a Hub elsewhere, set `EMBERTRAIL_HUB_UPSTREAM` (an origin with no trailing slash and no path, default `http://hub:8787`) and the Token for that Hub. To change the Hub the page asks, or to add static `headers`, bind-mount your own `config.json` ([`dashboard.md`](dashboard.md#reaching-the-hub)); the file is read at every page load, so a reload picks up an edit without a rebuild:
+
+```yaml
+# compose.override.yaml
+services:
+  dashboard:
+    volumes:
+      - ./config.json:/usr/share/nginx/html/config.json:ro
+```
+
+Mount the file itself and edit it in place; an editor that replaces the file leaves the container with the old one until `docker compose restart dashboard`.
+
 ## What starts
 
-| Service    | Image                                 | Role                                                            |
-| ---------- | ------------------------------------- | --------------------------------------------------------------- |
-| `hub`      | `ghcr.io/mitcsutt/embertrail`         | `embertrail migrate`, then the Hub (`apps/server`) on port 8787 |
-| `postgres` | `postgres:17`, volume `postgres-data` | The Hub's database; not published to the host                   |
+| Service     | Image                                   | Role                                                                                        |
+| ----------- | --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `hub`       | `ghcr.io/mitcsutt/embertrail`           | `embertrail migrate`, then the Hub (`apps/server`) on port 8787                             |
+| `postgres`  | `postgres:17`, volume `postgres-data`   | The Hub's database; not published to the host                                               |
+| `dashboard` | `ghcr.io/mitcsutt/embertrail-dashboard` | Only with `--profile dashboard`: nginx serving the [Dashboard](#the-dashboard) on port 8080 |
 
-The Hub listens on `127.0.0.1:8787` only. Put a reverse proxy with TLS in front of it before exposing it, and set `PUBLIC_URL` so the printed login line names that address. The image isn't published to a registry yet, so `docker compose up` builds it from the repository's [`Dockerfile`](../Dockerfile) (add `--build` after pulling new code). The Dashboard (`--profile dashboard`) joins the compose file with #51.
+The Hub listens on `127.0.0.1:8787` only. Put a reverse proxy with TLS in front of it before exposing it, and set `PUBLIC_URL` so the printed login line names that address. The image isn't published to a registry yet, so `docker compose up` builds it from the repository's [`Dockerfile`](../Dockerfile) (add `--build` after pulling new code).
 
 ## The zero-config start
 
@@ -52,7 +78,10 @@ The Hub reads its environment at start (`apps/server/src/config.ts`); an empty v
 | `ALLOWED_EMAILS`, `ALLOWED_DOMAINS` | empty                     | Comma-separated Edge Identity allowlists ([`identity.md`](identity.md#config)); Docker has no Edge Identity yet, so they have no effect |
 | **`EMBERTRAIL_PORT`**               | `8787`                    | The host port Compose publishes (on `127.0.0.1`)                                                                                        |
 | **`POSTGRES_PASSWORD`**             | `embertrail`              | The database password; the database is reachable only inside the Compose network                                                        |
-| **`EMBERTRAIL_VERSION`**            | `latest`                  | The image tag to run                                                                                                                    |
+| **`EMBERTRAIL_VERSION`**            | `latest`                  | The image tag to run (both images)                                                                                                      |
+| **`EMBERTRAIL_DASHBOARD_TOKEN`**    | unset                     | The Token the Dashboard's proxy sends to the Hub; see [the Dashboard](#the-dashboard)                                                   |
+| **`EMBERTRAIL_HUB_UPSTREAM`**       | `http://hub:8787`         | The Hub the Dashboard's proxy talks to                                                                                                  |
+| **`DASHBOARD_PORT`**                | `8080`                    | The host port Compose publishes the Dashboard on (on `127.0.0.1`)                                                                       |
 
 The Edge Identity Adapter is `noEdgeIdentity()`: Tokens are the only way in.
 
@@ -72,5 +101,6 @@ A database migrated by a newer version stops an older image at start with `migra
 - `apps/server/src/`: `config.ts` (env → config), `server.ts` (`startServer`: Hub, listener, zero-config, retention interval), `zero-config.ts`, `main.ts` (the image's entry, bundled to `dist/server.js` by `pnpm --filter @mitcsutt/embertrail-server build`), and `db.ts` (the Docker Db Adapter). The Modules come from `@mitcsutt/embertrail-modules` (`packages/modules`), the list `embertrail migrate` uses too.
 - The [`Dockerfile`](../Dockerfile) bundles the server and the CLI with esbuild and installs only `pg`; [`docker-entrypoint.sh`](../docker-entrypoint.sh) migrates, then starts the server.
 - `src/server.test.ts` boots the server on Postgres 17 (the zero-config Token, the restart, `BOOTSTRAP_TOKEN`, an unmigrated database); the Docker Db Adapter passes the shared contract suites in `db.test.ts` ([`ports-and-adapters.md`](ports-and-adapters.md#contract-suites)).
-- `apps/server/smoke/smoke.sh` is CI's **Docker smoke** job and runs anywhere with Docker, `curl`, `jq` and a built CLI (`pnpm --filter @mitcsutt/embertrail-cli build`): it builds the image, boots the stack on a random port in its own Compose project, checks the printed Token, runs `embertrail setup claude-code` against the Hub into a temporary `HOME` (your own `~/.claude` is untouched) and checks the `env` block it wrote, ingests the Claude Code fixtures with that block's endpoint and Token, queries Sessions and Events back, restarts the Hub and checks for no second Token or User, then removes the stack and its volume.
-- Publishing the image to `ghcr.io/mitcsutt/embertrail` is not wired yet: the `Dockerfile` builds a self-contained image, so a release workflow only needs to build, tag with the app version and push.
+- `apps/server/smoke/smoke.sh` is CI's **Docker smoke** job and runs anywhere with Docker, `curl`, `jq` and a built CLI (`pnpm --filter @mitcsutt/embertrail-cli build`): it builds the image, boots the stack on a random port in its own Compose project, checks the printed Token, runs `embertrail setup claude-code` against the Hub into a temporary `HOME` (your own `~/.claude` is untouched) and checks the `env` block it wrote, ingests the Claude Code fixtures with that block's endpoint and Token, starts the Dashboard profile with that Token, seeds the demo dataset with `pnpm seed` and checks the Dashboard serves the app and `config.json` and reads the Sessions through its proxy without the browser sending a Token (and refuses a cross-origin request), ingests the Claude Code fixtures, queries Sessions and Events back, restarts the Hub and checks for no second Token or User, then removes the stack and its volume. It also needs `pnpm`.
+- The Dashboard image is [`apps/dashboard/Dockerfile`](../apps/dashboard/Dockerfile) (build from the repository root): Vite builds the app, then `nginxinc/nginx-unprivileged` serves `dist/` and renders [`docker/default.conf.template`](../apps/dashboard/docker/default.conf.template) from the environment at start. It runs as a non-root user, which is why it listens on 8080.
+- Publishing the images to `ghcr.io/mitcsutt/embertrail` and `ghcr.io/mitcsutt/embertrail-dashboard` is not wired yet: the `Dockerfile` builds a self-contained image, so a release workflow only needs to build, tag with the app version and push.

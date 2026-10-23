@@ -1,0 +1,55 @@
+# The Dashboard's server (apps/dashboard/Dockerfile). The nginx image fills the ${...} variables in
+# from the environment at start (envsubst); the $variables are nginx's own.
+
+# The proxy holds the Token, so the browser never sees it. No Token, no header.
+map "${EMBERTRAIL_DASHBOARD_TOKEN}" $hub_authorization {
+    ""      "";
+    default "Bearer ${EMBERTRAIL_DASHBOARD_TOKEN}";
+}
+
+# Refuse /api requests from a page on another origin: the proxy adds the Token, so a simple
+# cross-site request would otherwise be written as you (the same rule as scripts/hubProxy.ts).
+# The key is Sec-Fetch-Site, Origin and Host; the first pattern that matches wins.
+map "$http_sec_fetch_site|$http_origin|$http_host" $refuse_api {
+    default 1;
+    "~^(|same-origin|none)\|\|"                                   0;
+    "~^(|same-origin|none)\|https?://(?<origin_host>[^|]+)\|\k<origin_host>$" 0;
+}
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    # Docker's resolver, so a restarted Hub container's new address is picked up.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+
+    location /api/ {
+        if ($refuse_api) { return 404; }
+        set $hub_upstream "${EMBERTRAIL_HUB_UPSTREAM}";
+        proxy_pass $hub_upstream;
+        proxy_set_header Authorization $hub_authorization;
+        proxy_read_timeout 120s;
+    }
+
+    # Read at every start of the app, so editing a mounted config.json needs only a reload.
+    location = /config.json {
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Vite hashes the file names under /assets, so they never change.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri /index.html;
+    }
+}

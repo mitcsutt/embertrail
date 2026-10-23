@@ -70,8 +70,9 @@ jobs:
         run: pnpm test
 
   # Builds the Docker image, boots the compose stack, runs the CLI's setup against it and ingests
-  # and queries a fixture through it (apps/server/smoke/smoke.sh, #37). The only job that needs
-  # Docker to run the Hub itself.
+  # and queries a fixture through it, then starts the Dashboard profile and reads the seeded demo
+  # dataset through its proxy (apps/server/smoke/smoke.sh, #37). The only job that needs Docker
+  # to run the Hub itself.
   smoke:
     name: Docker smoke
     runs-on: ubuntu-latest
@@ -81,7 +82,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build the CLI
         run: pnpm --filter @mitcsutt/embertrail-cli build
-      - name: Boot the stack, set up Claude Code, ingest a fixture, query it back
+      - name: Boot the stack and the Dashboard, set up Claude Code, ingest a fixture, query it back
         run: apps/server/smoke/smoke.sh
 
   # The Dashboard in a real browser (Chromium only): the built app behind `vite preview`, in front
