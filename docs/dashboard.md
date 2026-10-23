@@ -2,6 +2,10 @@
 
 The Dashboard (`apps/dashboard`, `@mitcsutt/embertrail-dashboard`, private) is a static single-page app that reads the Hub's Query API. The design is epic #51; the build plan is #72. This page is the canonical Dashboard doc: it grows with each task.
 
+![The Overview Board on seeded demo data](images/dashboard/overview.png)
+
+The Overview, the Everything Board, a Board in edit mode and the Session Groups view, from the seeded `embertrail-demo` dataset ([Everything](images/dashboard/everything.png), [edit mode](images/dashboard/edit-mode.png), [Session Groups](images/dashboard/session-groups.png)).
+
 ## Stack
 
 - Vite 8 and React 19, with [Kiln](https://kiln.mitchellsutton.com): `kiln-ui` for the shell, `kiln-charts` for charts and `kiln-dnd` for the Board grid. The Paper theme is set before first paint by a script that the Vite config writes into `index.html`; the colour mode is stored under `embertrail-dashboard-mode`.
@@ -276,6 +280,10 @@ The generator is plain TypeScript with explicit `.ts` imports and imports nothin
 
 For the default options (`--now 2026-11-04T13:00:00Z --tz Europe/Berlin`): 157 Sessions, 5,722 Events and 8,480 data points.
 
+## Docker
+
+`docker compose --profile dashboard up -d --wait` starts the Dashboard next to the Hub on `127.0.0.1:8080` (`DASHBOARD_PORT`). The image (`apps/dashboard/Dockerfile`, built from the repository root) is nginx serving `dist/`; it needs `EMBERTRAIL_DASHBOARD_TOKEN`, a Token with `otel:read`, `store:read` and `store:write` that is not bound to one Source, which the proxy adds to every `/api` request. The setup, the Token and pointing it at another Hub are in [`self-hosting.md`](self-hosting.md#the-dashboard); the proxy rules are under [Reaching the Hub](#reaching-the-hub). `apps/server/smoke/smoke.sh` is CI's check of this profile.
+
 ## Seeding a Hub
 
 With a Hub running ([`self-hosting.md`](self-hosting.md)) and the `embertrail` CLI logged in to it:
@@ -338,3 +346,12 @@ pnpm --filter @mitcsutt/embertrail-dashboard e2e
 - `e2e/axe.ts` exports `modes` and `setMode(page, mode)` (store the colour mode under `embertrail-dashboard-mode` and reload) and `expectNoAxeViolations(page, ready)`: it sets `light` then `dark`, waits for `ready` (and an optional `settled` callback, for a page such as a Board whose Widgets keep fetching) and fails on any axe violation. jsdom cannot compute colour contrast, so axe runs here and not in Vitest. A new page adds a spec that calls it.
 - `e2e/focus.spec.ts` is the keyboard and focus sweep: visible focus while tabbing a Board, edit mode, the Query Widget editor and the Session Groups tree in both modes, and focus returning to the opener after each Sheet and Dialog closes. A new overlay or page adds to it. Wait for the Widgets to draw (`expectWidgetsDrawn`) before tabbing, since a loading frame that is replaced takes focus with it.
 - Specs wait on what the page shows (a locator), never on a timeout. On a CI failure the job uploads `test-results/` (traces) and `playwright-report/`.
+
+## Known limitations
+
+- **Same origin only.** The Hub sends no CORS headers, so the Dashboard reaches it through a proxy on its own origin (Vite in development, nginx on Docker). A `hubUrl` on another origin in `config.json` fails in the browser. Serving the Dashboard from the Cloudflare Worker's own origin is the planned way to cover that Platform (#50).
+- **One Token, held by the proxy.** Everyone who can reach the Dashboard reads and writes as that Token's User; there is no login. It listens on `127.0.0.1` only; put authentication and TLS in front before exposing it.
+- **Source, Account and model filters are single-select**, because `GET /sessions` takes one value of each. A Widget that cannot honour a filter says so (`session.count` has no `model`).
+- **Editing needs a wide window.** kiln-dnd edits only the widest breakpoint; below it the grid is read-only and says so.
+- **Pointer drags are tested in Chromium only**; keyboard moves and resizes are tested in jsdom and Chromium.
+- **No Widget packs yet** (ADR-0014): the Catalogue is the 20 curated Widgets plus the Query Widget.
