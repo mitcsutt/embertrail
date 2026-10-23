@@ -37,3 +37,8 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+// kiln-ui's CommandPalette scrolls the highlighted result into view, which jsdom lacks.
+if (typeof window !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = noop
+}

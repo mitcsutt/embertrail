@@ -9,6 +9,8 @@ import {
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { BoardNav } from '#app/components/BoardNav'
+import { JumpPalette } from '#app/components/JumpPalette'
 import { useSelf } from '#lib/hub'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -40,11 +42,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                   Signed in as {self.user.name}
                 </Text>
               )}
+              <JumpPalette />
               <ModeToggle />
             </Inline>
           </Inline>
         </Container>
       </KilnAppShell.Header>
+      <KilnAppShell.Sidebar>
+        <BoardNav />
+      </KilnAppShell.Sidebar>
       <KilnAppShell.Main>{children}</KilnAppShell.Main>
     </KilnAppShell>
   )

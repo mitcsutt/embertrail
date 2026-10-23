@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { boardSchema } from '#features/boards/schemas/board'
 import type { BoardDocument } from '#features/boards/types/board'
+import { presetSummaries } from '#features/boards/constants/presetSummaries'
 import { presetIds } from '#features/boards/types/board'
 import type { WidgetGroup } from '#features/widgets/types/widget'
 
@@ -174,6 +175,15 @@ describe('presetBoard and isPresetId', () => {
   it('recognises the reserved ids and no stored Board id', () => {
     expect(presetIds.every((id) => isPresetId(id))).toBe(true)
     expect(isPresetId('b-abcde12345')).toBe(false)
+  })
+})
+
+describe('presetSummaries', () => {
+  it('names every Preset as the Board itself does, in the order the navigation lists them', () => {
+    expect(presetSummaries.map(({ id }) => id)).toEqual([...presetIds])
+    for (const { id, name } of presetSummaries) {
+      expect(presetBoard(id, catalogue).name).toBe(name)
+    }
   })
 })
 
