@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -34,7 +34,7 @@ const inventory: Inventory = {
   ],
 }
 
-function setup(initial?: QueryWidgetValue) {
+function setup() {
   const onSave = vi.fn<(value: QueryWidgetValue) => void>()
   const onOpenChange = vi.fn<(open: boolean) => void>()
   const user = userEvent.setup()
@@ -43,7 +43,6 @@ function setup(initial?: QueryWidgetValue) {
       open
       onOpenChange={onOpenChange}
       inventory={inventory}
-      initial={initial}
       onSave={onSave}
     />,
   )
@@ -117,16 +116,14 @@ describe('QueryWidgetEditor', () => {
   })
 
   it('moves an undrawable chart to one that fits when the Signal changes', async () => {
-    const { user, onSave } = setup({
-      title: 'Spend by model',
-      query: {
-        source: { kind: 'metric', name: 'claude_code.cost.usage', aggregation: 'sum' },
-        groupBy: ['model'],
-        filter: [],
-        chart: 'bar-list',
-        limit: 10,
-      },
-    })
+    const { user, onSave } = setup()
+
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), 'Spend by model')
+    await user.click(screen.getByRole('combobox', { name: 'Metric' }))
+    await user.click(await screen.findByRole('option', { name: /claude_code\.cost\.usage/ }))
+    await user.click(screen.getByRole('combobox', { name: 'Group by' }))
+    await user.click(await screen.findByRole('option', { name: 'model' }))
+    await choose(user, 'Chart', 'Bar list')
 
     // Switching to an Event clears Group by, which a bar list cannot draw without.
     await choose(user, 'Signal', 'Event')
@@ -138,29 +135,6 @@ describe('QueryWidgetEditor', () => {
       source: { kind: 'event', name: 'tool_result' },
       groupBy: [],
       chart: 'stat',
-    })
-  })
-
-  it('edits an existing Query Widget', async () => {
-    const { user, onSave } = setup({
-      title: 'Tool calls',
-      query: {
-        source: { kind: 'event', name: 'tool_result', aggregation: { fn: 'count' } },
-        groupBy: ['tool_name'],
-        filter: [{ key: 'success', op: 'eq', value: true }],
-        chart: 'bar-list',
-        limit: 10,
-      },
-    })
-
-    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Tool calls')
-    const filter = screen.getByRole('group', { name: 'Filter 1' })
-    expect(within(filter).getByRole('textbox', { name: 'Value' })).toHaveValue('true')
-
-    await user.click(screen.getByRole('button', { name: 'Save Query Widget' }))
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      title: 'Tool calls',
-      query: { filter: [{ key: 'success', op: 'eq', value: true }], limit: 10 },
     })
   })
 

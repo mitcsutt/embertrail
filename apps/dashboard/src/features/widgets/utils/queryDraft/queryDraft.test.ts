@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { filterValueText, makeFilter, newQueryConfig, withDrawableChart } from './queryDraft'
+import { makeFilter, newQueryConfig, withDrawableChart } from './queryDraft'
 
 describe('makeFilter', () => {
   it('reads a number or true and false as such, and anything else as text', () => {
@@ -27,16 +27,6 @@ describe('makeFilter', () => {
 
   it('gives presence operators no value', () => {
     expect(makeFilter('model', 'exists', 'ignored')).toEqual({ key: 'model', op: 'exists' })
-  })
-
-  it('round-trips through the text the editor shows', () => {
-    for (const filter of [
-      makeFilter('a', 'eq', '1'),
-      makeFilter('a', 'in', '1, x, true'),
-      makeFilter('a', 'not_exists', ''),
-    ]) {
-      expect(makeFilter(filter.key, filter.op, filterValueText(filter))).toEqual(filter)
-    }
   })
 })
 

@@ -37,12 +37,6 @@ const scalar = (text: string): string | number | boolean => {
   return trimmed !== '' && Number.isFinite(Number(trimmed)) ? Number(trimmed) : text
 }
 
-/** A filter's value as the editor shows it: members of `in` and `not_in` are comma-separated. */
-export function filterValueText(filter: Filter): string {
-  if (!('value' in filter)) return ''
-  return Array.isArray(filter.value) ? filter.value.join(', ') : String(filter.value)
-}
-
 /**
  * A filter with this key, operator and value text. A number or `true`/`false` is matched as such,
  * anything else as text; the `in` operators split on commas.
