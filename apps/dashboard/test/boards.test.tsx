@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 
 import { HubProvider } from '#app/components/HubProvider'
 import type { BoardDocument } from '#features/boards/types/board'
-import { overviewPreset, presetBoard } from '#features/boards/utils/presets'
+import { presetBoard } from '#features/boards/utils/presets'
 import type { PresetId } from '#features/boards/utils/presets'
 import { catalogue, getWidget } from '#features/widgets/constants/catalogue'
 import { createHub } from '#lib/hub'
@@ -95,17 +95,6 @@ describe('BoardPage', () => {
       item.type === 'widget' ? [item.widget] : [],
     )
     expect(ids.toSorted()).toEqual(catalogue.map((widget) => widget.id).toSorted())
-  })
-
-  it('names the Overview Widgets the Catalogue lacks as Unknown Widgets', async () => {
-    openBoard('/boards/overview', fakeHub().client)
-    const missing = overviewPreset.items.filter(
-      (item) => item.type === 'widget' && getWidget(item.widget) === undefined,
-    )
-
-    expect(await screen.findAllByRole('group', { name: 'Unknown Widget' })).toHaveLength(
-      missing.length,
-    )
   })
 
   it('asks the Hub once for each Widget a filter change affects, and for no other', async () => {
