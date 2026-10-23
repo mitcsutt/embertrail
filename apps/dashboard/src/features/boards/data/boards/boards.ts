@@ -1,5 +1,6 @@
-import { isProblemError, items } from '@mitcsutt/embertrail-client'
+import { UnexpectedResponseError, isProblemError, items } from '@mitcsutt/embertrail-client'
 import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
+import { queryOptions, useQuery } from '@tanstack/react-query'
 
 import type { BoardDocument } from '#features/boards/types/board'
 import { boardNamespace } from '#features/boards/types/board'
@@ -196,4 +197,38 @@ async function asConflict(hub: EmbertrailClient, id: string, error: unknown): Pr
       ? new BoardConflict(id, undefined)
       : new BoardConflict(id, undefined, reading)
   }
+}
+
+/** Only a failure that may pass is retried: a refusal, a missing or an unreadable Board will recur. */
+const retryOnce = (count: number, error: unknown): boolean =>
+  count < 1 &&
+  (error instanceof TypeError ||
+    error instanceof UnexpectedResponseError ||
+    (isProblemError(error) && error.status >= 500))
+
+/** The Boards the caller can read. Written elsewhere, so a save invalidates `['boards', 'list']`. */
+export function boardListQueryOptions(hub: EmbertrailClient) {
+  return queryOptions({
+    queryKey: ['boards', 'list'],
+    queryFn: ({ signal }) => listBoards(hub, signal),
+    retry: retryOnce,
+  })
+}
+
+export function useBoardList(hub: EmbertrailClient) {
+  return useQuery(boardListQueryOptions(hub))
+}
+
+/** One stored Board, keyed `['store', namespace, id]` (#72 A2). */
+export function boardQueryOptions(hub: EmbertrailClient, id: string) {
+  return queryOptions({
+    queryKey: ['store', boardNamespace, id],
+    queryFn: ({ signal }) => getBoard(hub, id, signal),
+    retry: retryOnce,
+  })
+}
+
+/** A stored Board. */
+export function useBoard(hub: EmbertrailClient, id: string) {
+  return useQuery(boardQueryOptions(hub, id))
 }

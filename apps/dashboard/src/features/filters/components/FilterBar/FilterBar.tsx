@@ -1,4 +1,4 @@
-import { Combobox, DateRangePickerField, Inline, Select } from '@mitcsutt/kiln-ui'
+import { Combobox, DateRangePickerField, Grid, Select } from '@mitcsutt/kiln-ui'
 import type { DateRangeValue } from '@mitcsutt/kiln-ui'
 import { useMemo, useState } from 'react'
 
@@ -49,7 +49,7 @@ export function FilterBar({ filters, onChange, inventory, loading, tz, now }: Fi
   }
 
   return (
-    <Inline gap={3} align="end" role="group" aria-label="Filters">
+    <Grid minItemWidth="xs" gap={3} align="end" role="group" aria-label="Filters">
       <Select
         aria-label="Time range"
         options={rangeOptions}
@@ -104,7 +104,7 @@ export function FilterBar({ filters, onChange, inventory, loading, tz, now }: Fi
         clearable
         clearLabel="Clear model"
       />
-    </Inline>
+    </Grid>
   )
 }
 

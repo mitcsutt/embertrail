@@ -56,18 +56,18 @@ apps/dashboard/
   src/
     main.tsx               # entry: styles, router, providers
     routes/                # thin file routes
-    app/components/        # AppShell, Providers, HubProvider, HubStatus
+    app/components/        # AppShell, BoardNav, JumpPalette, Providers, HubProvider, HubStatus
     app/utils/             # hubProblem: the copy for a Hub that can't be used
     config/runtimeConfig/  # config.json: load and validate
     lib/                   # configured clients, one module each (hub, queryClient)
     features/
       filters/             # types, utils (resolveWindow, toQueryContext), hooks, data, components
       widgets/             # the Widget framework and the first Catalogue entries, see Widgets
-      boards/{types,schemas,utils,data,pages}  # BoardDocument and its schema, Presets, the store, BoardPage
+      boards/{types,schemas,utils,constants,data,hooks,components,pages}  # BoardDocument and its schema, Presets, the store, BoardView and BoardGrid, BoardPage
       sessions/pages/      # SessionGroupsPage, SessionPage
 ```
 
-Routes: `/` redirects to `/boards/overview`; `/boards/$boardId`, `/sessions` and `/sessions/$sessionId` render placeholder pages for now.
+Routes: `/` redirects to `/boards/overview`; `/boards/$boardId` is the [Board view](#the-board-view); `/sessions` and `/sessions/$sessionId` render placeholder pages for now.
 
 What the structure rule allows, so a new folder does not fail lint after the code is written:
 
@@ -102,7 +102,7 @@ An absolute `TimeRange` is two `YYYY-MM-DD` calendar dates, both inclusive, read
 - **`resolveWindow(range, now, tz)`** turns a `TimeRange` into `{ from, to }`, UTC instants with `from` inclusive and `to` exclusive. Days are local calendar days in `tz`, so a day across a clock change is 23 or 25 hours; weeks start on Monday. Every range that includes today ends at the start of tomorrow, not at `now`, so a Widget's request stays the same all day and TanStack Query does not refetch it. `last-7-days` is today and the six days before it. `resolveFixedWindow` does the same for a Widget's fixed `window` (`today`, `this-week`, `last-28-days`, `last-12-weeks`); `absoluteRange` gives the dates a relative range covers (what the custom picker starts from). Never send a fixed offset as `tz`: the Hub answers 422. `browserTimeZone()` reads the IANA zone once at the edge.
 - **`toQueryContext(filters, override, widget, now, tz)`** builds a Widget's `QueryContext`. A pinned override wins field by field (a field it leaves unset follows the Board). A Widget with a fixed `window` ignores the Board's range, even a pinned one. Source, Account and model become `embertrail.source_id`, `embertrail.account_id` and `model` `eq` filters, and the same values in `sessions` for `listSessions`; a filter the Widget does not list in `filters` is left out of both. It takes a `WidgetScope` (`window` and `filters`), which a `WidgetDefinition` satisfies.
 - **The URL is the live state.** `useBoardFilters(saved)` reads the filters from the search params over the Board's `saved` ones and writes changes back, replacing the history entry and keeping other params. Keys: `range` (a relative range, or `custom` with `from` and `to`), `source`, `account` and `model`. A bare URL shows the saved filters; a value is written only where it differs from them, and an empty string means "all" for a pick the Board saved. A param that does not validate is ignored on its own (`filterSearchSchema`). Routes need no `validateSearch` for it, and the hook leaves other params alone. The hook returns `{ filters, setFilters, tz }`.
-- **`data/inventory`** is `getInventory` for the current window, keyed `['inventory', from, to]`. `useInventory(client, window)` takes the client as an argument; the Board page will pass `useHub()`'s.
+- **`data/inventory`** is `getInventory` for the current window, keyed `['inventory', from, to]`. `useInventory(client, window)` takes the client as an argument; the Board view passes `useHub()`'s.
 - **`FilterBar`** is the control: a range `Select` (with "Custom…" opening a `DateRangePickerField`) and `Combobox` pickers for Source, Account and model, single-select because `GET /sessions` takes one of each. It is controlled (`filters`, `onChange(patch)`, `inventory`) and keyboard-operable: Tab between the controls, Enter or the arrow keys in each. The custom picker keeps its own draft and reports only a whole range whose start is not after its end. Account options use `Inventory.accounts[].label` with the email under it; a Source shows its name; the Owner is shown only when the Inventory holds more than one, and is an id until the Hub names it. A pick the window no longer holds is still offered, so it never disappears from the bar.
 
 Tests: unit tests next to each module, including every relative range in Europe/Berlin and America/New_York on both clock-change days of 2026 (`resolveWindow.test.ts`), and `test/filters.test.ts` against the test Hub (the Inventory, and the filters `toQueryContext` maps against the demo facts).
@@ -114,7 +114,18 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 - **Schema:** `features/boards/schemas/board` holds the zod schema, and `board.schema.json` next to it is the same structure as JSON Schema (draft 2020-12), generated from zod and checked by a snapshot test: after changing the schema, run `pnpm --filter @mitcsutt/embertrail-dashboard test -- -u` to rewrite the file. `schema_version` is `1`. JSON Schema covers the structure; zod also checks what it cannot say: item ids are unique, the Layout has exactly one cell per item, and no cell runs past column 12. A Board that comes back from the Hub is always parsed by zod, never trusted.
 - **Migration:** `migrateBoard(stored)` (`utils/migrate`) lifts a stored Board of any older `schema_version` to the current one, step by step through `boardMigrations` (empty while v1 is the first version). It throws `UnsupportedBoardVersionError` for a newer version and `InvalidBoardError`, which names each problem, for anything that does not parse. Every read goes through it. To add version 2: bump `currentBoardVersion` and the schema, and add `boardMigrations[1]`.
 - **Presets** (`utils/presets`) are data, not stored documents, and are frozen: **Overview** (the layout of #16), **Everything** (one section per Widget group in Catalogue order, each Widget at its default size, built by `everythingPreset(catalogue)` so a new Widget joins it) and **New Board** (empty). All three start on `last-7-days`. `overview`, `everything` and `new` are reserved ids; a stored Board id is `b-` and ten base36 characters (`newBoardId`). A Widget item's `i` is its Widget id in a Preset and a section's `i` is `section-<slug>`. `customisePreset(preset)` returns a copy named `<name> (copy)`, which `createBoard` then stores.
+- **Queries** (`data/boards`): `useBoardList(client)` (key `['boards', 'list']`) and `useBoard(client, id)` (key `['store', 'embertrail-dashboard', id]`). Only a network failure, a proxy's 5xx or a Hub 5xx is retried, once; a missing, refused or unreadable Board is not.
 - **Store** (`data/boards`) takes the client as its first argument: `listBoards` (the readable ones, and the ids it could not read), `getBoard` (keeps the `ETag`), `createBoard` (`If-None-Match: *`, a fresh id, retried on a taken one), `saveBoard` and `deleteBoard` (`If-Match`). A write that loses its race throws `BoardConflict` with `current`, the Hub's copy (`undefined` if the Board was deleted since, or if the new copy cannot be read, in which case `cause` holds the read error); the stored Board is untouched, and the caller decides whether to reload or keep editing.
+
+### The Board view
+
+`/boards/$boardId` runs `BoardPage`. A Preset id (`overview`, `everything`, `new`) resolves to its Preset (`presetBoard(id, catalogue)`); any other id is a stored Board, read and migrated by `useBoard`. A Board that does not exist shows "No such Board"; one that cannot be read (`InvalidBoardError`, an unsupported version) shows the reason with a Try again.
+
+- **`BoardView`** (`components/BoardView`) is one Board in view mode: the name, the `FilterBar`, and the grid inside a `WidgetColorScope` (one colour per model across every chart; `features/widgets` owns it). The filters come from `useBoardFilters(board.filters)`, so the URL is the live state; the Inventory for the visible window fills the pickers. `now` is read once when the page mounts. An empty Board (the `new` Preset) shows "No Widgets on this Board yet".
+- **`BoardGrid`** (`components/BoardGrid`) draws the stored 12-column Layout with kiln-dnd's `GridLayout` (`columns` 4, 8 and 12 by width, narrower ones generated from the stored one). View mode has no `DragHandle` and `resizable={false}`, so nothing moves. A `section` is an `h2`; a `widget` is a `Widget` with its own `QueryContext` (pinned `override` applied); a Widget id the Catalogue does not have is an "Unknown Widget" frame, and a `query` item a frame saying Query Widgets cannot be shown yet, so one item never takes the Board down.
+- **Edit is not here yet.** "Customise" (Presets) and "Edit" (stored Boards) are disabled buttons shown when `useSelf().canEdit`; the Board editor replaces them (#72 D7).
+- **Navigation** (`app/components`): `BoardNav` is the sidebar list (Presets, then stored Boards, then "New Board", which is the empty Preset), and `JumpPalette` is the `CommandPalette` on ⌘K or Ctrl+K (and a "Jump to…" button) over the same Boards and the Session Groups page. A Hub that refuses the Board list leaves the Presets. Both list `presetIds` in order, named by each Preset's own `name`.
+- Features import each other's public kinds only, so `app` and `boards` reach `filters` and `widgets` through hooks and components (`useQueryContext`, `useResolvedWindow`, `usePresetList`, `WidgetColorScope`), not their `utils`.
 
 ## Widgets
 
@@ -162,6 +173,10 @@ Do not call the client from a Widget. `useWidgetData` does, and nothing else und
 3. render its `View` from a stub client in `Widget.test.tsx` when it draws something new.
 
 kiln-charts needs `ResizeObserver` and `matchMedia`, which jsdom lacks; `test/vitest.setup.ts` stubs both, so a chart renders its frame and hidden data table but is never laid out. Assert on the table, and check pointer behaviour in the browser.
+
+## Component tests
+
+`test/fakeHub.ts` is an in-memory Hub for tests that render the app: `fakeHub({ boards?, scopes? })` returns a real client whose `fetch` answers `getSelf`, `getInventory`, the three Query API operations (empty results) and reading Boards, plus `requests` and `widgetRequests()` for what was asked. PGLite does not boot under jsdom, so a `.tsx` test cannot use `dashboardTestHub`; use `fakeHub` for UI behaviour and the test Hub (a `// @vitest-environment node` file) for what the Hub does with a request. `test/boards.test.tsx` is the reference: it renders the real route tree and asserts what each Preset and a stored Board draw, that a filter change asks only the affected Widgets again, and the navigation and palette.
 
 ## Demo data
 

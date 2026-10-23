@@ -31,11 +31,16 @@ describe('AppShell', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve(
-          new Response(JSON.stringify(self), { headers: { 'content-type': 'application/json' } }),
-        ),
-      ),
+      vi.fn((input: Request | string | URL) => {
+        const url = input instanceof Request ? input.url : String(input)
+        return Promise.resolve(
+          url.endsWith('/api/v1/self')
+            ? new Response(JSON.stringify(self), {
+                headers: { 'content-type': 'application/json' },
+              })
+            : new Response('', { status: 404 }),
+        )
+      }),
     )
   })
 
@@ -46,7 +51,7 @@ describe('AppShell', () => {
   it('redirects / to the Overview Board and shows the navigation', async () => {
     renderAt('/')
 
-    expect(await screen.findByRole('heading', { name: 'Board: overview' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Boards' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Session Groups' })).toBeInTheDocument()
   })

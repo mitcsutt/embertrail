@@ -1,0 +1,1 @@
+export { WidgetColorScope } from './WidgetColorScope'
