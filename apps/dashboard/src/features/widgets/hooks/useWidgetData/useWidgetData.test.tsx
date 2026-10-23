@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { QueryContext } from '#features/filters/types/filters'
+import { costByAccount } from '#features/widgets/components/CostByAccount'
 import { costToday } from '#features/widgets/components/CostToday'
 import { HubContext } from '#lib/hub'
 
@@ -92,5 +93,45 @@ describe('useWidgetData', () => {
       expect(result.current.status).toBe('error')
     })
     expect(queryMetrics).toHaveBeenCalledOnce()
+  })
+
+  it('asks for the Inventory only for a Widget that wants it, and waits for it', async () => {
+    const queryMetrics = vi.fn().mockResolvedValue({
+      rows: [{ group: { 'embertrail.account_id': 'a' }, value: 2 }],
+      meta: {},
+    })
+    let answer: (inventory: unknown) => void = () => undefined
+    const getInventory = vi.fn<(input: { query: unknown }) => Promise<unknown>>().mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve
+      }),
+    )
+    const client = { queryMetrics, getInventory } as unknown as EmbertrailClient
+    const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000 } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <HubContext value={hubFor(client)}>{children}</HubContext>
+      </QueryClientProvider>
+    )
+
+    const { result: plain } = renderHook(() => useWidgetData(costToday, ctx), { wrapper })
+    await waitFor(() => {
+      expect(plain.current.status).toBe('ready')
+    })
+    expect(getInventory).not.toHaveBeenCalled()
+    expect(plain.current.inventory).toBeUndefined()
+
+    const { result } = renderHook(() => useWidgetData(costByAccount, ctx), { wrapper })
+    await waitFor(() => {
+      expect(getInventory).toHaveBeenCalledOnce()
+    })
+    // The rows are in; the names are not.
+    expect(result.current.status).toBe('loading')
+    answer({ accounts: [{ id: 'a', label: 'Work' }] })
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.inventory).toEqual({ accounts: [{ id: 'a', label: 'Work' }] })
+    expect(getInventory.mock.calls[0]?.[0].query).toEqual({ from: ctx.from, to: ctx.to })
   })
 })

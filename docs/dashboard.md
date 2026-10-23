@@ -117,14 +117,14 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 
 ## Widgets
 
-A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue; three Widgets exist so far, one per pattern: **Cost today** (a stat), **Each day by model** (a stacked `Bars` chart pivoted by model) and **Top sessions** (a `Table` linking to `/sessions/$sessionId`).
+A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue. Ten Widgets exist so far, in #16's order: **Cost today** and **Cost this week** (stats; the week is a fixed window), **Each day by model** (a stacked `Bars` chart pivoted by model), **Cost by Account** (`Bars`, an Account named by its Inventory label), **Sessions today** (a stat), **Top sessions** (a `Table` linking to `/sessions/$sessionId`), **Sessions per day** (`Bars` stacked by `start_type`), **Model mix** (`Share`), **Cache share** (a stat: cacheRead ÷ (input + cacheRead + cacheCreation), empty when no input was counted) and **Tokens by type** (a stacked `TimeSeries`). The two `session.count` Widgets leave `model` out of their `filters`: that metric has no model.
 
 ```
 features/widgets/
   components/
     Widget/                  # useWidgetData + WidgetFrame + the definition's View: what a Board renders
     WidgetFrame/             # the Card, and loading, empty and error in place of the View
-    CostToday/ EachDayByModel/ TopSessions/   # one module per Widget: definition and View together
+    CostToday/ EachDayByModel/ TopSessions/ …  # one module per Widget: definition and View together
   constants/catalogue/       # catalogue: WidgetDefinition[], getWidget(id)
   data/runRequest/           # a switch over WidgetRequest.op onto the client
   hooks/useWidgetData/       # the only path from a Widget to the Hub (lint enforces it)
@@ -133,6 +133,7 @@ features/widgets/
 
 - **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried; a 5xx or a network failure is retried once.
 - **The frame** maps `loading`, `empty` and `error` onto kiln-charts' `ChartFrame`. An error shows the Hub's `detail` when it sent one, with a Retry; `empty` is what `isEmpty(data)` says (no rows, or a sender that sends no cost). The `View` is drawn only when the status is `ready`. A `stat` leaves the title to its `Stat`.
+- **The Inventory** reaches a Widget that names things by it. A definition with `inventory: true` (Cost by Account, for Account labels) gets the window's Inventory from `useWidgetData` and as `View`'s `inventory` prop. It is the query the filter bar runs for the same window, so on a Board it costs no extra request. The Widget stays loading until the Inventory answers; if that fails it still draws, with ids for names. Other Widgets never ask for it.
 - **The Hub client** is `useHub().client` (`#lib/hub`), read only inside `useWidgetData`. ESLint stops anything else under `features/widgets` (tests aside) from importing `#lib/hub` or `runRequest`, so a Widget cannot reach the Hub another way. A test mounts a `HubContext` with the client it wants.
 - **Formats** (`utils/formats`) write dollars, token counts, percentages and durations in the browser's locale. `chartColorOrder({ models, types })` is the `order` for the Board-wide `ChartColorScope`, so a model keeps its colour in every chart.
 - **A Widget's window and filters** are already resolved into the `QueryContext` it gets. `toQueryContext` (`features/filters`) is the only code that builds one, in the app and in tests: `request(ctx)` uses `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` and leaves a `filter` out when it is empty.
@@ -145,6 +146,7 @@ Adding a Widget to the Catalogue is mechanical. Take `CostToday` (a stat), `Each
 2. **Fill the definition.** `id` is stable and kebab-case (Boards store it, so never rename it); `group`, `title`, `kind`, `size` (and `minSize`) place it. Set `window` to `board`, or to a fixed window if the Widget ignores the Board's range, and list in `filters` only the Board filters the Widget's metric carries: `session.count` has no `model`, so `model` stays out of its list.
 3. **`request(ctx)`** returns a `WidgetRequest` built from `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` (leave `filter` out when it is empty); `listSessions` Widgets use `ctx.sessions`. Copy the body from `packages/otel/src/query/widgets.test.ts`, which proves it against the Hub. Never build a `QueryContext` yourself, never send a fixed offset as `tz`, and keep a request free of anything that changes while the page is open, because the query is keyed on it.
 4. **`select(response, ctx)`** turns the response into the data the View needs, `isEmpty(data)` says when there is nothing to draw (no rows, or a sender that sends no such metric: never draw zeros), and `View` draws it. Use `utils/formats` for numbers and `chartColorOrder` for series colours.
+   A Widget that must name an Account (or another Inventory entry) sets `inventory: true` and reads `inventory` in `View`; it never calls the Hub itself.
 5. **Register it** in `constants/catalogue/catalogue.ts` with `asCatalogueEntry(widgetName)`, in the order of #16's table. `everythingPreset` picks it up.
 6. **Test it** (see below): one block in `test/widgets.test.ts` for the data, nothing else for the empty state and the spec check, which run over the Catalogue.
 

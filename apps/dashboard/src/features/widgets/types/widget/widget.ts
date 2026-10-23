@@ -2,6 +2,7 @@ import type { OperationInput } from '@mitcsutt/embertrail-client'
 import type { ChartStatus } from '@mitcsutt/kiln-charts'
 import type { ReactNode } from 'react'
 
+import type { Inventory } from '#features/filters/data/inventory'
 import type { QueryContext } from '#features/filters/types/filters'
 import type { FixedWindow } from '#features/filters/types/window'
 
@@ -31,8 +32,17 @@ export interface WidgetDefinition<Data = unknown> {
   window: WidgetWindow
   /** The Board filters this Widget honours. Filtering `session.count` by model would empty it. */
   filters: readonly ('source' | 'account' | 'model')[]
+  /** The View names things by the Inventory (an Account by its label): it is fetched and passed in. */
+  inventory?: boolean
   request(ctx: QueryContext): WidgetRequest
   select(response: unknown, ctx: QueryContext): Data
   isEmpty(data: Data): boolean
-  View: (props: { data: Data; ctx: QueryContext; status: ChartStatus; label: string }) => ReactNode
+  View: (props: {
+    data: Data
+    ctx: QueryContext
+    status: ChartStatus
+    label: string
+    /** The window's Inventory; set when the definition asks for it and the Hub has answered. */
+    inventory?: Inventory
+  }) => ReactNode
 }

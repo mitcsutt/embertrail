@@ -5,7 +5,7 @@ import type { WidgetDefinition } from '#features/widgets/types/widget'
 
 /** One Widget of the Catalogue: its data, its frame and its view. */
 export function Widget({ definition, ctx }: { definition: WidgetDefinition; ctx: QueryContext }) {
-  const { status, data, error, refetch } = useWidgetData(definition, ctx)
+  const { status, data, inventory, error, refetch } = useWidgetData(definition, ctx)
   return (
     <WidgetFrame
       title={definition.title}
@@ -16,7 +16,13 @@ export function Widget({ definition, ctx }: { definition: WidgetDefinition; ctx:
       height={definition.kind === 'bars' || definition.kind === 'series' ? 'fill' : 'auto'}
     >
       {data === undefined ? null : (
-        <definition.View data={data} ctx={ctx} status={status} label={definition.title} />
+        <definition.View
+          data={data}
+          ctx={ctx}
+          status={status}
+          label={definition.title}
+          inventory={inventory}
+        />
       )}
     </WidgetFrame>
   )
