@@ -169,7 +169,11 @@ export function buildQueryRequest(config: QueryWidgetConfig, ctx: QueryContext):
   const { source, groupBy, bucket, limit } = config
   const ranked = limit !== undefined && bucket === undefined && groupBy.length > 0
   const newestFirst = bucket !== undefined && limit !== undefined
-  const order = ranked ? 'value' : newestFirst ? 'bucket' : undefined
+  const order: 'bucket' | 'value' | undefined = ranked
+    ? 'value'
+    : newestFirst
+      ? 'bucket'
+      : undefined
   const shape = {
     from: ctx.from,
     to: ctx.to,

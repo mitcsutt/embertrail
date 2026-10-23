@@ -39,12 +39,7 @@ function setup() {
   const onOpenChange = vi.fn<(open: boolean) => void>()
   const user = userEvent.setup()
   render(
-    <QueryWidgetEditor
-      open
-      onOpenChange={onOpenChange}
-      inventory={inventory}
-      onSave={onSave}
-    />,
+    <QueryWidgetEditor open onOpenChange={onOpenChange} inventory={inventory} onSave={onSave} />,
   )
   return { user, onSave, onOpenChange }
 }

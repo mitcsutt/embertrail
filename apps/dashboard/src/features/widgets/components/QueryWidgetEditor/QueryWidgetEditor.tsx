@@ -28,11 +28,7 @@ import {
 } from '#features/widgets/constants/queryOptions'
 import type { QueryIssue, QueryWidgetConfig } from '#features/widgets/types/queryWidget'
 import type { WidgetKind } from '#features/widgets/types/widget'
-import {
-  makeFilter,
-  newQueryConfig,
-  withDrawableChart,
-} from '#features/widgets/utils/queryDraft'
+import { makeFilter, newQueryConfig, withDrawableChart } from '#features/widgets/utils/queryDraft'
 import { chartAvailability, validateQueryConfig } from '#features/widgets/utils/queryWidget'
 
 type Filter = Schemas['Filter']
