@@ -69,15 +69,19 @@ jobs:
       - name: Test
         run: pnpm test
 
-  # Builds the Docker image, boots the compose stack and ingests and queries a fixture through it
-  # (apps/server/smoke/smoke.sh, #37). The only job that needs Docker to run the Hub itself.
+  # Builds the Docker image, boots the compose stack, runs the CLI's setup against it and ingests
+  # and queries a fixture through it (apps/server/smoke/smoke.sh, #37). The only job that needs
+  # Docker to run the Hub itself.
   smoke:
     name: Docker smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Boot the stack, ingest a fixture, query it back
+      - uses: ./.github/actions/setup
+      - name: Build the CLI
+        run: pnpm --filter @mitcsutt/embertrail-cli build
+      - name: Boot the stack, set up Claude Code, ingest a fixture, query it back
         run: apps/server/smoke/smoke.sh
 
   # The one check branch protection requires. Every new job must be added to
