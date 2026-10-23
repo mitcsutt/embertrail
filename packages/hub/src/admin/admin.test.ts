@@ -73,7 +73,7 @@ describe('the Admin and self-management API', () => {
       },
     )
 
-    it('only an instance admin holds admin, so a demoted admin loses the Admin API', async () => {
+    it('only an Admin holds admin, so a demoted admin loses the Admin API', async () => {
       const ada = t.as('ada', ['admin'])
       expect((await ada.get('/api/v1/admin/users')).status).toBe(200)
       await t.sql(sql`update core.users set admin = false where id = 'ada'`)

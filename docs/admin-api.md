@@ -6,7 +6,7 @@ How Users, Teams, Sources, Tokens, Accounts and Grants are managed over HTTP ([#
 
 | Scope         | Who                        | Routes              | What                                                                                                   |
 | ------------- | -------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
-| `admin`       | instance admins only       | `/api/v1/admin/...` | Users (list, create, delete), Teams (list, create, delete, set or remove a member), every Source       |
+| `admin`       | Admins only                | `/api/v1/admin/...` | Users (list, create, delete), Teams (list, create, delete, set or remove a member), every Source       |
 | `self:manage` | every User, their own data | `/api/v1/self/...`  | Sources (list, create with an ingest Token, rename, delete), Tokens, Accounts (labels), Grants, export |
 
 `POST /api/v1/bootstrap` (tagged `admin`) creates the first admin once; [`identity.md`](identity.md#bootstrap) covers it. The allowlist (`ALLOWED_EMAILS` / `ALLOWED_DOMAINS`) is configuration, not an API call.

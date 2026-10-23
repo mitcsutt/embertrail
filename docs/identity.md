@@ -16,7 +16,7 @@ Teams, Grants and `ALLOWED_EMAILS` / `ALLOWED_DOMAINS` only matter once a second
 
 | Record      | Table            | Rules                                                                                                                                                       |
 | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **User**    | `core.users`     | Optional email (lowercased, unique), matched by Edge Identity. `admin` marks an instance admin, who alone may hold the `admin` Scope.                       |
+| **User**    | `core.users`     | Optional email (lowercased, unique), matched by Edge Identity. `admin` marks an Admin, who alone may hold the `admin` Scope.                                |
 | **Team**    | `core.teams`     | Id is 1–64 letters, digits, `_` or `-` (it appears as `team:<id>`), and never a User's id: both are Owner ids. Members read; editors also act for the Team. |
 | **Source**  | `core.sources`   | Owned by one User; its name is unique per User. Every Signal it sends belongs to that User.                                                                 |
 | **Token**   | `core.tokens`    | One User + Scopes. Kind `ingest` is bound to exactly one of the User's Sources; `read` and `management` never are (a check constraint enforces both).       |

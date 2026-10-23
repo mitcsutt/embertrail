@@ -52,7 +52,7 @@ export const bootstrap: Command = {
   path: ['bootstrap'],
   summary: "Create a new Hub's first User and log in as them",
   description:
-    "Exchanges the Hub's BOOTSTRAP_TOKEN for its first User, an instance admin, and a management Token, " +
+    "Exchanges the Hub's BOOTSTRAP_TOKEN for its first User, an Admin, and a management Token, " +
     'then logs in with that Token. Works once. The Docker Hub started without a BOOTSTRAP_TOKEN needs no bootstrap.',
   options: {
     hub: { type: 'string', value: 'url', required: true, description: "The Hub's address" },

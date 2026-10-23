@@ -12,7 +12,7 @@ export const contractVersion = 1
 export type Scope = `${string}:${string}` | 'admin'
 
 /**
- * Scopes the core defines (#27, #29): `admin` (instance admin), `self:manage` (a User's own
+ * Scopes the core defines (#27, #29): `admin` (Admin), `self:manage` (a User's own
  * Sources, Tokens, Accounts and Grants) and `sql:read` (the read-only SQL endpoint).
  */
 export const coreScopes: readonly Scope[] = ['admin', 'self:manage', 'sql:read']

@@ -45,7 +45,7 @@ export interface TestHub {
   /**
    * A client holding a real Token for `userId` with `scopes`: the User (and the Source, for
    * `sourceId`) is created with that id if new, and the Token is issued before the first
-   * request. Holding `admin` makes the User an instance admin.
+   * request. Holding `admin` makes the User an Admin.
    */
   as(userId: string, scopes: readonly Scope[], options?: AsOptions): TestClient
   /** Creates the User with this id if new. */

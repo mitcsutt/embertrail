@@ -19,7 +19,7 @@ export interface User {
   name: string
   /** Lowercased. What an Edge Identity is matched on; null for a Token-only User. */
   email: string | null
-  /** Instance admin: may hold the `admin` Scope. */
+  /** Admin: may hold the `admin` Scope. */
   admin: boolean
 }
 
@@ -125,7 +125,7 @@ export interface Directory {
   }): Promise<Grant>
   revokeGrant(grantId: string): Promise<void>
   /**
-   * Creates the first User, an instance admin, with a management Token holding every Scope.
+   * Creates the first User, an Admin, with a management Token holding every Scope.
    * Null once any admin User exists or a first User was ever created: `BOOTSTRAP_TOKEN` and
    * the Docker zero-config start both go through here, and each works once. A non-admin User
    * who already has `email` (signed up by Edge Identity) is promoted instead of duplicated.
