@@ -1,8 +1,9 @@
 import { Chart } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { todayVsTypical } from '#features/widgets/utils/localHours'
+import { bucketedRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface HourCost {
   /** The local hour, `09:00`. */
@@ -38,16 +39,11 @@ export const todayByHourVsTypical: WidgetDefinition<TodayByHourVsTypicalData> = 
       to: ctx.to,
       tz: ctx.tz,
       bucket: 'hour',
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response, ctx) => {
-    const rows = aggregateRows(response)
-    const buckets = rows.flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ start: row.bucket, value: row.value }],
-    )
+    const buckets = bucketedRows(response).map((row) => ({ start: row.bucket, value: row.value }))
     return {
       hasCost: buckets.length > 0,
       hours: todayVsTypical(buckets, ctx).map(({ hour, today, typical }) => ({

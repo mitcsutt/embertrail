@@ -1,2 +1,2 @@
-export { aggregateRows } from './aggregateRows'
-export type { AggregateRow } from './aggregateRows'
+export { aggregateRows, bucketedRows, groupLabel, valuedRows } from './aggregateRows'
+export type { AggregateRow, BucketedRow, ValuedRow } from './aggregateRows'

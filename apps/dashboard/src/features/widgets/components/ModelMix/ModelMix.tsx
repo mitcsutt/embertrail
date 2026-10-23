@@ -1,7 +1,8 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Share } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { valuedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface ModelCost {
   model: string
@@ -31,13 +32,14 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
       to: ctx.to,
       tz: ctx.tz,
       group_by: ['model'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    models: (response as OperationOutput<'queryMetrics'>).rows.flatMap((row) =>
-      row.value === null ? [] : [{ model: String(row.group.model ?? 'Unknown'), cost: row.value }],
-    ),
+    models: valuedRows(response).map((row) => ({
+      model: groupLabel(row, 'model'),
+      cost: row.value,
+    })),
   }),
   isEmpty: ({ models }) => models.length === 0,
   View: ({ data, label }) => (

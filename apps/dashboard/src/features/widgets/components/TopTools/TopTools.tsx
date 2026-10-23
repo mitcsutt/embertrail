@@ -1,7 +1,7 @@
 import { BarList } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { valuedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 
 export interface ToolCount {
   tool: string
@@ -38,11 +38,10 @@ export const topTools: WidgetDefinition<TopToolsData> = {
     },
   }),
   select: (response) => ({
-    tools: aggregateRows(response).flatMap((row) =>
-      row.value === null
-        ? []
-        : [{ tool: String(row.group.tool_name ?? 'Unknown'), calls: row.value }],
-    ),
+    tools: valuedRows(response).map((row) => ({
+      tool: groupLabel(row, 'tool_name'),
+      calls: row.value,
+    })),
   }),
   isEmpty: ({ tools }) => tools.length === 0,
   View: ({ data, label }) => (

@@ -1,7 +1,8 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 /** The Sessions that started on one day in one way (`startup`, `resume`, ...). */
 export interface DayStartTypeSessions {
@@ -35,21 +36,15 @@ export const sessionsPerDay: WidgetDefinition<SessionsPerDayData> = {
       tz: ctx.tz,
       bucket: 'day',
       group_by: ['start_type'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    rows: (response as OperationOutput<'queryMetrics'>).rows.flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [
-            {
-              day: row.bucket,
-              startType: String(row.group.start_type ?? 'Unknown'),
-              sessions: row.value,
-            },
-          ],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      day: row.bucket,
+      startType: groupLabel(row, 'start_type'),
+      sessions: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

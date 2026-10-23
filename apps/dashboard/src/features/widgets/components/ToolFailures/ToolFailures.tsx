@@ -1,8 +1,8 @@
 import { Table } from '@mitcsutt/kiln-ui'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { formatPercent } from '#features/widgets/utils/formats'
+import { aggregateRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 
 export interface ToolOutcome {
   tool: string
@@ -41,7 +41,7 @@ export const toolFailures: WidgetDefinition<ToolFailuresData> = {
     const byTool = new Map<string, ToolOutcome>()
     for (const row of aggregateRows(response)) {
       if (row.value === null) continue
-      const tool = String(row.group.tool_name ?? 'Unknown')
+      const tool = groupLabel(row, 'tool_name')
       const outcome = byTool.get(tool) ?? { tool, calls: 0, failures: 0 }
       outcome.calls += row.value
       if (String(row.group.success) === 'false') outcome.failures += row.value

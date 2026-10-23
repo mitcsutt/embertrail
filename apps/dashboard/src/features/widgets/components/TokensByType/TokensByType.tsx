@@ -1,7 +1,8 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { TimeSeries } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 /** One day's tokens of one type (`input`, `output`, `cacheRead`, `cacheCreation`). */
 export interface DayTypeTokens {
@@ -35,15 +36,15 @@ export const tokensByType: WidgetDefinition<TokensByTypeData> = {
       tz: ctx.tz,
       bucket: 'day',
       group_by: ['type'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    rows: (response as OperationOutput<'queryMetrics'>).rows.flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ day: row.bucket, type: String(row.group.type ?? 'Unknown'), tokens: row.value }],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      day: row.bucket,
+      type: groupLabel(row, 'type'),
+      tokens: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

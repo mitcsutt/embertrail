@@ -9,9 +9,14 @@ const modes = ['light', 'dark'] as const
 /**
  * Checks the current page with axe in light and in dark mode and fails on any violation. It stores
  * each mode and reloads the page, so pass `ready`, a locator that is visible once the content you
- * want checked has rendered.
+ * want checked has rendered. Pass `settled` too when the page keeps loading after that, such as
+ * a Board whose Widgets fetch their data: it runs after each reload, before axe.
  */
-export async function expectNoAxeViolations(page: Page, ready: Locator): Promise<void> {
+export async function expectNoAxeViolations(
+  page: Page,
+  ready: Locator,
+  settled?: () => Promise<void>,
+): Promise<void> {
   for (const mode of modes) {
     await page.evaluate(
       ({ key, value }) => {
@@ -22,6 +27,7 @@ export async function expectNoAxeViolations(page: Page, ready: Locator): Promise
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
     await expect(ready).toBeVisible()
+    await settled?.()
     const { violations } = await new AxeBuilder({ page }).analyze()
     expect(violations, `axe violations in ${mode} mode`).toEqual([])
   }

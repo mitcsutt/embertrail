@@ -1,7 +1,8 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Stat } from '@mitcsutt/kiln-ui'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface SessionsTodayData {
   /** Sessions started today; `null` when the Hub holds no session count for the day. */
@@ -26,11 +27,11 @@ export const sessionsToday: WidgetDefinition<SessionsTodayData> = {
       from: ctx.from,
       to: ctx.to,
       tz: ctx.tz,
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    sessions: (response as OperationOutput<'queryMetrics'>).rows[0]?.value ?? null,
+    sessions: aggregateRows(response)[0]?.value ?? null,
   }),
   isEmpty: ({ sessions }) => sessions === null,
   View: ({ data, label }) => (

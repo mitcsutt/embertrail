@@ -1,8 +1,9 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Stat } from '@mitcsutt/kiln-ui'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { formatUsd } from '#features/widgets/utils/formats'
+import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface CostThisWeekData {
   /** Dollars since Monday; `null` when the Hub holds no cost for the week. */
@@ -26,11 +27,11 @@ export const costThisWeek: WidgetDefinition<CostThisWeekData> = {
       from: ctx.from,
       to: ctx.to,
       tz: ctx.tz,
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    cost: (response as OperationOutput<'queryMetrics'>).rows[0]?.value ?? null,
+    cost: aggregateRows(response)[0]?.value ?? null,
   }),
   isEmpty: ({ cost }) => cost === null,
   View: ({ data, label }) => <Stat label={label} size="lg" value={formatUsd(data.cost ?? 0)} />,

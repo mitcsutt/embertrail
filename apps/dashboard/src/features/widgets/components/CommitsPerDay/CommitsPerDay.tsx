@@ -1,7 +1,8 @@
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { bucketedRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface DayCommits {
   /** The day's start, an ISO time with its offset. */
@@ -32,15 +33,11 @@ export const commitsPerDay: WidgetDefinition<CommitsPerDayData> = {
       to: ctx.to,
       tz: ctx.tz,
       bucket: 'day',
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    rows: aggregateRows(response).flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ day: row.bucket, commits: row.value }],
-    ),
+    rows: bucketedRows(response).map((row) => ({ day: row.bucket, commits: row.value })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

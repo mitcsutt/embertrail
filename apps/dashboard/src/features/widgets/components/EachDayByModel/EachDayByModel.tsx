@@ -1,7 +1,8 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Bars } from '@mitcsutt/kiln-charts'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 /** One day's cost for one model: the long rows `Bars` pivots into one series per model. */
 export interface DayModelCost {
@@ -35,15 +36,15 @@ export const eachDayByModel: WidgetDefinition<EachDayByModelData> = {
       tz: ctx.tz,
       bucket: 'day',
       group_by: ['model'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => ({
-    rows: (response as OperationOutput<'queryMetrics'>).rows.flatMap((row) =>
-      row.bucket === undefined || row.value === null
-        ? []
-        : [{ day: row.bucket, model: String(row.group.model ?? 'Unknown'), cost: row.value }],
-    ),
+    rows: bucketedRows(response).map((row) => ({
+      day: row.bucket,
+      model: groupLabel(row, 'model'),
+      cost: row.value,
+    })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
   View: ({ data, ctx, label }) => (

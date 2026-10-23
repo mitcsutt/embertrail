@@ -1,8 +1,9 @@
-import type { OperationOutput } from '@mitcsutt/embertrail-client'
 import { Stat } from '@mitcsutt/kiln-ui'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { formatPercent } from '#features/widgets/utils/formats'
+import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import { filterClause } from '#features/widgets/utils/filterClause'
 
 export interface CacheShareData {
   /** Cached input as a fraction (0 to 1) of all input; `null` when no input tokens were counted. */
@@ -27,12 +28,12 @@ export const cacheShare: WidgetDefinition<CacheShareData> = {
       to: ctx.to,
       tz: ctx.tz,
       group_by: ['type'],
-      ...(ctx.filter.length > 0 && { filter: ctx.filter }),
+      ...filterClause(ctx),
     },
   }),
   select: (response) => {
     const tokens: Record<string, number> = {}
-    for (const row of (response as OperationOutput<'queryMetrics'>).rows) {
+    for (const row of aggregateRows(response)) {
       if (row.value !== null) tokens[String(row.group.type)] = row.value
     }
     // Output tokens are not input, so they stay out of the denominator.
