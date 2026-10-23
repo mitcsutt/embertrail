@@ -78,6 +78,21 @@ function checked(board: BoardDocument): BoardDocument {
   return migrateBoard(board)
 }
 
+/** Who a write acts for: omitted for the caller's own Boards, a Team's id for a Team's. */
+export interface WriteOptions {
+  team?: string
+}
+
+/** The Team a stored Board belongs to, if it is a Team's; what its writes act for. */
+export function teamOf(owner: StoredBoard['owner']): string | undefined {
+  return owner.kind === 'team' ? owner.id : undefined
+}
+
+/** `Embertrail-Owner` goes on writes only, and only for a Team (the solo path sends nothing). */
+function ownerHeader({ team }: WriteOptions): { 'Embertrail-Owner'?: string } {
+  return team === undefined ? {} : { 'Embertrail-Owner': `team:${team}` }
+}
+
 /** The `ETag` the Hub sent with a version of a document; the Hub always sends one. */
 function etagOf(headers: { ETag?: string | null }): string {
   if (headers.ETag === undefined || headers.ETag === null) throw new Error('The Hub sent no ETag')
@@ -124,12 +139,13 @@ export async function getBoard(
 
 /**
  * Creates a Board under a fresh id and fails rather than overwrite one. `If-None-Match: *` makes a
- * taken id a 412 or a 409; a new id is tried a few times before giving up.
+ * taken id a 412 or a 409; a new id is tried a few times before giving up. With `team` the Team
+ * owns the Board, which only its editors may do.
  */
 export async function createBoard(
   hub: EmbertrailClient,
   board: BoardDocument,
-  options: { newId?: () => string } = {},
+  options: WriteOptions & { newId?: () => string } = {},
 ): Promise<StoredBoard> {
   const newId = options.newId ?? newBoardId
   const valid = checked(board)
@@ -138,7 +154,7 @@ export async function createBoard(
     try {
       const { data, headers } = await hub.putStoreDocument({
         path: { namespace: boardNamespace, id },
-        header: { 'If-None-Match': '*' },
+        header: { 'If-None-Match': '*', ...ownerHeader(options) },
         body: { data: valid },
       })
       return stored(data, etagOf(headers))
@@ -151,19 +167,21 @@ export async function createBoard(
 
 /**
  * Replaces a Board that is still at `etag`. When it is not, throws `BoardConflict` carrying the
- * server's current copy, and the stored Board is left as it is.
+ * server's current copy, and the stored Board is left as it is. A Team's Board is written with
+ * `team`, its Owner, and only its editors may.
  */
 export async function saveBoard(
   hub: EmbertrailClient,
   id: string,
   board: BoardDocument,
   etag: string,
+  options: WriteOptions = {},
 ): Promise<StoredBoard> {
   const valid = checked(board)
   try {
     const { data, headers } = await hub.putStoreDocument({
       path: { namespace: boardNamespace, id },
-      header: { 'If-Match': etag },
+      header: { 'If-Match': etag, ...ownerHeader(options) },
       body: { data: valid },
     })
     return stored(data, etagOf(headers))
@@ -172,12 +190,17 @@ export async function saveBoard(
   }
 }
 
-/** Deletes a Board that is still at `etag`; otherwise throws `BoardConflict`. */
-export async function deleteBoard(hub: EmbertrailClient, id: string, etag: string): Promise<void> {
+/** Deletes a Board that is still at `etag`; otherwise throws `BoardConflict`. `team` as for `saveBoard`. */
+export async function deleteBoard(
+  hub: EmbertrailClient,
+  id: string,
+  etag: string,
+  options: WriteOptions = {},
+): Promise<void> {
   try {
     await hub.deleteStoreDocument({
       path: { namespace: boardNamespace, id },
-      header: { 'If-Match': etag },
+      header: { 'If-Match': etag, ...ownerHeader(options) },
     })
   } catch (error) {
     throw await asConflict(hub, id, error)

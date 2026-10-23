@@ -12,6 +12,7 @@ import {
   boardQueryOptions,
   deleteBoard,
   saveBoard,
+  teamOf,
 } from '#features/boards/data/boards'
 import type { StoredBoard } from '#features/boards/data/boards'
 import type { BoardDocument } from '#features/boards/types/board'
@@ -50,6 +51,8 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [stored] = useState(opened)
+  // A Team's Board is written as the Team; the Owner never changes in edit mode.
+  const team = teamOf(stored.owner)
   const [draft, setDraft] = useState<BoardDocument>(stored.board)
   const dirty = !sameBoard(draft, stored.board)
   const { filters, setFilters, tz } = useBoardFilters(draft.filters)
@@ -88,7 +91,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   }
 
   const save = useMutation({
-    mutationFn: () => saveBoard(client, stored.id, draft, stored.etag),
+    mutationFn: () => saveBoard(client, stored.id, draft, stored.etag, { team }),
     onSuccess: (saved) => {
       queryClient.setQueryData(boardQueryOptions(client, stored.id).queryKey, saved)
       void queryClient.invalidateQueries({ queryKey: ['boards', 'list'] })
@@ -100,7 +103,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   })
 
   const remove = useMutation({
-    mutationFn: () => deleteBoard(client, stored.id, stored.etag),
+    mutationFn: () => deleteBoard(client, stored.id, stored.etag, { team }),
     onSuccess: () => {
       forgetBoard()
       goToOverview()

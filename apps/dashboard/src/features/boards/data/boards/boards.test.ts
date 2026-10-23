@@ -19,6 +19,7 @@ import {
   listBoards,
   newBoardId,
   saveBoard,
+  teamOf,
 } from './boards'
 
 let hub: DashboardTestHub
@@ -211,5 +212,138 @@ describe('Writing an invalid Board', () => {
       saveBoard(hub.client, created.id, orphanCell(), created.etag),
     ).rejects.toBeInstanceOf(InvalidBoardError)
     expect((await getBoard(hub.client, created.id)).board.name).toBe('Fine')
+  })
+})
+
+describe('Team Boards', () => {
+  /** A client for a User with their own management Token, as that User's Dashboard would hold. */
+  async function clientFor(userId: string) {
+    await hub.t.user(userId)
+    const { token } = await hub.t.hub.directory.issueToken(userId, {
+      kind: 'management',
+      scopes: ['store:read', 'store:write'],
+    })
+    return createClient({
+      baseUrl: 'http://hub.test',
+      token,
+      fetch: (input, init) => hub.t.hub.fetch(new Request(input, init)),
+    })
+  }
+
+  it('is created by a Team editor, listed for a second member, and left to the editors to write', async () => {
+    const editor = await clientFor('tb-editor')
+    const member = await clientFor('tb-member')
+    const outsider = await clientFor('tb-outsider')
+    await hub.t.team('tb-crew', { editors: ['tb-editor'], members: ['tb-member'] })
+
+    const created = await createBoard(editor, named('Crew spend'), { team: 'tb-crew' })
+    expect(created.owner).toEqual({ kind: 'team', id: 'tb-crew' })
+    expect(teamOf(created.owner)).toBe('tb-crew')
+
+    // The second member reads it, in the list and by id; the outsider does not.
+    const listed = await listBoards(member)
+    expect(listed.boards.find(({ id }) => id === created.id)).toMatchObject({
+      name: 'Crew spend',
+      owner: { kind: 'team', id: 'tb-crew' },
+    })
+    expect((await getBoard(member, created.id)).board.name).toBe('Crew spend')
+    expect((await listBoards(outsider)).boards.map(({ id }) => id)).not.toContain(created.id)
+
+    // The member cannot replace or delete it, with or without acting for the Team.
+    const refused = (error: unknown) => isProblemError(error) && error.status >= 400
+    for (const options of [{}, { team: 'tb-crew' }]) {
+      await expect(
+        saveBoard(member, created.id, named('Taken over'), created.etag, options),
+      ).rejects.toSatisfy(refused)
+      await expect(deleteBoard(member, created.id, created.etag, options)).rejects.toSatisfy(
+        refused,
+      )
+    }
+    expect((await getBoard(editor, created.id)).board.name).toBe('Crew spend')
+
+    // The editor writes it only as the Team.
+    const saved = await saveBoard(editor, created.id, named('Crew spend 2'), created.etag, {
+      team: 'tb-crew',
+    })
+    expect(saved.owner).toEqual({ kind: 'team', id: 'tb-crew' })
+    await deleteBoard(editor, created.id, saved.etag, { team: 'tb-crew' })
+    await expect(getBoard(editor, created.id)).rejects.toSatisfy((error: unknown) =>
+      isProblemError(error, 'urn:embertrail:problem:not-found'),
+    )
+  })
+
+  it('refuses a Board for a Team the caller does not edit', async () => {
+    const member = await clientFor('tb-reader')
+    await hub.t.team('tb-other', { members: ['tb-reader'] })
+    await expect(createBoard(member, named('Nope'), { team: 'tb-other' })).rejects.toSatisfy(
+      (error: unknown) => isProblemError(error) && error.status === 403,
+    )
+  })
+})
+
+const ownerHeader = 'Embertrail-Owner'
+
+interface Recorded {
+  method: string
+  owner: string | null
+}
+
+/** A client for a User, recording the method and `Embertrail-Owner` of each request it makes. */
+async function recordingClientFor(userId: string) {
+  await hub.t.user(userId)
+  const { token } = await hub.t.hub.directory.issueToken(userId, {
+    kind: 'management',
+    scopes: ['store:read', 'store:write'],
+  })
+  const requests: Recorded[] = []
+  const client = createClient({
+    baseUrl: 'http://hub.test',
+    token,
+    fetch: (input, init) => {
+      const request = new Request(input, init)
+      requests.push({ method: request.method, owner: request.headers.get(ownerHeader) })
+      return hub.t.hub.fetch(request)
+    },
+  })
+  return { client, requests }
+}
+
+describe('Embertrail-Owner on Team Board requests', () => {
+  it('goes on a Team editor’s writes and on no read, and the Hub refuses a non-editor member', async () => {
+    const editor = await recordingClientFor('oh-editor')
+    const member = await recordingClientFor('oh-member')
+    await hub.t.team('oh-crew', { editors: ['oh-editor'], members: ['oh-member'] })
+    const team = 'oh-crew'
+
+    const created = await createBoard(editor.client, named('Crew'), { team })
+    const saved = await saveBoard(editor.client, created.id, named('Crew 2'), created.etag, {
+      team,
+    })
+    await getBoard(editor.client, created.id)
+    await listBoards(editor.client)
+    await deleteBoard(editor.client, created.id, saved.etag, { team })
+
+    const writes = editor.requests.filter(({ method }) => method !== 'GET')
+    expect(writes.map(({ method }) => method)).toEqual(['PUT', 'PUT', 'DELETE'])
+    expect(writes.map(({ owner }) => owner)).toEqual(Array(3).fill(`team:${team}`))
+    const reads = editor.requests.filter(({ method }) => method === 'GET')
+    expect(reads.length).toBeGreaterThan(0)
+    expect(reads.map(({ owner }) => owner)).toEqual(reads.map(() => null))
+
+    // A member who is not an editor reads it without the header, and the Hub refuses their write.
+    const other = await createBoard(editor.client, named('Crew other'), { team })
+    member.requests.length = 0
+    expect((await getBoard(member.client, other.id)).board.name).toBe('Crew other')
+    expect((await listBoards(member.client)).boards.map(({ id }) => id)).toContain(other.id)
+    expect(member.requests.map(({ owner }) => owner)).toEqual(member.requests.map(() => null))
+
+    const refused = (error: unknown) => isProblemError(error) && error.status >= 400
+    await expect(
+      saveBoard(member.client, other.id, named('Taken'), other.etag, { team }),
+    ).rejects.toSatisfy(refused)
+    await expect(deleteBoard(member.client, other.id, other.etag, { team })).rejects.toSatisfy(
+      refused,
+    )
+    expect((await getBoard(editor.client, other.id)).board.name).toBe('Crew other')
   })
 })

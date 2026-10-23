@@ -1,12 +1,23 @@
-import { Alert, Button, Container, EmptyState, Heading, Inline, Stack } from '@mitcsutt/kiln-ui'
+import {
+  Alert,
+  Button,
+  Container,
+  EmptyState,
+  Heading,
+  Inline,
+  Select,
+  Stack,
+  Text,
+} from '@mitcsutt/kiln-ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { BoardEditor } from '#features/boards/components/BoardEditor'
 import { BoardGrid } from '#features/boards/components/BoardGrid'
-import { boardQueryOptions, createBoard } from '#features/boards/data/boards'
+import { boardQueryOptions, createBoard, teamOf } from '#features/boards/data/boards'
 import type { StoredBoard } from '#features/boards/data/boards'
+import { useBoardAccess } from '#features/boards/hooks/useBoardAccess'
 import { useEditMode } from '#features/boards/hooks/useEditMode'
 import type { BoardDocument } from '#features/boards/types/board'
 import { customisePreset } from '#features/boards/utils/presets'
@@ -15,7 +26,7 @@ import { useInventory } from '#features/filters/data/inventory'
 import { useBoardFilters } from '#features/filters/hooks/useBoardFilters'
 import { useResolvedWindow } from '#features/filters/hooks/useResolvedWindow'
 import { WidgetColorScope } from '#features/widgets/components/WidgetColorScope'
-import { useHub, useSelf } from '#lib/hub'
+import { useHub } from '#lib/hub'
 
 export interface BoardViewProps {
   board: BoardDocument
@@ -28,13 +39,15 @@ export interface BoardViewProps {
 /**
  * One Board: in view mode its name, the filter bar and the grid, with one colour per model across
  * every chart (the filters live in the URL over the Board's saved ones); in edit mode, the editor.
- * "Edit" opens a stored Board in the editor. "Customise" stores a copy of a Preset and opens that.
- * Without `store:write` neither is offered, and `?edit` is ignored.
+ * "Edit" opens a stored Board in the editor. "Customise" stores a copy of a Preset, or of a Team's
+ * Board the caller may not write, and opens that. Without `store:write`, or for a Team's Board of
+ * which the caller is not an editor, a Board cannot be edited and `?edit` is ignored.
  */
 export function BoardView({ board, preset, stored }: BoardViewProps) {
-  const { canEdit } = useSelf()
+  const { canCreate, canWrite } = useBoardAccess()
   const { editing, setEditing } = useEditMode()
-  if (canEdit && editing && stored !== undefined) {
+  const writable = stored !== undefined && canWrite(stored.owner)
+  if (stored !== undefined && writable && editing) {
     return (
       <BoardEditor
         stored={stored}
@@ -48,7 +61,9 @@ export function BoardView({ board, preset, stored }: BoardViewProps) {
     <ViewedBoard
       board={board}
       preset={preset}
-      canEdit={canEdit}
+      stored={stored}
+      canCreate={canCreate}
+      writable={writable}
       onEdit={() => {
         setEditing(true)
       }}
@@ -59,12 +74,21 @@ export function BoardView({ board, preset, stored }: BoardViewProps) {
 interface ViewedBoardProps {
   board: BoardDocument
   preset: boolean
-  canEdit: boolean
+  stored: StoredBoard | undefined
+  canCreate: boolean
+  /** Whether the caller may edit this Board, not only create their own. */
+  writable: boolean
   onEdit: () => void
 }
 
-function ViewedBoard({ board, preset, canEdit, onEdit }: ViewedBoardProps) {
+/** The Owner choice for a new Board: the caller, or a Team they edit by its id. A Team id has no `:`. */
+const mine = ':me'
+
+function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: ViewedBoardProps) {
   const { client } = useHub()
+  const { teams, editorTeams } = useBoardAccess()
+  const [owner, setOwner] = useState(mine)
+  const owning = teams.find(({ id }) => stored !== undefined && teamOf(stored.owner) === id)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { filters, setFilters, tz } = useBoardFilters(board.filters)
@@ -74,7 +98,13 @@ function ViewedBoard({ board, preset, canEdit, onEdit }: ViewedBoardProps) {
 
   // The copy keeps what is on screen: the Preset's Widgets under the filters in force.
   const customise = useMutation({
-    mutationFn: () => createBoard(client, { ...customisePreset(board), filters }),
+    mutationFn: () =>
+      createBoard(
+        client,
+        { ...customisePreset(board), filters },
+        // Only a Preset is copied into a Team's Boards; a copy of a Team's Board is the caller's own.
+        { team: preset && owner !== mine ? owner : undefined },
+      ),
     onSuccess: (created) => {
       queryClient.setQueryData(boardQueryOptions(client, created.id).queryKey, created)
       void queryClient.invalidateQueries({ queryKey: ['boards', 'list'] })
@@ -93,22 +123,41 @@ function ViewedBoard({ board, preset, canEdit, onEdit }: ViewedBoardProps) {
           <Heading level={1} size="2xl">
             {board.name}
           </Heading>
-          {canEdit ? (
-            <Button
-              variant="outline"
-              loading={customise.isPending}
-              onClick={
-                preset
-                  ? () => {
-                      customise.mutate()
-                    }
-                  : onEdit
-              }
-            >
-              {preset ? 'Customise' : 'Edit'}
-            </Button>
+          {canCreate ? (
+            <Inline gap={2} align="center">
+              {preset && editorTeams.length > 0 ? (
+                <Select
+                  aria-label="Owner"
+                  options={[
+                    { value: mine, label: 'Yours' },
+                    ...editorTeams.map(({ id, name }) => ({ value: id, label: `${name} (Team)` })),
+                  ]}
+                  value={owner}
+                  onValueChange={setOwner}
+                />
+              ) : null}
+              <Button
+                variant="outline"
+                loading={customise.isPending}
+                onClick={
+                  writable
+                    ? onEdit
+                    : () => {
+                        customise.mutate()
+                      }
+                }
+              >
+                {writable ? 'Edit' : 'Customise'}
+              </Button>
+            </Inline>
           ) : null}
         </Inline>
+        {owning !== undefined && canCreate && !writable ? (
+          <Text size="sm" tone="muted">
+            {owning.name} owns this Board and you cannot edit it. Customise copies it into your own
+            Boards.
+          </Text>
+        ) : null}
         {customise.isError ? (
           <Alert tone="critical" title="Could not customise this Board">
             {customise.error instanceof Error ? customise.error.message : 'The Hub did not answer.'}
