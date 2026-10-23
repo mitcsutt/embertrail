@@ -1,1 +1,0 @@
-export { useWidgetClient } from './useWidgetClient'

@@ -207,8 +207,8 @@ catalogs:
       specifier: ^0.2.0
       version: 0.2.0
     '@mitcsutt/kiln-ui':
-      specifier: ^0.7.0
-      version: 0.7.0
+      specifier: ^0.8.0
+      version: 0.8.0
     '@redocly/cli':
       specifier: ^2.67.1
       version: 2.67.1
@@ -384,13 +384,13 @@ importers:
         version: link:../../packages/client
       '@mitcsutt/kiln-charts':
         specifier: 'catalog:'
-        version: 0.1.0(@mitcsutt/kiln-ui@0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)
+        version: 0.1.0(@mitcsutt/kiln-ui@0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)
       '@mitcsutt/kiln-dnd':
         specifier: 'catalog:'
-        version: 0.1.0(@mitcsutt/kiln-ui@0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.1.0(@mitcsutt/kiln-ui@0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@mitcsutt/kiln-ui':
         specifier: 'catalog:'
-        version: 0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1644,8 +1644,8 @@ packages:
     peerDependencies:
       typescript: '>=5.4.0'
 
-  '@mitcsutt/kiln-ui@0.7.0':
-    resolution: {integrity: sha512-DzPY7KfIWKqGxDaeIvsMLWcITkL0UT9hSkwNARro5aa/bb85O4D52BeXbe9mu4Pcvp7JE1AI5DJehBHYQ+vOYQ==}
+  '@mitcsutt/kiln-ui@0.8.0':
+    resolution: {integrity: sha512-59aKDNugt8+PI49MY40Y56/F7IYzf/M9fuFJdx8llZXLppx2PSBoOe3YWLi6NseZhzoWH5nSO8ZQToqKNDl0dQ==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       react: ^18.3.0 || ^19.0.0
@@ -6397,9 +6397,9 @@ snapshots:
       tinyglobby: 0.2.17
       yaml: 2.9.1
 
-  '@mitcsutt/kiln-charts@0.1.0(@mitcsutt/kiln-ui@0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)':
+  '@mitcsutt/kiln-charts@0.1.0(@mitcsutt/kiln-ui@0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)':
     dependencies:
-      '@mitcsutt/kiln-ui': 0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@mitcsutt/kiln-ui': 0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       react-is: 19.3.1
@@ -6408,11 +6408,11 @@ snapshots:
       - '@types/react'
       - redux
 
-  '@mitcsutt/kiln-dnd@0.1.0(@mitcsutt/kiln-ui@0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@mitcsutt/kiln-dnd@0.1.0(@mitcsutt/kiln-ui@0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@dnd-kit/abstract': 0.5.0
       '@dnd-kit/dom': 0.5.0
-      '@mitcsutt/kiln-ui': 0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@mitcsutt/kiln-ui': 0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
@@ -6465,7 +6465,7 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
-  '@mitcsutt/kiln-ui@0.7.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@mitcsutt/kiln-ui@0.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       radix-ui: 1.8.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1

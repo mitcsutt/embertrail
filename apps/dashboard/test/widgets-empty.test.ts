@@ -23,12 +23,8 @@ describe('on a Hub with only a non-Claude sender', () => {
   it.each(catalogue.map((widget) => [widget.title, widget] as const))(
     '%s is empty',
     async (_, widget) => {
-      const { today } = (hub.demo ?? failed('demo')).facts
-      const window = {
-        from: new Date(Date.parse(today.from) - 40 * 86_400_000).toISOString(),
-        to: today.to,
-      }
-      const data = await loadWidget(hub.client, widget, testContext(window))
+      const { options } = hub.demo ?? failed('demo')
+      const data = await loadWidget(hub.client, widget, testContext(widget, options.now))
       expect(widget.isEmpty(data)).toBe(true)
     },
   )
