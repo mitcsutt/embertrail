@@ -33,11 +33,14 @@ export class BoardConflict extends Error {
   readonly id: string
   readonly current: StoredBoard | undefined
 
-  constructor(id: string, current: StoredBoard | undefined) {
+  constructor(id: string, current: StoredBoard | undefined, cause?: unknown) {
     super(
-      current === undefined
-        ? `Board ${id} was deleted elsewhere`
-        : `Board ${id} changed elsewhere (version ${current.etag})`,
+      cause !== undefined
+        ? `Board ${id} changed elsewhere and the new version cannot be read`
+        : current === undefined
+          ? `Board ${id} was deleted elsewhere`
+          : `Board ${id} changed elsewhere (version ${current.etag})`,
+      { cause },
     )
     this.name = 'BoardConflict'
     this.id = id
@@ -66,6 +69,11 @@ function stored(document: Schemas['StoreDocument'], etag: string): StoredBoard {
     owner: document.owner,
     updatedAt: document.updated_at,
   }
+}
+
+/** Refuses a Board the Hub would store but every read would then reject. */
+function checked(board: BoardDocument): BoardDocument {
+  return migrateBoard(board)
 }
 
 /** The `ETag` the Hub sent with a version of a document; the Hub always sends one. */
@@ -122,13 +130,14 @@ export async function createBoard(
   options: { newId?: () => string } = {},
 ): Promise<StoredBoard> {
   const newId = options.newId ?? newBoardId
+  const valid = checked(board)
   for (let attempt = 0; ; attempt += 1) {
     const id = newId()
     try {
       const { data, headers } = await hub.putStoreDocument({
         path: { namespace: boardNamespace, id },
         header: { 'If-None-Match': '*' },
-        body: { data: board },
+        body: { data: valid },
       })
       return stored(data, etagOf(headers))
     } catch (error) {
@@ -148,11 +157,12 @@ export async function saveBoard(
   board: BoardDocument,
   etag: string,
 ): Promise<StoredBoard> {
+  const valid = checked(board)
   try {
     const { data, headers } = await hub.putStoreDocument({
       path: { namespace: boardNamespace, id },
       header: { 'If-Match': etag },
-      body: { data: board },
+      body: { data: valid },
     })
     return stored(data, etagOf(headers))
   } catch (error) {
@@ -172,14 +182,17 @@ export async function deleteBoard(hub: EmbertrailClient, id: string, etag: strin
   }
 }
 
+const notFound = 'urn:embertrail:problem:not-found'
+
 async function asConflict(hub: EmbertrailClient, id: string, error: unknown): Promise<unknown> {
+  if (isProblemError(error, notFound)) return new BoardConflict(id, undefined)
   if (!isProblemError(error, preconditionFailed)) return error
   try {
     return new BoardConflict(id, await getBoard(hub, id))
   } catch (reading) {
-    // A 404 is the conflict "deleted since"; anything else is the read's own failure.
-    return isProblemError(reading, 'urn:embertrail:problem:not-found')
+    // A 404 is the conflict "deleted since"; anything else is a newer copy this Dashboard cannot read.
+    return isProblemError(reading, notFound)
       ? new BoardConflict(id, undefined)
-      : reading
+      : new BoardConflict(id, undefined, reading)
   }
 }

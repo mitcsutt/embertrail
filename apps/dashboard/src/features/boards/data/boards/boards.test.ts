@@ -171,4 +171,45 @@ describe('Two clients saving the same Board', () => {
     )
     expect((await getBoard(hub.client, created.id)).board.name).toBe('Kept, edited')
   })
+
+  it('makes a delete of an already deleted Board a conflict with no current copy', async () => {
+    const other = await otherClient()
+    const created = await createBoard(hub.client, named('Twice'))
+    await deleteBoard(other, created.id, created.etag)
+    const loss = await deleteBoard(hub.client, created.id, created.etag).catch(
+      (error: unknown) => error,
+    )
+    expect(loss).toBeInstanceOf(BoardConflict)
+    expect((loss as BoardConflict).current).toBeUndefined()
+  })
+
+  it('still reports a conflict when the winner’s copy cannot be read', async () => {
+    const created = await createBoard(hub.client, named('Newer'))
+    await hub.client.putStoreDocument({
+      path: { namespace: boardNamespace, id: created.id },
+      header: { 'If-Match': created.etag },
+      body: { data: { ...created.board, schema_version: 2 } },
+    })
+    const loss = await saveBoard(hub.client, created.id, named('Late'), created.etag).catch(
+      (error: unknown) => error,
+    )
+    expect(loss).toBeInstanceOf(BoardConflict)
+    expect((loss as BoardConflict).cause).toBeInstanceOf(UnsupportedBoardVersionError)
+  })
+})
+
+describe('Writing an invalid Board', () => {
+  const orphanCell = (): BoardDocument => {
+    const board = named('Orphan')
+    return { ...board, items: board.items.slice(1) }
+  }
+
+  it('is refused before it is stored', async () => {
+    await expect(createBoard(hub.client, orphanCell())).rejects.toBeInstanceOf(InvalidBoardError)
+    const created = await createBoard(hub.client, named('Fine'))
+    await expect(
+      saveBoard(hub.client, created.id, orphanCell(), created.etag),
+    ).rejects.toBeInstanceOf(InvalidBoardError)
+    expect((await getBoard(hub.client, created.id)).board.name).toBe('Fine')
+  })
 })
