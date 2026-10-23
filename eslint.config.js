@@ -96,6 +96,16 @@ export default defineConfig(
     files: ['apps/dashboard/**'],
     extends: [react],
   },
+  {
+    // The browser specs are Playwright, not Testing Library (its `page.getBy*` queries look like
+    // `render` queries to the plugin), and like test/ they import the packages they test.
+    name: 'embertrail/dashboard/e2e',
+    files: ['apps/dashboard/e2e/**', 'apps/dashboard/playwright.config.ts'],
+    rules: {
+      'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }],
+      'testing-library/prefer-screen-queries': 'off',
+    },
+  },
   // Kiln's app structure (ADR 0037) for the Dashboard's src/. The feature graph is the one in
   // docs/dashboard.md; a new feature folder must be declared here first.
   ...kilnStructure({

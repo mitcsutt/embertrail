@@ -32,3 +32,7 @@ worker-configuration.d.ts
 
 # Written by eslint-plugin-project-structure (kiln-structure)
 projectStructure.cache.json
+
+# Playwright output (apps/dashboard)
+test-results
+playwright-report

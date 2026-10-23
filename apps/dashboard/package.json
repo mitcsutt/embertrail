@@ -14,6 +14,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
+    "e2e": "playwright test",
     "lint": "eslint --max-warnings=0 .",
     "preview": "vite preview",
     "seed": "node scripts/seed.ts",
@@ -35,11 +36,13 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@hono/node-server": "catalog:",
     "@mitcsutt/embertrail-cli": "workspace:*",
     "@mitcsutt/embertrail-hub": "workspace:*",
     "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@playwright/test": "catalog:",
     "@tanstack/router-plugin": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",

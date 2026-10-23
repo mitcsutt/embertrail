@@ -84,6 +84,29 @@ jobs:
       - name: Boot the stack, set up Claude Code, ingest a fixture, query it back
         run: apps/server/smoke/smoke.sh
 
+  # The Dashboard in a real browser (Chromium only): the built app behind `vite preview`, in front
+  # of an in-process Hub on PGLite seeded with the demo dataset (apps/dashboard/e2e). No Docker.
+  dashboard-e2e:
+    name: Dashboard e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+      - name: Install Chromium
+        run: pnpm --filter @mitcsutt/embertrail-dashboard exec playwright install --with-deps chromium
+      - name: Run the browser specs
+        run: pnpm --filter @mitcsutt/embertrail-dashboard e2e
+      - name: Upload traces and the report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: dashboard-e2e-traces
+          path: |
+            apps/dashboard/test-results
+            apps/dashboard/playwright-report
+          retention-days: 7
+
   # The one check branch protection requires. Every new job must be added to
   # its needs list, or the gate passes without waiting for it.
   ci-passed:
@@ -94,6 +117,7 @@ jobs:
       - typecheck
       - test
       - smoke
+      - dashboard-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
