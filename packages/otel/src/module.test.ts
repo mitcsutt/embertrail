@@ -486,6 +486,31 @@ describe('the otel Module', () => {
         expect(response.status).toBe(200)
       })
 
+      it('accepts exactly 5 MiB decoded, plain or gzip, and refuses one byte more', async () => {
+        const bodyOf = (bytes: number) => {
+          const empty = JSON.stringify(plainLogs([plainRecord('')])).length
+          return JSON.stringify(plainLogs([plainRecord('x'.repeat(bytes - empty))]))
+        }
+        const atLimit = bodyOf(maxBodyBytes)
+        expect(Buffer.byteLength(atLimit)).toBe(maxBodyBytes)
+        expect((await postOtlp(sender, '/v1/logs', atLimit)).status).toBe(200)
+        const gzipped = gzipSync(atLimit)
+        expect(
+          (await postOtlp(sender, '/v1/logs', gzipped, { 'content-encoding': 'gzip' })).status,
+        ).toBe(200)
+        // The same record twice is stored once.
+        expect(await count('otel_logs')).toBe(1)
+
+        const over = bodyOf(maxBodyBytes + 1)
+        expect(Buffer.byteLength(over)).toBe(maxBodyBytes + 1)
+        await status(await postOtlp(sender, '/v1/logs', over), 413)
+        await status(
+          await postOtlp(sender, '/v1/logs', gzipSync(over), { 'content-encoding': 'gzip' }),
+          413,
+        )
+        expect(await count('otel_logs')).toBe(1)
+      })
+
       it('answers 413 over 5 MB decoded, plain or gzip', async () => {
         const big = JSON.stringify(plainLogs([plainRecord('x'.repeat(maxBodyBytes))]))
         await status(await postOtlp(sender, '/v1/logs', big), 413)
