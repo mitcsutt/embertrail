@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, realpath, stat } from 'node:fs/promises'
+import { chmod, mkdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 import { writePrivateFile } from './config.ts'
@@ -7,8 +7,8 @@ import type { Io } from './io.ts'
 
 /**
  * The `env` block that points Claude Code's telemetry at a Hub: on, Metrics and Events (OTLP
- * logs) exported over `http/json`, authenticated by the Source's ingest Token. Traces are never
- * enabled: there is no `OTEL_TRACES_EXPORTER` here, and the Hub does not store them.
+ * logs) exported over `http/json` with delta temporality (the Hub refuses cumulative sums),
+ * authenticated by the Source's ingest Token. Traces are never enabled: there is no `OTEL_TRACES_EXPORTER` here, and the Hub does not store them.
  */
 export function telemetryEnv(hub: string, token: string): Record<string, string> {
   return {
@@ -16,6 +16,7 @@ export function telemetryEnv(hub: string, token: string): Record<string, string>
     OTEL_METRICS_EXPORTER: 'otlp',
     OTEL_LOGS_EXPORTER: 'otlp',
     OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+    OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: 'delta',
     OTEL_EXPORTER_OTLP_ENDPOINT: hub,
     OTEL_EXPORTER_OTLP_HEADERS: `Authorization=Bearer ${token}`,
   }
@@ -77,9 +78,10 @@ export async function readSettings(path: string): Promise<Record<string, unknown
 }
 
 /**
- * Writes `settings` to `path` as two-space JSON. The file holds a Token, so a new one is mode 600
- * and an existing one keeps its mode. A symlink (a dotfiles repo's) is written through, not
- * replaced. Returns false, writing nothing, when the file already says exactly this.
+ * Writes `settings` to `path` as two-space JSON. The file holds a Token, so it is always mode 600,
+ * whatever mode it had and even when its content is already right. A symlink (a dotfiles repo's)
+ * is written through, not replaced. Returns false, writing nothing, when the file already says
+ * exactly this.
  */
 export async function writeSettings(
   path: string,
@@ -87,16 +89,16 @@ export async function writeSettings(
 ): Promise<boolean> {
   const text = `${JSON.stringify(settings, null, 2)}\n`
   let target = path
-  let mode = 0o600
   try {
     target = await realpath(path)
-    mode = (await stat(target)).mode & 0o777
-    if ((await readFile(target, 'utf8')) === text) return false
+    if ((await readFile(target, 'utf8')) === text) {
+      await chmod(target, 0o600)
+      return false
+    }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     await mkdir(dirname(path), { recursive: true })
   }
   await writePrivateFile(target, text)
-  await chmod(target, mode)
   return true
 }

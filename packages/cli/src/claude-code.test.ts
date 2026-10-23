@@ -46,6 +46,7 @@ describe('the telemetry env block', () => {
       OTEL_METRICS_EXPORTER: 'otlp',
       OTEL_LOGS_EXPORTER: 'otlp',
       OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+      OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: 'delta',
       OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:8787',
       OTEL_EXPORTER_OTLP_HEADERS: `Authorization=Bearer ${token}`,
     })
@@ -108,11 +109,33 @@ describe('the settings file', () => {
     expect(await readFile(path, 'utf8')).toBe(`${JSON.stringify({ env }, null, 2)}\n`)
   })
 
-  it('keeps the mode an existing file has', async () => {
+  it('tightens an existing file to mode 600, keeping its other keys', async () => {
     const path = await copyFixture('settings-with-other-keys.json')
+    const before = await readSettings(path)
     await chmod(path, 0o644)
+    await writeSettings(path, applyTelemetry(before, env))
+    expect((await stat(path)).mode & 0o777).toBe(0o600)
+    expect(await readSettings(path)).toEqual({
+      ...before,
+      env: { ...(before.env as object), ...env },
+    })
+  })
+
+  it('tightens a wide file that already holds the exact block, writing nothing', async () => {
+    const path = join(dir, 'settings.json')
+    await writeSettings(path, applyTelemetry({}, env))
+    await chmod(path, 0o644)
+    expect(await writeSettings(path, applyTelemetry(await readSettings(path), env))).toBe(false)
+    expect((await stat(path)).mode & 0o777).toBe(0o600)
+  })
+
+  it('corrects a cumulative temporality override to delta', async () => {
+    const path = join(dir, 'settings.json')
+    const cumulative = { env: { OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: 'cumulative' } }
+    await writeFile(path, JSON.stringify(cumulative))
     await writeSettings(path, applyTelemetry(await readSettings(path), env))
-    expect((await stat(path)).mode & 0o777).toBe(0o644)
+    const written = (await readSettings(path)).env as Record<string, string>
+    expect(written.OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE).toBe('delta')
   })
 
   it('is written through a symlink, which stays a symlink', async () => {
