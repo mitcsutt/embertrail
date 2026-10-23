@@ -185,14 +185,17 @@ function QueryWidgetForm({ inventory, initial, onSave, onCancel }: FormProps) {
         value={source.kind}
         onValueChange={(kind) => {
           if (kind === source.kind) return
-          setBase((current) => ({
-            ...current,
-            source:
-              kind === 'metric'
-                ? { kind: 'metric', name: '', aggregation: 'sum' }
-                : { kind: 'event', name: '', aggregation: { fn: 'count' } },
-            groupBy: [],
-          }))
+          // Group by is cleared, which can take the chart's rows away: keep it one that draws.
+          setBase((current) =>
+            withDrawableChart({
+              ...current,
+              source:
+                kind === 'metric'
+                  ? { kind: 'metric', name: '', aggregation: 'sum' }
+                  : { kind: 'event', name: '', aggregation: { fn: 'count' } },
+              groupBy: [],
+            }),
+          )
         }}
       />
 

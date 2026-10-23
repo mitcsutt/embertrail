@@ -116,6 +116,31 @@ describe('QueryWidgetEditor', () => {
     expect(onSave.mock.calls[0]?.[0].query).toMatchObject({ bucket: 'day', chart: 'series' })
   })
 
+  it('moves an undrawable chart to one that fits when the Signal changes', async () => {
+    const { user, onSave } = setup({
+      title: 'Spend by model',
+      query: {
+        source: { kind: 'metric', name: 'claude_code.cost.usage', aggregation: 'sum' },
+        groupBy: ['model'],
+        filter: [],
+        chart: 'bar-list',
+        limit: 10,
+      },
+    })
+
+    // Switching to an Event clears Group by, which a bar list cannot draw without.
+    await choose(user, 'Signal', 'Event')
+    await user.click(screen.getByRole('combobox', { name: 'Event' }))
+    await user.click(await screen.findByRole('option', { name: 'tool_result' }))
+    await user.click(screen.getByRole('button', { name: 'Save Query Widget' }))
+
+    expect(onSave.mock.calls[0]?.[0].query).toMatchObject({
+      source: { kind: 'event', name: 'tool_result' },
+      groupBy: [],
+      chart: 'stat',
+    })
+  })
+
   it('edits an existing Query Widget', async () => {
     const { user, onSave } = setup({
       title: 'Tool calls',

@@ -146,6 +146,17 @@ describe('validateQueryConfig', () => {
     ])
   })
 
+  it('holds a Metric or Event name to the 200 characters a Board document stores', () => {
+    const long = 'x'.repeat(201)
+    expect(problems({ ...cost, source: { ...cost.source, name: long } })).toEqual([
+      'source: A Metric name is 200 characters at most.',
+    ])
+    expect(problems({ ...toolCalls, source: { ...toolCalls.source, name: long } })).toEqual([
+      'source: An Event name is 200 characters at most.',
+    ])
+    expect(problems({ ...cost, source: { ...cost.source, name: 'x'.repeat(200) } })).toEqual([])
+  })
+
   it('requires a key for every Event aggregation but count, and forbids one for count', () => {
     const event = (aggregation: { fn: string; key?: string }): QueryWidgetConfig => ({
       ...cost,

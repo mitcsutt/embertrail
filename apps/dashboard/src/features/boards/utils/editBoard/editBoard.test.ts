@@ -4,6 +4,7 @@ import { boardSchema } from '#features/boards/schemas/board'
 import { newBoardPreset, overviewPreset } from '#features/boards/utils/presets'
 
 import {
+  addQueryItem,
   addSectionItem,
   addWidgetItem,
   removeBoardItem,
@@ -30,6 +31,27 @@ describe('adding', () => {
 
     expect(twice.id).toBe('cost-today-2')
     expect(twice.board.items.map((item) => item.i)).toEqual(['cost-today', 'cost-today-2'])
+    expect(boardSchema.safeParse(twice.board).success).toBe(true)
+  })
+
+  it('adds a Query Widget at its chart kind’s size, as a Board the schema accepts', () => {
+    const query = {
+      source: {
+        kind: 'metric' as const,
+        name: 'claude_code.cost.usage',
+        aggregation: 'sum' as const,
+      },
+      groupBy: [],
+      filter: [],
+      chart: 'stat' as const,
+    }
+    const once = addQueryItem(newBoardPreset, 'Spend, in $', query, { w: 3, h: 2 })
+    const twice = addQueryItem(once.board, 'Spend, in $', query, { w: 3, h: 2 })
+
+    expect(once.id).toBe('query-spend-in')
+    expect(twice.id).toBe('query-spend-in-2')
+    expect(once.board.items).toEqual([{ i: once.id, type: 'query', title: 'Spend, in $', query }])
+    expect(once.board.layout).toEqual([{ i: once.id, x: 0, y: 0, w: 3, h: 2 }])
     expect(boardSchema.safeParse(twice.board).success).toBe(true)
   })
 

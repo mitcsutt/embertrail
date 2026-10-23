@@ -6,6 +6,7 @@ import {
   maxGroupBy,
   maxLimit,
   maxMembers,
+  maxNameLength,
   maxQueryFilters,
   membershipOps,
   metricAggregations,
@@ -35,10 +36,15 @@ export function validateQueryConfig(config: QueryWidgetConfig): QueryIssue[] {
   const { source } = config
   if (source.kind === 'metric') {
     if (source.name.trim() === '') add('source', 'Pick a Metric.')
-    else if (source.name.length > 256) add('source', 'A Metric name is 256 characters at most.')
+    else if (source.name.length > maxNameLength) {
+      add('source', `A Metric name is ${String(maxNameLength)} characters at most.`)
+    }
     if (!has(metricAggregations, source.aggregation)) add('aggregation', 'Pick an aggregation.')
   } else {
     if (source.name.trim() === '') add('source', 'Pick an Event.')
+    else if (source.name.length > maxNameLength) {
+      add('source', `An Event name is ${String(maxNameLength)} characters at most.`)
+    }
     const { fn, key } = source.aggregation
     if (!has(eventAggregations, fn)) {
       add('aggregation', 'Pick an aggregation.')

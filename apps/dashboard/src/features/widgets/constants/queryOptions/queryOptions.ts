@@ -33,3 +33,5 @@ export const defaultLimit = 1_000
 /** A query holds 20 filters at most; the Board's Source, Account and model and an Event's name take four. */
 export const maxQueryFilters = 16
 export const maxMembers = 100
+/** The longest Metric or Event name: the spec allows a Metric 256, a Board document 200 (`boardSchema`), and a saved Query Widget must fit both. */
+export const maxNameLength = 200

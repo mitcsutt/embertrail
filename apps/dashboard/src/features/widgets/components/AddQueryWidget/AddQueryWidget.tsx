@@ -4,18 +4,21 @@ import { useState } from 'react'
 import type { Inventory } from '#features/filters/data/inventory'
 import { QueryWidgetEditor } from '#features/widgets/components/QueryWidgetEditor'
 import type { QueryWidgetValue } from '#features/widgets/components/QueryWidgetEditor'
+import { queryWidgetSize } from '#features/widgets/utils/queryWidgetDefinition'
 
 export interface AddQueryWidgetProps {
   inventory: Inventory | undefined
-  /** Called with the saved Query Widget; the caller appends it to the Board. */
-  onAdd: (value: QueryWidgetValue) => void
+  /** Called with the saved Query Widget and the Layout size its chart kind starts at. */
+  onAdd: (value: QueryWidgetValue & { size: { w: number; h: number } }) => void
+  /** Where focus goes when the editor closes after an add, instead of back to the button. */
+  onCloseAutoFocus?: (event: Event) => void
 }
 
 /**
- * The entry point for a new Query Widget: a button that opens the editor. The Board editor (#72
- * D7) mounts it beside "Add Widget" and appends the item at `queryWidgetSize(value.query.chart)`.
+ * The entry point for a new Query Widget: a button that opens the editor. The Board editor mounts
+ * it beside "Add Widget" and appends the item at the size it reports.
  */
-export function AddQueryWidget({ inventory, onAdd }: AddQueryWidgetProps) {
+export function AddQueryWidget({ inventory, onAdd, onCloseAutoFocus }: AddQueryWidgetProps) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -33,8 +36,9 @@ export function AddQueryWidget({ inventory, onAdd }: AddQueryWidgetProps) {
         inventory={inventory}
         onSave={(value) => {
           setOpen(false)
-          onAdd(value)
+          onAdd({ ...value, size: queryWidgetSize(value.query.chart) })
         }}
+        {...(onCloseAutoFocus !== undefined && { onCloseAutoFocus })}
       />
     </>
   )

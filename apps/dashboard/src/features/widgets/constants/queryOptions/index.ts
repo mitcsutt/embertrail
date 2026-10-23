@@ -6,6 +6,7 @@ export {
   maxGroupBy,
   maxLimit,
   maxMembers,
+  maxNameLength,
   maxQueryFilters,
   membershipOps,
   metricAggregations,

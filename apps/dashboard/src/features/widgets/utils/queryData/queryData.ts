@@ -2,13 +2,13 @@ import type { OperationOutput } from '@mitcsutt/embertrail-client'
 
 import type { QueryContext } from '#features/filters/types/filters'
 import type { QueryData, QueryWidgetConfig } from '#features/widgets/types/queryWidget'
-import { aggregateRows } from '#features/widgets/utils/aggregateRows'
+import {
+  aggregateRows,
+  bucketedRows,
+  groupLabel,
+  valuedRows,
+} from '#features/widgets/utils/aggregateRows'
 import { foldWeek } from '#features/widgets/utils/localHours'
-
-type Scalar = string | number | boolean | null | undefined
-
-const text = (value: Scalar): string =>
-  value === null || value === undefined ? 'Unknown' : String(value)
 
 /**
  * Turns a Query Widget's rows into the shape its chart kind draws. Group keys that a row lacks read
@@ -23,11 +23,10 @@ export function selectQueryData(
   const rows = aggregateRows(response)
   const unit = (response as Partial<OperationOutput<'queryMetrics'>>).meta?.unit ?? null
   const { groupBy, bucket } = config
-  const withValue = rows.flatMap((row) =>
-    row.value === null ? [] : [{ ...row, value: row.value }],
-  )
+  const withValue = valuedRows(response)
+  const timed = bucketedRows(response)
   const labelOf = (row: (typeof rows)[number], keys: readonly string[]) =>
-    keys.length === 0 ? 'Value' : keys.map((key) => text(row.group[key])).join(' · ')
+    keys.length === 0 ? 'Value' : keys.map((key) => groupLabel(row, key)).join(' · ')
   const base = { unit, ...(bucket !== undefined && { bucket }) }
 
   switch (config.chart) {
@@ -37,29 +36,28 @@ export function selectQueryData(
       return {
         ...base,
         chart: 'series',
-        points: withValue.flatMap((row) =>
-          row.bucket === undefined
-            ? []
-            : [{ x: row.bucket, series: labelOf(row, groupBy), value: row.value }],
-        ),
+        points: timed.map((row) => ({
+          x: row.bucket,
+          series: labelOf(row, groupBy),
+          value: row.value,
+        })),
       }
     case 'bars':
       return {
         ...base,
         chart: 'bars',
-        points: withValue.flatMap((row) =>
+        points:
           bucket === undefined
-            ? [
-                {
-                  x: text(row.group[groupBy[0] ?? '']),
-                  series: labelOf(row, groupBy.slice(1)),
-                  value: row.value,
-                },
-              ]
-            : row.bucket === undefined
-              ? []
-              : [{ x: row.bucket, series: labelOf(row, groupBy), value: row.value }],
-        ),
+            ? withValue.map((row) => ({
+                x: groupLabel(row, groupBy[0] ?? ''),
+                series: labelOf(row, groupBy.slice(1)),
+                value: row.value,
+              }))
+            : timed.map((row) => ({
+                x: row.bucket,
+                series: labelOf(row, groupBy),
+                value: row.value,
+              })),
       }
     case 'bar-list':
     case 'share':
@@ -80,9 +78,7 @@ export function selectQueryData(
         ]),
       }
     case 'heatmap': {
-      const buckets = withValue.flatMap((row) =>
-        row.bucket === undefined ? [] : [{ start: row.bucket, value: row.value }],
-      )
+      const buckets = timed.map((row) => ({ start: row.bucket, value: row.value }))
       return {
         ...base,
         chart: 'heatmap',
