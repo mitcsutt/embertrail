@@ -90,10 +90,12 @@ jobs:
   dashboard-e2e:
     name: Dashboard e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
+      # `--with-deps` runs apt, which intermittently takes 10-14 minutes on hosted runners (20-30s
+      # otherwise); the specs take about 3 minutes, so the job limit leaves room for a slow install.
       - name: Install Chromium
         run: pnpm --filter @mitcsutt/embertrail-dashboard exec playwright install --with-deps chromium
       - name: Run the browser specs
