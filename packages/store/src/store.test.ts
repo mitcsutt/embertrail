@@ -43,9 +43,11 @@ function put(
 describe('the store Module', () => {
   it('passes the Module contract suite', async () => {
     await assertModuleContract(store, {
-      async seed(client) {
-        expect((await client.put(doc, { data: { a: 1 } })).status).toBe(201)
-        expect((await client.put('/api/v1/store/other/second', { data: [1, 2] })).status).toBe(201)
+      async seed(_, management) {
+        expect((await management.put(doc, { data: { a: 1 } })).status).toBe(201)
+        expect((await management.put('/api/v1/store/other/second', { data: [1, 2] })).status).toBe(
+          201,
+        )
       },
     })
   })
@@ -81,6 +83,25 @@ describe('the store Module', () => {
     const later = (seconds: number) => {
       time = new Date(time.getTime() + seconds * 1000)
     }
+
+    it('refuses a Token bound to a Source on PUT and DELETE, as a leaked device Token must not edit Boards', async () => {
+      expect((await put(alice, doc, { title: 'Board' })).status).toBe(201)
+      const device = t.as('alice', scopes, { sourceId: 'laptop' })
+      for (const response of [
+        await put(device, doc, { title: 'Overwritten' }),
+        await device.delete(doc),
+      ]) {
+        expect(response.status).toBe(403)
+        expect(await json(response)).toMatchObject({
+          type: 'urn:embertrail:problem:forbidden',
+          detail: 'Needs a Token not bound to a Source',
+        })
+      }
+      expect(await json<StoreDocument>(await alice.get(doc))).toMatchObject({
+        data: { title: 'Board' },
+      })
+      expect((await alice.delete(doc)).status).toBe(204)
+    })
 
     it('creates, reads, replaces, lists and deletes a document', async () => {
       const created = await put(alice, doc, { title: 'Groceries' })

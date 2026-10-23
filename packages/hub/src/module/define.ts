@@ -116,6 +116,15 @@ export interface OpDef<I, O> {
   run(input: I, ctx: Ctx): Promise<O | Reply<O>>
 }
 
+/** What `op.mutate` and `op.raw` add: they may take a Token bound to a Source. */
+export interface AcceptsSource {
+  /**
+   * Accept a Token bound to a Source (an ingest Token). Without it the op refuses one with 403,
+   * so a leaked device Token cannot reach it.
+   */
+  acceptsSource?: boolean
+}
+
 export interface RawDef {
   method: HttpMethod
   path: string
@@ -123,13 +132,22 @@ export interface RawDef {
   scope?: Scope
   /** Refuse callers whose Token isn't bound to a Source, as `op.ingest` does. */
   sourceBound?: boolean
+  /** Accept a Token bound to a Source as well as one that isn't. Ignored with `sourceBound`. */
+  acceptsSource?: boolean
   /** The OpenAPI Operation Object for this route; the core adds the Module and Scope. */
   openapi: Record<string, unknown>
   bind?: { mcp?: { tool: string } | false }
   run(request: Request, ctx: Ctx): Promise<Response>
 }
 
+/**
+ * How an op treats a Token bound to a Source: `require` one (ingest), `accept` one, or
+ * `refuse` one (the default, so a Module is safe without declaring anything).
+ */
+export type SourceBinding = 'require' | 'accept' | 'refuse'
+
 interface OpBase {
+  readonly source: SourceBinding
   readonly method: HttpMethod
   readonly path: string
   readonly summary: string
@@ -149,7 +167,6 @@ export interface TypedOp extends OpBase {
 
 export interface RawOp extends OpBase {
   readonly kind: 'raw'
-  readonly sourceBound: boolean
   readonly openapi: Record<string, unknown>
   readonly run: (request: Request, ctx: Ctx) => Promise<Response>
 }
@@ -157,9 +174,14 @@ export interface RawOp extends OpBase {
 /** One operation, transport-agnostic: HTTP binds it by `method` and `path`. */
 export type Op = TypedOp | RawOp
 
-function typed<I, O>(kind: TypedOp['kind'], method: HttpMethod, def: OpDef<I, O>): TypedOp {
+function typed<I, O>(
+  kind: TypedOp['kind'],
+  method: HttpMethod,
+  def: OpDef<I, O> & AcceptsSource,
+): TypedOp {
   return {
     kind,
+    source: kind === 'ingest' ? 'require' : def.acceptsSource ? 'accept' : 'refuse',
     method,
     path: def.path,
     summary: def.summary,
@@ -182,7 +204,7 @@ export const op = {
     return typed('query', def.method, def)
   },
   /** Writes. Default Scope `<name>:write`. */
-  mutate<I, O>(def: OpDef<I, O> & { method: 'PUT' | 'POST' | 'DELETE' }): Op {
+  mutate<I, O>(def: OpDef<I, O> & AcceptsSource & { method: 'PUT' | 'POST' | 'DELETE' }): Op {
     return typed('mutate', def.method, def)
   },
   /** Writes from a Source: needs a Source-bound Token. Always POST. Default `<name>:write`. */
@@ -196,12 +218,12 @@ export const op = {
   raw(def: RawDef): Op {
     return {
       kind: 'raw',
+      source: def.sourceBound ? 'require' : def.acceptsSource ? 'accept' : 'refuse',
       method: def.method,
       path: def.path,
       summary: def.summary,
       scope: def.scope,
       bind: def.bind,
-      sourceBound: def.sourceBound ?? false,
       openapi: def.openapi,
       run: (request, ctx) => def.run(request, ctx),
     }

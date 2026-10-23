@@ -7,8 +7,8 @@ import { notes } from './notes'
 describe('the example notes Module', () => {
   it('passes the Module contract suite', async () => {
     await assertModuleContract(notes, {
-      async seed(client) {
-        expect((await client.post('/api/v1/notes', { title: 'First' })).status).toBe(200)
+      async seed(_, management) {
+        expect((await management.post('/api/v1/notes', { title: 'First' })).status).toBe(200)
       },
     })
   })

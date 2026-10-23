@@ -52,6 +52,19 @@ create table readings (id serial primary key, value integer not null)`,
         return { id: row.id, note: row.note, ownerId: row.ownerId }
       },
     }),
+    addDeviceEntry: op.mutate({
+      method: 'POST',
+      path: '/api/v1/ledger/device-entries',
+      summary: 'Add an entry from a device, accepting a Token bound to a Source',
+      acceptsSource: true,
+      input: note,
+      output: entry,
+      async run(input, { db }) {
+        const [row] = await db.insert(entries).values({ note: input.note }).returning()
+        if (row === undefined) throw new Error('insert returned nothing')
+        return { id: row.id, note: row.note, ownerId: row.ownerId }
+      },
+    }),
     listEntries: op.query({
       method: 'GET',
       path: '/api/v1/ledger/entries',

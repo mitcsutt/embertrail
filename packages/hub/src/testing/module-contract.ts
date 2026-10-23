@@ -13,10 +13,11 @@ import type { TestClient } from './test-hub'
 
 export interface ModuleContractOptions {
   /**
-   * Writes data through the Module's ops. `client` holds every Scope the Module derives on a
-   * Token bound to a Source, and adds a forged `owner_id` and `source_id` to every request.
+   * Writes data through the Module's ops, adding a forged `owner_id` and `source_id` to every
+   * request. Both clients hold every Scope the Module derives: `client` on a Token bound to a
+   * Source, for `op.ingest`; `management` on one that isn't, for the ops that refuse a Source.
    */
-  seed(client: TestClient): Promise<void>
+  seed(client: TestClient, management: TestClient): Promise<void>
   /** Defaults to PGLite; pass a Postgres Adapter to run the suite on a server. */
   db?: ClosableDbPort
 }
@@ -72,7 +73,10 @@ export async function assertModuleContract(module: Module, options: ModuleContra
       return found
     }
 
-    await options.seed(forging(t.as(owner, module.scopes, { sourceId: source })))
+    await options.seed(
+      forging(t.as(owner, module.scopes, { sourceId: source })),
+      forging(t.as(owner, module.scopes)),
+    )
     assert.deepEqual(t.errors, [], 'seeding answered with a 500')
     const seeded = await stamps()
     assert.ok(seeded.length > 0, 'seed wrote no rows, so the contract proves nothing')

@@ -80,8 +80,8 @@ export const notes = defineModule({
 | Builder     | Methods           | Default Scope  | Notes                                                                 |
 | ----------- | ----------------- | -------------- | --------------------------------------------------------------------- |
 | `op.query`  | GET, POST         | `<name>:read`  | Reads.                                                                |
-| `op.mutate` | PUT, POST, DELETE | `<name>:write` | Writes.                                                               |
-| `op.ingest` | POST              | `<name>:write` | Refused unless the Token is bound to a Source.                        |
+| `op.mutate` | PUT, POST, DELETE | `<name>:write` | Writes. Refuses a Token bound to a Source unless `acceptsSource`.     |
+| `op.ingest` | POST              | `<name>:write` | Requires a Token bound to a Source.                                   |
 | `op.raw`    | any               | `<name>:write` | Gets the `Request`, returns a `Response`; declares its own `openapi`. |
 
 - `input` is a [Standard Schema](https://standardschema.dev) that can also produce JSON Schema (Zod 4 does both). The core merges the path parameters, query string and JSON body, removes any `owner_id` and `source_id`, then validates. Query values arrive as strings, so use `z.coerce` for numbers.
@@ -90,6 +90,7 @@ export const notes = defineModule({
 - `headers` maps input keys to request headers (`{ if_match: 'If-Match' }`). Those keys come only from the header, never the body or query, and OpenAPI lists them as header parameters.
 - `scope` narrows the derived Scope within your prefix (`notes:share`) or to `admin`. Claiming another Module's Scope fails boot.
 - `run(input, ctx)` gets `ctx.db` (Drizzle on the op's transaction), `ctx.caller` (`userId`, `ownerId`, `sourceId`, `scopes`), `ctx.now()` (the request's time), `ctx.ownerOf(ownerId)`, which says whether an `owner_id` you read is a User's or a Team's (`{ kind, id }`), and `ctx.account(attributes)` (the id of the Account that telemetry attributes name, created on first sight; [`identity.md`](identity.md#accounts)).
+- **Source-bound Tokens.** An op requires a Token bound to a Source (`op.ingest`, and `op.raw` with `sourceBound: true`), accepts one (`acceptsSource: true` on `op.mutate` or `op.raw`), or refuses one. Refuse is the default, so an ingest Token, which a device keeps in plaintext, reaches only the writes a Module opts in; `op.query` always refuses. The core answers 403 `forbidden` ("Needs a Token not bound to a Source") before the op runs, and the OpenAPI document lists that 403 on the ops that refuse. Opt in only for a write a plugin on the device should make, such as the otel Module's Session Labels.
 - `op.raw` keeps auth, Scopes and stamping; set `sourceBound: true` for ingest. Use it only when the body isn't JSON, such as OTLP.
 - Ops are transport-agnostic: `path` and `method` bind them to HTTP, and the same ops will bind to MCP tools later without changes (`bind` is reserved for that).
 

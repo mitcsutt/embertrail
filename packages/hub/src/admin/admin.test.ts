@@ -183,7 +183,7 @@ describe('the Admin and self-management API', () => {
       const bob = t.as('bob', ['alpha:write'], { sourceId: 'bob-laptop' })
       await bob.post('/api/v1/alpha/signals', { value: 1, attributes: { 'user.email': 'b@x.io' } })
       await bob.post('/api/v1/alpha/signals', { value: 2 })
-      await bob.post('/api/v1/alpha/notes', { note: 'mine' })
+      await t.as('bob', ['alpha:write']).post('/api/v1/alpha/notes', { note: 'mine' })
       const carol = t.as('carol', ['alpha:write'], { sourceId: 'carol-laptop' })
       await carol.post('/api/v1/alpha/signals', { value: 3 })
       const [account] = await t.sql<{ id: string }>(

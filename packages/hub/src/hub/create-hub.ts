@@ -208,9 +208,11 @@ export function createHub(options: HubOptions): Hub {
     const caller = await resolveCaller(request, edgeIdentity, directory)
     const scope = opScope(module.name, op)
     if (!caller.scopes.includes(scope)) throw HubError.forbidden(`Needs Scope ${scope}`)
-    const sourceBound = op.kind === 'ingest' || (op.kind === 'raw' && op.sourceBound)
-    if (sourceBound && caller.sourceId === undefined) {
+    if (op.source === 'require' && caller.sourceId === undefined) {
       throw HubError.forbidden('Needs a Token bound to a Source')
+    }
+    if (op.source === 'refuse' && caller.sourceId !== undefined) {
+      throw HubError.forbidden('Needs a Token not bound to a Source')
     }
     const session: DbSession = {
       role: 'app',

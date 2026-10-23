@@ -107,7 +107,7 @@ describe('createHub', () => {
     const hub = await start()
     const laptop = hub.as('alice', write, { sourceId: 'laptop' })
     await laptop.post('/api/v1/ledger/readings', { value: 1 })
-    await laptop.post('/api/v1/ledger/entries', { note: 'kept' })
+    await hub.as('alice', write).post('/api/v1/ledger/entries', { note: 'kept' })
     await hub
       .as('alice', write, { sourceId: 'desktop' })
       .post('/api/v1/ledger/readings', { value: 2 })
@@ -282,12 +282,13 @@ describe('createHub', () => {
       expect(put?.requestBody).toMatchObject({
         content: { 'application/json': { schema: { properties: { note: {} } } } },
       })
-      expect(Object.keys(put?.responses ?? {})).toEqual(['200', '201', 'default'])
+      expect(Object.keys(put?.responses ?? {})).toEqual(['200', '201', '403', 'default'])
       expect(put?.responses).toMatchObject({
         '201': { headers: { ETag: { $ref: '#/components/headers/ETag' } } },
       })
       expect(paths['/api/v1/ledger/stamps/{id}']?.delete?.responses).toEqual({
         '204': { description: 'No Content' },
+        '403': { $ref: '#/components/responses/SourceRefused' },
         default: { $ref: '#/components/responses/Problem' },
       })
     })
