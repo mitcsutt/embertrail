@@ -20,7 +20,8 @@ export function boardSections(
   boards: readonly BoardSummary[],
   teams: readonly BoardTeam[],
 ): BoardSection[] {
-  if (teams.length === 0) return [{ key: 'user', label: 'Boards', heading: false, boards: [...boards] }]
+  if (teams.length === 0)
+    return [{ key: 'user', label: 'Boards', heading: false, boards: [...boards] }]
   const owned = (id: string | undefined) =>
     boards.filter(({ owner }) => (id === undefined ? owner.kind === 'user' : owner.id === id))
   const known = new Set(teams.map(({ id }) => id))
