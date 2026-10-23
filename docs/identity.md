@@ -93,7 +93,7 @@ Each Platform's entry file maps env to `HubConfig`; the core validates it at boo
 
 ## `hub.directory`
 
-The core's privileged API over these records: `createUser`, `createTeam`, `setTeamMember`, `removeTeamMember`, `createSource`, `renameSource`, `issueToken`, `revokeToken`, `accounts`, `setAccountLabel`, `grant`, `revokeGrant`, `createFirstUser`, and the lists `users`, `teams`, `sources`, `tokens` and `grants`. It enforces the records' own rules (an ingest Token needs a Source, `admin` needs an admin User, a Grant names a loaded Module) and answers with `HubError`s, but it doesn't check who is asking. The [Admin and self-management API](admin-api.md) (#30) wraps it in ops with the `admin` and `self:manage` Scopes, and adds deletion.
+The core's privileged API over these records: `createUser`, `createTeam`, `setTeamMember`, `removeTeamMember`, `createSource`, `renameSource`, `issueToken`, `revokeToken`, `accounts`, `setAccountLabel`, `grant`, `revokeGrant`, `createFirstUser`, the lists `users`, `teams`, `sources`, `tokens` and `grants`, and the caller's-own reads `ownSource`, `ownToken`, `ownAccount` and `ownGrant` (null for another User's record). Each call opens a transaction of its own, except on `directory.in(tx)`, which runs a series of calls on the one transaction you hand it: how a core op uses it. It enforces the records' own rules (an ingest Token needs a Source, `admin` needs an admin User, a Grant names a loaded Module) and answers with `HubError`s, but it doesn't check who is asking. The [Admin and self-management API](admin-api.md) (#30) wraps it in ops with the `admin` and `self:manage` Scopes, and adds deletion.
 
 ## Testing
 

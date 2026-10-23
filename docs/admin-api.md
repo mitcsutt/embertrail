@@ -26,7 +26,7 @@ One person on their own Hub calls two things: bootstrap (or the Docker zero-conf
 
 ## How core ops work
 
-Core ops are not Module ops: they reach the `core` tables, which the app role can't, so they run privileged through `hub.directory` and check ownership themselves. Each is declared with `coreOp()` in [`ops.ts`](../packages/hub/src/admin/ops.ts) (key, method, path, tag, Scope, Zod input and output, statuses, `run(input, ctx)`), and the core:
+Core ops are not Module ops: they reach the `core` tables, which the app role can't, so they run privileged and check ownership themselves. Like a Module's op, each runs in one transaction (the pipeline's `privileged` one), and `ctx.directory` and `ctx.remove` are on it, so a throw anywhere in the op rolls back all of it: `POST /api/v1/self/sources` creates the Source and its Token together or not at all. Ownership is a Directory read, not a filter in the op: `ownSource`, `ownToken`, `ownAccount` and `ownGrant` answer null for another User's id and for an absent one alike, and lock the row until the op ends. Each is declared with `coreOp()` in [`ops.ts`](../packages/hub/src/admin/ops.ts) (key, method, path, tag, Scope, Zod input and output, statuses, `run(input, ctx)`), and the core:
 
 - routes it and reserves its path, so a Module claiming it fails boot (`duplicate path`);
 - resolves the caller, checks the Scope, validates the input and parses the output exactly as for a Module's typed op, but keeps `source_id` in the input, since core ops never write a Module's rows;

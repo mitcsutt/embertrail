@@ -3,7 +3,10 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { Directory } from '../identity/directory'
 import type { Caller, HttpMethod, OpStatus, Reply, Scope } from '../module/define'
 
-/** What a core op receives besides its input. Unlike a Module's op, it runs privileged. */
+/**
+ * What a core op receives besides its input. Unlike a Module's op, it runs privileged: the
+ * `directory` and `remove` are on the op's one transaction, so a throw undoes all of it.
+ */
 export interface CoreCtx {
   caller: Caller
   directory: Directory
@@ -15,7 +18,7 @@ export interface CoreCtx {
   modules: readonly string[]
   /**
    * Hard deletes through the core's delete-by-Owner and delete-by-Source: the record and
-   * every row it owns (or sent) in every Module, in one transaction. False when it is absent.
+   * every row it owns (or sent) in every Module, on the op's transaction. False when it is absent.
    */
   remove: {
     user(userId: string): Promise<boolean>
@@ -28,8 +31,9 @@ export interface CoreCtx {
 
 /**
  * An op the core serves itself (#30): the Admin API (`admin`) and self-management
- * (`self:manage`). Validated, documented and answered like a Module's typed op, but it reaches
- * the `core` tables through the Directory, so it checks who may touch which record itself.
+ * (`self:manage`). Validated, documented, answered and run in one transaction like a Module's
+ * typed op, but privileged: it reaches the `core` tables through the Directory, so it checks who
+ * may touch which record itself.
  */
 export interface CoreOp {
   key: string

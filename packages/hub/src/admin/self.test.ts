@@ -129,6 +129,23 @@ describe('self-management', () => {
       expect(await t.sql(sql`select name from core.sources`)).toEqual([{ name: 'laptop' }])
     })
 
+    it('rolls the Source back when its Token fails', async () => {
+      const alice = t.as('alice', ['self:manage', 'alpha:write'])
+      // A fault on the Token's insert, after the Source row exists in the same transaction.
+      await t.sql(sql`create function core.fail_ingest_token() returns trigger language plpgsql as
+        $$ begin if new.kind = 'ingest' then raise exception 'injected'; end if; return new; end $$`)
+      await t.sql(sql`create trigger fail_ingest_token before insert on core.tokens
+        for each row execute function core.fail_ingest_token()`)
+
+      expect(await problem(alice.post(self('sources'), { name: 'laptop' }))).toEqual({
+        status: 500,
+        type: 'internal',
+      })
+      expect(t.errors).toHaveLength(1)
+      t.errors.length = 0
+      expect(await t.sql(sql`select 1 from core.sources`)).toEqual([])
+    })
+
     it('gives the ingest Token only Module write Scopes, never a core Scope', async () => {
       const alice = t.as('alice', ['admin', 'self:manage', 'sql:read', 'alpha:read', 'alpha:write'])
       const created = await body<{ token: Issued }>(alice.post(self('sources'), { name: 'laptop' }))
@@ -418,6 +435,24 @@ describe('self-management', () => {
         }),
       ]
       for (const attempt of attempts) {
+        expect(await problem(attempt)).toEqual({ status: 404, type: 'not-found' })
+      }
+
+      // The same attempts on ids that don't exist answer the same.
+      const absent = [
+        alice.put(self('sources/nobody'), { name: 'mine now' }),
+        alice.delete(self('sources/nobody')),
+        alice.delete(self('tokens/nobody')),
+        alice.put(self('accounts/nobody'), { label: 'mine now' }),
+        alice.post(self('grants'), { module: 'alpha', account_id: 'nobody', user_id: 'alice' }),
+        alice.delete(self('grants/nobody')),
+        alice.post(self('tokens'), {
+          kind: 'ingest',
+          scopes: ['alpha:write'],
+          source_id: 'nobody',
+        }),
+      ]
+      for (const attempt of absent) {
         expect(await problem(attempt)).toEqual({ status: 404, type: 'not-found' })
       }
 

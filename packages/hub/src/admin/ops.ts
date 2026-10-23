@@ -116,16 +116,10 @@ function expiry(ctx: CoreCtx, value: string | undefined) {
   return cap !== undefined && cap.getTime() < at.getTime() ? cap : at
 }
 
-async function ownSource(ctx: CoreCtx, sourceId: string) {
-  const found = (await ctx.directory.sources(ctx.caller.userId)).find((s) => s.id === sourceId)
-  if (found === undefined) throw HubError.notFound(`No Source ${sourceId}`)
-  return found
-}
-
-async function ownAccount(ctx: CoreCtx, accountId: string) {
-  const found = (await ctx.directory.accounts(ctx.caller.userId)).find((a) => a.id === accountId)
-  if (found === undefined) throw HubError.notFound(`No Account ${accountId}`)
-  return found
+/** The caller's own record, or the 404 an absent one gets: another User's id looks the same. */
+function found<T>(record: T | null, what: string, recordId: string): T {
+  if (record === null) throw HubError.notFound(`No ${what} ${recordId}`)
+  return record
 }
 
 const admin = { tag: 'admin', scope: 'admin' } as const
@@ -343,26 +337,22 @@ const selfOps = [
         throw HubError.invalid('The caller holds no Module write Scope to give an ingest Token')
       }
       const expiresAt = expiry(ctx, input.expires_at)
+      // One transaction: when the Token fails, the Source goes with it.
       const source = await ctx.directory.createSource(ctx.caller.userId, { name: input.name })
-      try {
-        const issued = await ctx.directory.issueToken(ctx.caller.userId, {
-          kind: 'ingest',
-          scopes,
-          sourceId: source.id,
-          name: input.name,
-          expiresAt,
-        })
-        return reply(
-          {
-            source: toSource(source),
-            token: { token: issued.token, record: toToken(issued.record) },
-          },
-          { status: 201 },
-        )
-      } catch (error) {
-        await ctx.remove.source(source.id)
-        throw error
-      }
+      const issued = await ctx.directory.issueToken(ctx.caller.userId, {
+        kind: 'ingest',
+        scopes,
+        sourceId: source.id,
+        name: input.name,
+        expiresAt,
+      })
+      return reply(
+        {
+          source: toSource(source),
+          token: { token: issued.token, record: toToken(issued.record) },
+        },
+        { status: 201 },
+      )
     },
   }),
   coreOp({
@@ -374,7 +364,11 @@ const selfOps = [
     input: z.strictObject({ source_id: id, name }),
     output: sourceOut,
     async run(input, ctx) {
-      await ownSource(ctx, input.source_id)
+      found(
+        await ctx.directory.ownSource(ctx.caller.userId, input.source_id),
+        'Source',
+        input.source_id,
+      )
       return toSource(await ctx.directory.renameSource(input.source_id, input.name))
     },
   }),
@@ -389,7 +383,7 @@ const selfOps = [
     output: empty,
     statuses: [204],
     async run({ source_id: sourceId }, ctx) {
-      await ownSource(ctx, sourceId)
+      found(await ctx.directory.ownSource(ctx.caller.userId, sourceId), 'Source', sourceId)
       await ctx.remove.source(sourceId)
       return reply.noContent()
     },
@@ -451,8 +445,7 @@ const selfOps = [
     output: empty,
     statuses: [204],
     async run({ token_id: tokenId }, ctx) {
-      const tokens = await ctx.directory.tokens(ctx.caller.userId)
-      if (!tokens.some((t) => t.id === tokenId)) throw HubError.notFound(`No Token ${tokenId}`)
+      found(await ctx.directory.ownToken(ctx.caller.userId, tokenId), 'Token', tokenId)
       await ctx.directory.revokeToken(tokenId)
       return reply.noContent()
     },
@@ -480,9 +473,11 @@ const selfOps = [
     input: z.strictObject({ account_id: id, label: z.string().max(200).nullable() }),
     output: accountOut,
     async run({ account_id: accountId, label }, ctx) {
-      await ownAccount(ctx, accountId)
+      found(await ctx.directory.ownAccount(ctx.caller.userId, accountId), 'Account', accountId)
       await ctx.directory.setAccountLabel(accountId, label)
-      return toAccount(await ownAccount(ctx, accountId))
+      return toAccount(
+        found(await ctx.directory.ownAccount(ctx.caller.userId, accountId), 'Account', accountId),
+      )
     },
   }),
   coreOp({
@@ -513,7 +508,11 @@ const selfOps = [
     output: grantOut,
     statuses: [201],
     async run(input, ctx) {
-      await ownAccount(ctx, input.account_id)
+      found(
+        await ctx.directory.ownAccount(ctx.caller.userId, input.account_id),
+        'Account',
+        input.account_id,
+      )
       const grant = await ctx.directory.grant({
         module: input.module,
         accountId: input.account_id,
@@ -534,8 +533,7 @@ const selfOps = [
     output: empty,
     statuses: [204],
     async run({ grant_id: grantId }, ctx) {
-      const grants = await ctx.directory.grants(ctx.caller.userId)
-      if (!grants.some((g) => g.id === grantId)) throw HubError.notFound(`No Grant ${grantId}`)
+      found(await ctx.directory.ownGrant(ctx.caller.userId, grantId), 'Grant', grantId)
       await ctx.directory.revokeGrant(grantId)
       return reply.noContent()
     },

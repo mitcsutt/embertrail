@@ -177,8 +177,9 @@ const ownOps: readonly HubOp[] = [
 ]
 
 /**
- * One of the core's own ops (#30): it reaches the `core` tables through the Directory, so it
- * keeps `source_id` in its input and checks who may touch which record itself.
+ * One of the core's own ops (#30): it reaches the `core` tables through the Directory, on the
+ * op's one privileged transaction, so it keeps `source_id` in its input and checks who may
+ * touch which record itself.
  */
 function fromCoreOp(op: CoreOp): HubOp {
   return {
@@ -191,7 +192,7 @@ function fromCoreOp(op: CoreOp): HubOp {
     description: op.description,
     tags: [op.tag],
     auth: { kind: 'scope', scope: op.scope, source: 'accept' },
-    transaction: 'none',
+    transaction: 'privileged',
     input: op.input,
     output: op.output,
     headers: {},
@@ -200,16 +201,18 @@ function fromCoreOp(op: CoreOp): HubOp {
     stamped: 'keep',
     ownerHeader: false,
     responses: op.responses,
-    run: (input, call) =>
-      op.run(input, {
+    run(input, call) {
+      const tx = needs(call.db, 'a transaction')
+      return op.run(input, {
         caller: needs(call.caller, 'a caller'),
-        directory: call.hub.directory,
+        directory: call.hub.directory.in(tx),
         now: () => new Date(call.now),
         scopes: call.hub.scopes,
         modules: call.hub.modules,
-        remove: call.hub.remove,
+        remove: call.hub.remove(tx),
         exportOwner: (module, ownerId) => call.hub.exportOwner(module, ownerId, call.requestId),
-      }),
+      })
+    },
   }
 }
 

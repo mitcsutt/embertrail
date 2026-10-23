@@ -38,7 +38,8 @@ export interface Services {
   /** The loaded Modules' names. */
   modules: readonly string[]
   openapi: OpenApiDocument
-  remove: CoreCtx['remove']
+  /** The core's hard deletes on an op's transaction. */
+  remove(tx: ScopedDb): CoreCtx['remove']
   exportOwner(module: string, ownerId: string, requestId: string): ReadableStream<Uint8Array>
 }
 
