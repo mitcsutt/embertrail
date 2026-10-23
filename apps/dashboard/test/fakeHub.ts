@@ -3,7 +3,7 @@
 // through the real client, so errors, headers and paging behave as they do against a Hub.
 
 import { createClient } from '@mitcsutt/embertrail-client'
-import type { EmbertrailClient } from '@mitcsutt/embertrail-client'
+import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
 
 import type { BoardDocument } from '#features/boards/types/board'
 import { boardNamespace } from '#features/boards/types/board'
@@ -12,6 +12,11 @@ export interface FakeHubOptions {
   /** Stored Boards by id; a value that is not a Board is served as it is. */
   boards?: Record<string, BoardDocument | object>
   scopes?: string[]
+  /** The Sessions `listSessions` answers with, and `getSession` looks up (children by parent). */
+  sessions?: Schemas['SessionSummary'][]
+  /** The Events a list query pages through, `eventPageSize` at a time, whatever the filter. */
+  events?: Schemas['Event'][]
+  eventPageSize?: number
 }
 
 export interface FakeHub {
@@ -50,7 +55,7 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
   const boards = new Map(Object.entries(options.boards ?? {}))
   const requests: FakeHub['requests'] = []
 
-  const respond = (method: string, url: URL): Response => {
+  const respond = (method: string, url: URL, body: unknown): Response => {
     const path = url.pathname
     if (path === '/api/v1/self') {
       return json({
@@ -71,10 +76,34 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         attributes: [],
       })
     }
+    if (
+      path === '/api/v1/events/query' &&
+      (body as { mode?: string } | undefined)?.mode === 'list'
+    ) {
+      const size = options.eventPageSize ?? 100
+      const start = Number((body as { cursor?: string }).cursor ?? 0)
+      const all = options.events ?? []
+      const next = start + size
+      return json({
+        items: all.slice(start, next),
+        next_cursor: next < all.length ? String(next) : null,
+      })
+    }
     if (path === '/api/v1/metrics/query' || path === '/api/v1/events/query') {
       return json({ rows: [], meta: {} })
     }
-    if (path === '/api/v1/sessions') return json({ items: [], next_cursor: null })
+    if (path === '/api/v1/sessions')
+      return json({ items: options.sessions ?? [], next_cursor: null })
+    const session = /^\/api\/v1\/sessions\/([^/]+)$/.exec(path)
+    if (session !== null) {
+      const found = (options.sessions ?? []).find((candidate) => candidate.id === session[1])
+      return found === undefined
+        ? problem(404, 'not-found')
+        : json({
+            ...found,
+            children: (options.sessions ?? []).filter((c) => c.parent_session_id === found.id),
+          })
+    }
 
     const store = new RegExp(`^/api/v1/store/${boardNamespace}(?:/([^/]+))?$`).exec(path)
     if (store !== null && method === 'GET') {
@@ -105,7 +134,7 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         path: url.pathname,
         ...(body === undefined ? {} : { body }),
       })
-      return respond(request.method, url)
+      return respond(request.method, url, body)
     },
   })
 

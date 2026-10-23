@@ -1,0 +1,1 @@
+export { describeEvent } from './describeEvent'
