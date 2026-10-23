@@ -28,6 +28,8 @@ export interface DashboardTestHub {
   t: TestHub
   /** What the Dashboard holds: `otel:read`, `store:read` and `store:write`, no ingest. */
   client: EmbertrailClient
+  /** The Token behind `client`, for a proxy that serves the Hub over HTTP. */
+  token: string
   /** The ingest client, bound to the Source `embertrail-demo`. */
   ingest: TestClient
   /** The dataset that was ingested, if any. */
@@ -87,6 +89,7 @@ export async function dashboardTestHub(
     return {
       t,
       client,
+      token,
       ingest,
       demo,
       applyLabels: () => (demo === undefined ? Promise.resolve() : labelDemo(ingest, demo)),

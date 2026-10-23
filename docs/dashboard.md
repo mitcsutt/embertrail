@@ -17,6 +17,7 @@ pnpm --filter @mitcsutt/embertrail-dashboard dev        # the shell on a Vite de
 pnpm --filter @mitcsutt/embertrail-dashboard build      # dist/
 pnpm --filter @mitcsutt/embertrail-dashboard preview    # serve dist/
 pnpm --filter @mitcsutt/embertrail-dashboard test       # Vitest on jsdom
+pnpm --filter @mitcsutt/embertrail-dashboard e2e        # Playwright on Chromium, see End-to-end tests
 ```
 
 `pnpm lint`, `pnpm typecheck` and `pnpm test` at the root cover it too.
@@ -233,3 +234,18 @@ const { rows } = await client.queryMetrics({
 ### Test time
 
 `pnpm test` at the root takes about 2 min 40 s with a cold cache, and the Dashboard's part of that is about 11 s: one PGLite Hub per test file, booted in `beforeAll` (`demo.test.ts`, `contracts.test.ts`, `filters.test.ts` and `seed.test.ts` each boot one; a boot plus the dataset takes about 3 s). Turbo runs packages one at a time (`--concurrency=1`). Keep to one Hub per file as Widget tests arrive; re-measure at each tidy pass.
+
+## End-to-end tests
+
+`apps/dashboard/e2e/` holds the browser specs (Playwright, Chromium only). They are not part of `pnpm test`; CI runs them as the `Dashboard e2e` job, which is in the `CI passed` needs list. Locally:
+
+```sh
+pnpm --filter @mitcsutt/embertrail-dashboard exec playwright install chromium   # once
+pnpm --filter @mitcsutt/embertrail-dashboard e2e
+```
+
+- `e2e/global-setup.ts` calls `startStack()` in `e2e/stack.ts` once per run: `dashboardTestHub({ now: new Date() })` (the demo dataset, ending now so every relative range holds data) served over HTTP with `@hono/node-server`, then `vite build`, then three `vite preview` servers whose proxies point at that Hub. All ports are random. Each preview's proxy reads `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` like `pnpm dev`, so the specs exercise the real proxy path. Playwright's own TypeScript loader runs the setup, which is how it can import the Hub's TypeScript source that plain Node cannot.
+- The three previews make the failure states real: **working** (the Hub's Token), **unauthorized** (a Token the Hub refuses, so a real 401) and **unreachable** (a port nothing listens on, so the proxy's real error). The setup puts their origins in `E2E_ORIGIN`, `E2E_ORIGIN_UNAUTHORIZED` and `E2E_ORIGIN_UNREACHABLE`; `e2e/origins.ts` reads them.
+- `e2e/requests.spec.ts` is the request allowlist (#40): every request the page makes must be to its own origin, and the only API path is `/api/`. A request to another origin fails the spec.
+- `e2e/axe.ts` exports `expectNoAxeViolations(page, ready)`: it stores `light` then `dark` under `embertrail-dashboard-mode`, reloads, waits for `ready` and fails on any axe violation. jsdom cannot compute colour contrast, so axe runs here and not in Vitest. A new page adds a spec that calls it.
+- Specs wait on what the page shows (a locator), never on a timeout. On a CI failure the job uploads `test-results/` (traces) and `playwright-report/`.

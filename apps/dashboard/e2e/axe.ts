@@ -1,0 +1,28 @@
+import AxeBuilder from '@axe-core/playwright'
+import { expect } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+
+// Where the Dashboard keeps the colour mode (the Vite config's theme script reads the same key).
+const modeKey = 'embertrail-dashboard-mode'
+const modes = ['light', 'dark'] as const
+
+/**
+ * Checks the current page with axe in light and in dark mode and fails on any violation. It stores
+ * each mode and reloads the page, so pass `ready`, a locator that is visible once the content you
+ * want checked has rendered.
+ */
+export async function expectNoAxeViolations(page: Page, ready: Locator): Promise<void> {
+  for (const mode of modes) {
+    await page.evaluate(
+      ({ key, value }) => {
+        localStorage.setItem(key, value)
+      },
+      { key: modeKey, value: mode },
+    )
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
+    await expect(ready).toBeVisible()
+    const { violations } = await new AxeBuilder({ page }).analyze()
+    expect(violations, `axe violations in ${mode} mode`).toEqual([])
+  }
+}
