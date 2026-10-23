@@ -1,0 +1,1 @@
+export { asCatalogueEntry } from './asCatalogueEntry'
