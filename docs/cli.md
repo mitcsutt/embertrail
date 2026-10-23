@@ -42,15 +42,16 @@ Deletes are hard and confirmed by the Hub's own rules (the Admin API doc has the
 
 Claude Code reads telemetry settings from the `env` of its **user** settings, `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`, which is how to try this without touching your real one). That `env` overrides shell variables, and project settings cannot set exporters, so the user file is the only reliable place. The command writes:
 
-| Variable                                      | Value                                     |
-| --------------------------------------------- | ----------------------------------------- |
-| `CLAUDE_CODE_ENABLE_TELEMETRY`                | `1`                                       |
-| `OTEL_METRICS_EXPORTER`, `OTEL_LOGS_EXPORTER` | `otlp` (Metrics, and Events as OTLP logs) |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`                 | `http/json`                               |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                 | the Hub's URL                             |
-| `OTEL_EXPORTER_OTLP_HEADERS`                  | `Authorization=Bearer <ingest Token>`     |
+| Variable                                            | Value                                     |
+| --------------------------------------------------- | ----------------------------------------- |
+| `CLAUDE_CODE_ENABLE_TELEMETRY`                      | `1`                                       |
+| `OTEL_METRICS_EXPORTER`, `OTEL_LOGS_EXPORTER`       | `otlp` (Metrics, and Events as OTLP logs) |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                       | `http/json`                               |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | `delta`                                   |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                       | the Hub's URL                             |
+| `OTEL_EXPORTER_OTLP_HEADERS`                        | `Authorization=Bearer <ingest Token>`     |
 
-Traces are never enabled: no `OTEL_TRACES_EXPORTER` is written, and a value the user set themselves is left alone. Every other key and `env` entry in the file is kept, and the same block applied twice changes nothing (`applyTelemetry` in `src/claude-code.ts`). The file must be a JSON object; one that is not is reported and left untouched, before any Source is created. A new file is mode 600 (it holds a Token), an existing file keeps its mode, and a symlinked file is written through.
+Traces are never enabled: no `OTEL_TRACES_EXPORTER` is written, and a value the user set themselves is left alone. Every other key and `env` entry in the file is kept, and the same block applied twice changes nothing (`applyTelemetry` in `src/claude-code.ts`). The file must be a JSON object; one that is not is reported and left untouched, before any Source is created. The file is always mode 600 (it holds a Token): a wider existing file is tightened, even when its content is already right, and a symlinked file is written through, the mode applying to the file it resolves to. Temporality is pinned to `delta` because the Hub refuses cumulative sums with `partialSuccess`; a re-run overwrites a `cumulative` override.
 
 Running it again is idempotent. For a Source that exists, when the settings already point at this Hub with an ingest Token that is still active (not revoked, not expired) for that Source, the command keeps it: the file is left as it was and nothing is revoked, so other machines sharing that Source and Token keep working. When the settings hold no usable Token for the Source (a new machine, a lost file, a revoked or expired Token, another Hub), it issues a new ingest Token with the logged-in Token's `:write` Scopes and writes it. The Hub never shows a Token twice, and there is no rotate option; revoke the old Token with `tokens revoke` once its replacement is in place.
 
