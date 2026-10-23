@@ -51,7 +51,7 @@ apps/dashboard/
   index.html  vite.config.ts  vitest.config.ts
   public/config.json       # runtime config
   scripts/                 # seed.ts, hubProxy.ts (the dev proxy's Hub and Token)
-  test/                    # test setup, outside src/
+  test/                    # test setup, Hub harness, demo data, spec check: outside src/
   src/
     main.tsx               # entry: styles, router, providers
     routes/                # thin file routes
@@ -61,7 +61,7 @@ apps/dashboard/
     lib/                   # configured clients, one module each (hub, queryClient)
     features/
       filters/types/       # BoardFilters, QueryContext
-      widgets/types/       # WidgetDefinition
+      widgets/             # the Widget framework and the first Catalogue entries, see Widgets
       boards/{types,schemas,utils,data,pages}  # BoardDocument and its schema, Presets, the store, BoardPage
       sessions/pages/      # SessionGroupsPage, SessionPage
 ```
@@ -102,6 +102,39 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
 - **Migration:** `migrateBoard(stored)` (`utils/migrate`) lifts a stored Board of any older `schema_version` to the current one, step by step through `boardMigrations` (empty while v1 is the first version). It throws `UnsupportedBoardVersionError` for a newer version and `InvalidBoardError`, which names each problem, for anything that does not parse. Every read goes through it. To add version 2: bump `currentBoardVersion` and the schema, and add `boardMigrations[1]`.
 - **Presets** (`utils/presets`) are data, not stored documents, and are frozen: **Overview** (the layout of #16), **Everything** (one section per Widget group in Catalogue order, each Widget at its default size, built by `everythingPreset(catalogue)` so a new Widget joins it) and **New Board** (empty). All three start on `last-7-days`. `overview`, `everything` and `new` are reserved ids; a stored Board id is `b-` and ten base36 characters (`newBoardId`). A Widget item's `i` is its Widget id in a Preset and a section's `i` is `section-<slug>`. `customisePreset(preset)` returns a copy named `<name> (copy)`, which `createBoard` then stores.
 - **Store** (`data/boards`) takes the client as its first argument: `listBoards` (the readable ones, and the ids it could not read), `getBoard` (keeps the `ETag`), `createBoard` (`If-None-Match: *`, a fresh id, retried on a taken one), `saveBoard` and `deleteBoard` (`If-Match`). A write that loses its race throws `BoardConflict` with `current`, the Hub's copy (`undefined` if the Board was deleted since, or if the new copy cannot be read, in which case `cause` holds the read error); the stored Board is untouched, and the caller decides whether to reload or keep editing.
+
+## Widgets
+
+A Widget is one entry of the Catalogue: a `WidgetDefinition` (see Shared contracts) that says what to ask the Hub (`request`), how to read the answer (`select`, `isEmpty`) and how to draw it (`View`). `features/widgets` holds the framework and the Catalogue; three Widgets exist so far, one per pattern: **Cost today** (a stat), **Each day by model** (a stacked `Bars` chart pivoted by model) and **Top sessions** (a `Table` linking to `/sessions/$sessionId`).
+
+```
+features/widgets/
+  components/
+    Widget/                  # useWidgetData + WidgetFrame + the definition's View: what a Board renders
+    WidgetFrame/             # the Card, and loading, empty and error in place of the View
+    WidgetClientProvider/    # gives Widgets the Hub client
+    CostToday/ EachDayByModel/ TopSessions/   # one module per Widget: definition and View together
+  constants/catalogue/       # catalogue: WidgetDefinition[], getWidget(id)
+  data/runRequest/           # a switch over WidgetRequest.op onto the client
+  hooks/useWidgetData/       # the only path from a Widget to the Hub
+  utils/                     # formats, chartColorOrder, describeError, asCatalogueEntry
+```
+
+- **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried; a 5xx or a network failure is retried once.
+- **The frame** maps `loading`, `empty` and `error` onto kiln-charts' `ChartFrame`. An error shows the Hub's `detail` when it sent one, with a Retry; `empty` is what `isEmpty(data)` says (no rows, or a sender that sends no cost). The `View` is drawn only when the status is `ready`. A `stat` leaves the title to its `Stat`.
+- **The Hub client** comes from `WidgetClientProvider`. Until the runtime config and `HubStatus` gate land (#72 D2) nothing mounts it; the app will mount it with the client it builds from the config.
+- **Formats** (`utils/formats`) write dollars, token counts, percentages and durations in the browser's locale. `chartColorOrder({ models, types })` is the `order` for the Board-wide `ChartColorScope`, so a model keeps its colour in every chart.
+- **A Widget's window and filters** are already resolved into the `QueryContext` it gets: `request(ctx)` uses `ctx.from`, `ctx.to`, `ctx.tz` and `ctx.filter` and leaves a `filter` out when it is empty.
+
+### Testing a Widget
+
+`test/spec.ts` checks a request against `spec/query-api.yaml` itself: a body against the operation's request schema, `listSessions`' query against its parameters (an unknown parameter fails). `test/widget.ts` is the template: `testContext(window)` builds a `QueryContext`, `loadWidget(client, definition, ctx)` validates the request, sends it through the real client and returns the selected data. A Widget's tests then:
+
+1. assert the selected data against `demo.facts` on the demo Hub (`test/widgets.test.ts`),
+2. add the Widget to the Catalogue so `test/widgets-empty.test.ts` asserts it is empty on a Hub that only holds a non-Claude sender, and the spec check covers its request,
+3. render its `View` from a stub client in `Widget.test.tsx` when it draws something new.
+
+kiln-charts needs `ResizeObserver` and `matchMedia`, which jsdom lacks; `test/vitest.setup.ts` stubs both, so a chart renders its frame and hidden data table but is never laid out. Assert on the table, and check pointer behaviour in the browser.
 
 ## Demo data
 
