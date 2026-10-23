@@ -40,7 +40,7 @@ export default defineConfig(
     // they import no driver, and test support (pglite, `@mitcsutt/embertrail-hub/testing`)
     // stays out of code that ships. Adapters live in the apps; tests may use both.
     name: 'embertrail/core/no-drivers-or-test-support',
-    files: ['packages/{hub,otel,store}/src/**'],
+    files: ['packages/{hub,modules,otel,store}/src/**'],
     ignores: [
       '**/*.test.ts',
       'packages/hub/src/testing/**',

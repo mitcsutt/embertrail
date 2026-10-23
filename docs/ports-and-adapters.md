@@ -82,7 +82,7 @@ Each Platform's entry file builds a typed config and the Ports, then hands them 
 const hub = createHub({
   config: { retentionDays: 90 }, // HubConfig, validated at boot (identity.md#config)
   ports: { db: dockerDb({ url }), edgeIdentity: noEdgeIdentity() },
-  modules: [otel, store],
+  modules: hubModules, // @mitcsutt/embertrail-modules: otel, store; the one list every Platform and test shares
 })
 // hub.fetch(request), hub.migrate(), hub.boot(), hub.runRetention(),
 // hub.deleteBySource(id), hub.deleteByOwner(id), hub.exportOwner(module, ownerId),
@@ -90,7 +90,7 @@ const hub = createHub({
 ```
 
 - **Docker** (`apps/server`, #37; [`self-hosting.md`](self-hosting.md)): config from env, `embertrail migrate` in the image's entrypoint, then `boot()` before listening, `fetch` through `@hono/node-server`, `runRetention()` hourly when `RETENTION_DAYS` is set.
-- **Cloudflare** (`apps/worker`, #38): config from bindings, `fetch` from the Worker handler, `runRetention()` from a cron trigger. `embertrail migrate` runs before deploy, never at Worker startup.
+- **Cloudflare** (`apps/worker`, #38): config from bindings, `fetch` from the Worker handler, `runRetention()` from a cron trigger. Its entry imports `hubModules` from `@mitcsutt/embertrail-modules` (`apps/worker` has a `workerd` test that does). `embertrail migrate` runs before deploy, never at Worker startup.
 
 `createHub` throws `HubBootError` when a Module breaks the contract; `boot()` checks the database ([what fails boot](writing-a-module.md#what-fails-boot)). `fetch` runs `boot()` once before the first op.
 

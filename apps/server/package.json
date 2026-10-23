@@ -17,8 +17,8 @@
   "dependencies": {
     "@hono/node-server": "catalog:",
     "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/embertrail-otel": "workspace:*",
-    "@mitcsutt/embertrail-store": "workspace:*",
     "drizzle-orm": "catalog:",
     "pg": "catalog:",
     "zod": "catalog:"

@@ -5,7 +5,7 @@ import pg from 'pg'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { dockerDb } from './db'
-import { hubModules } from './modules'
+import { hubModules } from '@mitcsutt/embertrail-modules'
 import { startServer } from './server'
 import type { RunningServer } from './server'
 import { databaseUrl, skipWithoutPostgres } from './testing/postgres'

@@ -27,6 +27,7 @@ export type { Hub, HubOptions, Ports } from './hub/create-hub'
 export type { HubConfig } from './hub/boot'
 export type { OpenApiDocument } from './hub/openapi'
 
+export { migrate as migrateDatabase } from './db/migrate'
 export { drizzleDbPort } from './db/port'
 export type { DbPort, DbSession, ScopedDb } from './db/port'
 export type { AppliedMigration, MigrationReport } from './db/migrate'

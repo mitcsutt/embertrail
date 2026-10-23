@@ -24,7 +24,7 @@ export const migrate: Command = {
     // Loaded here: the Hub, its Modules and the Postgres driver are only for this command.
     const [{ dockerDb }, { migrateDatabase }] = await Promise.all([
       import('@mitcsutt/embertrail-server'),
-      import('../migrate.ts'),
+      import('@mitcsutt/embertrail-modules'),
     ])
     const db = dockerDb({ url, poolSize: 1 })
     try {
