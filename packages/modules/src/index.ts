@@ -1,4 +1,4 @@
-import { migrateDatabase as migrate } from '@mitcsutt/embertrail-hub'
+import { migrateModules } from '@mitcsutt/embertrail-hub'
 import type { DbPort, MigrationReport } from '@mitcsutt/embertrail-hub'
 import { otel } from '@mitcsutt/embertrail-otel'
 import { store } from '@mitcsutt/embertrail-store'
@@ -15,5 +15,5 @@ export const hubModules = [otel, store]
  * sync (#25), in one transaction. It needs only the Db Port: no Hub config and no Edge Identity.
  */
 export function migrateDatabase(db: DbPort): Promise<MigrationReport> {
-  return migrate(db, hubModules)
+  return migrateModules(db, hubModules)
 }

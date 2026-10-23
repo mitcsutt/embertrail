@@ -19,7 +19,6 @@
     "@mitcsutt/embertrail-store": "workspace:*"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
