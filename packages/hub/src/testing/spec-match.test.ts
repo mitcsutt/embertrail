@@ -93,6 +93,17 @@ describe('compareOpenApi', () => {
     expect(compareOpenApi(served(), spec)).toEqual([])
   })
 
+  it('reads items that accept anything as no items at all', () => {
+    const spelled = served()
+    const schema = spelled.paths['/api/v1/things/{id}'].get.responses['200'].content[
+      'application/json'
+    ].schema as { properties: Record<string, unknown> }
+    const withList = structuredClone(spec)
+    Object.assign(withList.components.schemas.Thing.properties, { list: { type: 'array' } })
+    schema.properties.list = { type: 'array', items: {} }
+    expect(compareOpenApi(spelled, withList)).toEqual([])
+  })
+
   it('reports an operation on one side only', () => {
     const extra = served()
     Object.assign(extra.paths, { '/api/v1/other': { post: { responses: {} } } })

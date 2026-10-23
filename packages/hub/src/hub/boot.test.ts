@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { defineModule, moduleSchema, op } from '../module/define'
 import type { Module, ModuleDef, OwnedTable } from '../module/define'
-import { createHub } from './create-hub'
+import { createHub, migrateModules } from './create-hub'
 import { noEdgeIdentity } from '../identity/edge'
 import type { DbPort } from '../db/port'
 import type { HubConfig } from './boot'
@@ -130,6 +130,20 @@ describe('boot', () => {
     expect(boot([module('alpha', { ops: { doc: ping('/api/v1/openapi.json') } })])).toThrow(
       'Module "alpha": duplicate path: op "doc" (GET /api/v1/openapi.json) collides with a route of the core',
     )
+  })
+
+  it('refuses a path the core serves before migrating', () => {
+    const touched: string[] = []
+    const db: DbPort = {
+      transaction: () => (
+        touched.push('transaction'),
+        unusedDb.transaction(undefined as never, undefined as never)
+      ),
+      privileged: () => (touched.push('privileged'), unusedDb.privileged(undefined as never)),
+    }
+    const clash = module('alpha', { ops: { doc: ping('/api/v1/openapi.json') } })
+    expect(() => migrateModules(db, [clash])).toThrow('duplicate path')
+    expect(touched).toEqual([])
   })
 
   it('refuses a schema with no JSON Schema converter', () => {

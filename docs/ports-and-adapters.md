@@ -92,7 +92,19 @@ const hub = createHub({
 - **Docker** (`apps/server`, #37; [`self-hosting.md`](self-hosting.md)): config from env, `embertrail migrate` in the image's entrypoint, then `boot()` before listening, `fetch` through `@hono/node-server`, `runRetention()` hourly when `RETENTION_DAYS` is set.
 - **Cloudflare** (`apps/worker`, #38): config from bindings, `fetch` from the Worker handler, `runRetention()` from a cron trigger. Its entry imports `hubModules` from `@mitcsutt/embertrail-modules` (`apps/worker` has a `workerd` test that does). `embertrail migrate` runs before deploy, never at Worker startup.
 
-`createHub` throws `HubBootError` when a Module breaks the contract; `boot()` checks the database ([what fails boot](writing-a-module.md#what-fails-boot)). `fetch` runs `boot()` once before the first op.
+`createHub` throws `HubBootError` when a Module breaks the contract; `boot()` checks the database ([what fails boot](writing-a-module.md#what-fails-boot)). `fetch` runs `boot()` once before the first op that reaches the database.
+
+## The op pipeline
+
+Every route `fetch` serves is an op in one list ([`hub/ops.ts`](../packages/hub/src/hub/ops.ts), #79): the core's own (`openapi.json`, `docs`, `llms.txt`, `bootstrap`, `sql`), the Admin and self-management ops, then each Module's. An op (`HubOp` in [`hub/pipeline.ts`](../packages/hub/src/hub/pipeline.ts)) declares:
+
+- **who may call it:** anyone (`public`), the holder of `BOOTSTRAP_TOKEN` (`bootstrap`), or a caller holding a Scope (`scope`), with its rule for a Token bound to a Source (require, accept or refuse);
+- **its schemas:** a typed op's input and output, or a raw op's own `Request`, `Response` and Operation Object;
+- **its transaction:** `scoped` (one transaction as the caller, under row-level security: every Module op), `privileged` (one `db.privileged` transaction, outside row-level security, for an op that serves no one caller's rows) or `none` (the op reaches the database itself: the core's ops through `hub.directory`, `sql` as the readonly role).
+
+One pipeline serves them all, in this order: the database check (skipped for `public` ops, which never reach the database), the caller and its Scope and Source rule, the input read and validated, the transaction, the run, then the reply. The reply is the same for every typed op: a status the op doesn't declare is a 500 naming it, 204 sends no body, the output is parsed by its schema so undeclared keys never leave the Hub, and an `ETag` from `reply()` becomes the header. In a `scoped` or `privileged` transaction the output is parsed before commit, so output that fails its schema rolls the write back. An unexpected error before the run is the core's; after it, the op's Module's.
+
+The router, boot's `duplicate path` check and the OpenAPI document are all built from the same list, so a new core route is one entry: its schemas are what it validates with and what `/api/v1/openapi.json` documents.
 
 ## Contract suites
 
