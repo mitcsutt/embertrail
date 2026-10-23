@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 
 import { rows } from '../db/port'
 import type { DbPort, ScopedDb } from '../db/port'
@@ -115,6 +115,16 @@ export interface Directory {
   revokeToken(tokenId: string): Promise<void>
   /** A User's Accounts, as recognised from their telemetry. */
   accounts(userId: string): Promise<Account[]>
+  /**
+   * `ownSource`, `ownToken`, `ownAccount` and `ownGrant`: the record when it belongs to the
+   * User, else null, for the id of another User's record and one that doesn't exist alike.
+   * Each locks the row until the transaction ends, so what the caller then does with it
+   * can't be changed from under it.
+   */
+  ownSource(userId: string, sourceId: string): Promise<Source | null>
+  ownToken(userId: string, tokenId: string): Promise<TokenRecord | null>
+  ownAccount(userId: string, accountId: string): Promise<Account | null>
+  ownGrant(userId: string, grantId: string): Promise<Grant | null>
   /** Sets the Account's label; null goes back to the suggestion. */
   setAccountLabel(accountId: string, label: string | null): Promise<void>
   grant(input: {
@@ -145,6 +155,11 @@ export interface Directory {
   tokens(userId: string): Promise<TokenRecord[]>
   /** The Grants on a User's Accounts: the access that User gave, not the access they hold. */
   grants(userId: string): Promise<Grant[]>
+  /**
+   * This Directory on the given transaction, so a run of calls commits or rolls back
+   * together. Without it each call opens a transaction of its own.
+   */
+  in(tx: ScopedDb): Directory
 }
 
 /** A User as caller resolution sees them. */
@@ -193,6 +208,9 @@ export async function ownerKind(db: ScopedDb, ownerId: string): Promise<'user' |
   )
   return found?.kind ?? 'user'
 }
+
+/** Runs work in a transaction: the Directory's own, or the one it was handed. */
+type Run = <T>(fn: (tx: ScopedDb) => Promise<T>) => Promise<T>
 
 /** A Postgres error code anywhere in the cause chain (drivers and Drizzle wrap them). */
 function pgCode(error: unknown): string | undefined {
@@ -249,6 +267,19 @@ function toSource(row: typeof sources.$inferSelect): Source {
   return { id: row.id, ownerId: row.ownerId, name: row.name }
 }
 
+function toAccount(row: typeof accounts.$inferSelect): Account {
+  return {
+    id: row.id,
+    ownerId: row.ownerId,
+    label: accountLabel(row),
+    labelled: row.label !== null,
+    organizationId: row.organizationId,
+    accountUuid: row.accountUuid,
+    email: row.email,
+    sourceId: row.sourceId,
+  }
+}
+
 function toGrant(row: typeof grants.$inferSelect): Grant {
   return {
     id: row.id,
@@ -261,7 +292,7 @@ function toGrant(row: typeof grants.$inferSelect): Grant {
 
 /** The core Directory over the `core` tables, and the Resolver caller resolution uses. */
 export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
-  const { db, clock } = options
+  const { clock } = options
   const known = new Set(options.scopes)
   const allowedEmails = new Set(options.allowedEmails.map(normaliseEmail))
   const allowedDomains = new Set(options.allowedDomains.map((d) => d.trim().toLowerCase()))
@@ -309,312 +340,371 @@ export function coreDirectory(options: DirectoryOptions): Directory & Resolver {
     return { token: generated.token, record: toToken(row) }
   }
 
-  return {
-    async createUser(input) {
-      const [row] = await db.privileged((tx) =>
-        guarded(
-          tx
-            .insert(users)
-            .values({
-              id: input.id ?? crypto.randomUUID(),
-              name: input.name,
-              email: input.email === undefined ? null : normaliseEmail(input.email),
-              admin: input.admin ?? false,
-            })
-            .returning(),
-          { conflict: 'A User or Team with that id, or a User with that email, already exists' },
-        ),
-      )
-      if (row === undefined) throw new Error('insert into core.users returned no row')
-      return toUser(row)
-    },
-
-    async createTeam(input) {
-      const id = input.id ?? crypto.randomUUID()
-      if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
-        throw HubError.invalid('A Team id is 1 to 64 letters, digits, _ or -')
-      }
-      const [row] = await db.privileged((tx) =>
-        guarded(tx.insert(teams).values({ id, name: input.name }).returning(), {
-          conflict: 'A User or Team with that id, or a Team with that name, already exists',
-        }),
-      )
-      if (row === undefined) throw new Error('insert into core.teams returned no row')
-      return { id: row.id, name: row.name }
-    },
-
-    async setTeamMember(teamId, userId, role) {
-      await db.privileged((tx) =>
-        guarded(
-          tx
-            .insert(teamMembers)
-            .values({ teamId, userId, role })
-            .onConflictDoUpdate({
-              target: [teamMembers.teamId, teamMembers.userId],
-              set: { role },
-            }),
-          { missing: `No Team ${teamId} or no User ${userId}` },
-        ),
-      )
-    },
-
-    async removeTeamMember(teamId, userId) {
-      await db.privileged((tx) =>
-        tx
-          .delete(teamMembers)
-          .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))),
-      )
-    },
-
-    async createSource(userId, input) {
-      const [row] = await db.privileged((tx) =>
-        guarded(
-          tx
-            .insert(sources)
-            .values({ id: input.id ?? crypto.randomUUID(), ownerId: userId, name: input.name })
-            .returning(),
-          {
-            conflict: `A Source with that id, or named "${input.name}", already exists`,
-            missing: `No User ${userId}`,
-          },
-        ),
-      )
-      if (row === undefined) throw new Error('insert into core.sources returned no row')
-      return toSource(row)
-    },
-
-    issueToken: (userId, input) => db.privileged((tx) => issue(tx, userId, input)),
-
-    async revokeToken(tokenId) {
-      await db.privileged((tx) =>
-        tx
-          .update(tokens)
-          .set({ revokedAt: clock() })
-          .where(and(eq(tokens.id, tokenId), sql`${tokens.revokedAt} is null`)),
-      )
-    },
-
-    async accounts(userId) {
-      const found = await db.privileged((tx) =>
-        tx
-          .select()
-          .from(accounts)
-          .where(eq(accounts.ownerId, userId))
-          .orderBy(asc(accounts.createdAt), asc(accounts.id)),
-      )
-      return found.map((row) => ({
-        id: row.id,
-        ownerId: row.ownerId,
-        label: accountLabel(row),
-        labelled: row.label !== null,
-        organizationId: row.organizationId,
-        accountUuid: row.accountUuid,
-        email: row.email,
-        sourceId: row.sourceId,
-      }))
-    },
-
-    async setAccountLabel(accountId, label) {
-      const updated = await db.privileged((tx) =>
-        tx
-          .update(accounts)
-          .set({ label: label === null || label.trim() === '' ? null : label.trim() })
-          .where(eq(accounts.id, accountId))
-          .returning({ id: accounts.id }),
-      )
-      if (updated.length === 0) throw HubError.notFound(`No Account ${accountId}`)
-    },
-
-    async grant(input) {
-      if (!options.modules.includes(input.module)) {
-        throw HubError.invalid(`No Module "${input.module}"`)
-      }
-      if ((input.userId === undefined) === (input.teamId === undefined)) {
-        throw HubError.invalid('A Grant is to exactly one User or one Team')
-      }
-      const [row] = await db.privileged((tx) =>
-        guarded(
-          tx
-            .insert(grants)
-            .values({
-              id: crypto.randomUUID(),
-              module: input.module,
-              accountId: input.accountId,
-              userId: input.userId ?? null,
-              teamId: input.teamId ?? null,
-            })
-            .returning(),
-          {
-            conflict: 'That Grant already exists',
-            missing: 'No such Account, User or Team',
-          },
-        ),
-      )
-      if (row === undefined) throw new Error('insert into core.grants returned no row')
-      return toGrant(row)
-    },
-
-    async revokeGrant(grantId) {
-      await db.privileged((tx) => tx.delete(grants).where(eq(grants.id, grantId)))
-    },
-
-    createFirstUser: (input = {}) =>
-      db.privileged(async (tx) => {
-        // Two first starts at once: the second waits, then sees the first admin.
-        await tx.execute(sql`select pg_advisory_xact_lock(hashtext('embertrail.bootstrap'))`)
-        const [used] = await tx.select({ id: bootstrap.id }).from(bootstrap)
-        const [admin] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.admin, true))
-          .limit(1)
-        if (used !== undefined || admin !== undefined) return null
-        const email = input.email === undefined ? null : normaliseEmail(input.email)
-        // An Edge Identity may have signed this person up before bootstrap ran.
-        const [promoted] =
-          email === null
-            ? []
-            : await tx.update(users).set({ admin: true }).where(eq(users.email, email)).returning()
-        const [row] =
-          promoted === undefined
-            ? await tx
-                .insert(users)
-                .values({
-                  id: crypto.randomUUID(),
-                  name: input.name ?? 'admin',
-                  email,
-                  admin: true,
-                })
-                .returning()
-            : [promoted]
+  /** The Directory with every method running its work through `run`, one transaction each. */
+  function over(run: Run): Directory & Resolver {
+    return {
+      async createUser(input) {
+        const [row] = await run((tx) =>
+          guarded(
+            tx
+              .insert(users)
+              .values({
+                id: input.id ?? crypto.randomUUID(),
+                name: input.name,
+                email: input.email === undefined ? null : normaliseEmail(input.email),
+                admin: input.admin ?? false,
+              })
+              .returning(),
+            { conflict: 'A User or Team with that id, or a User with that email, already exists' },
+          ),
+        )
         if (row === undefined) throw new Error('insert into core.users returned no row')
-        await tx.insert(bootstrap).values({ id: true, userId: row.id })
-        const issued = await issue(tx, row.id, {
-          kind: 'management',
-          scopes: options.scopes,
-          name: 'bootstrap',
-        })
-        return { user: toUser(row), token: issued.token }
-      }),
+        return toUser(row)
+      },
 
-    async users() {
-      const found = await db.privileged((tx) =>
-        tx.select().from(users).orderBy(asc(users.createdAt), asc(users.id)),
-      )
-      return found.map(toUser)
-    },
-
-    async teams() {
-      return db.privileged(async (tx) => {
-        const found = await tx.select().from(teams).orderBy(asc(teams.createdAt), asc(teams.id))
-        const members = await tx
-          .select()
-          .from(teamMembers)
-          .orderBy(asc(teamMembers.teamId), asc(teamMembers.userId))
-        return found.map((team) => ({
-          id: team.id,
-          name: team.name,
-          members: members
-            .filter((m) => m.teamId === team.id)
-            .map((m) => ({ userId: m.userId, role: m.role })),
-        }))
-      })
-    },
-
-    async sources(userId) {
-      const found = await db.privileged((tx) =>
-        tx
-          .select()
-          .from(sources)
-          .where(userId === undefined ? undefined : eq(sources.ownerId, userId))
-          .orderBy(asc(sources.createdAt), asc(sources.id)),
-      )
-      return found.map(toSource)
-    },
-
-    async renameSource(sourceId, name) {
-      const [row] = await db.privileged((tx) =>
-        guarded(tx.update(sources).set({ name }).where(eq(sources.id, sourceId)).returning(), {
-          conflict: `A Source named "${name}" already exists`,
-        }),
-      )
-      if (row === undefined) throw HubError.notFound(`No Source ${sourceId}`)
-      return toSource(row)
-    },
-
-    async tokens(userId) {
-      const found = await db.privileged((tx) =>
-        tx
-          .select()
-          .from(tokens)
-          .where(eq(tokens.userId, userId))
-          .orderBy(asc(tokens.createdAt), asc(tokens.id)),
-      )
-      return found.map(toToken)
-    },
-
-    async grants(userId) {
-      const found = await db.privileged((tx) =>
-        tx
-          .select({ grant: grants })
-          .from(grants)
-          .innerJoin(accounts, eq(accounts.id, grants.accountId))
-          .where(eq(accounts.ownerId, userId))
-          .orderBy(asc(grants.createdAt), asc(grants.id)),
-      )
-      return found.map(({ grant }) => toGrant(grant))
-    },
-
-    async token(parsed) {
-      const hash = await hashSecret(parsed.secret)
-      const [row] = await db.privileged((tx) =>
-        tx
-          .select({ token: tokens, admin: users.admin })
-          .from(tokens)
-          .innerJoin(users, eq(users.id, tokens.userId))
-          .where(eq(tokens.id, parsed.id)),
-      )
-      if (row === undefined || !sameHash(hash, row.token.secretHash)) return null
-      const { token } = row
-      if (token.revokedAt !== null) return null
-      if (token.expiresAt !== null && token.expiresAt.getTime() <= clock().getTime()) return null
-      // A User who is no longer an admin loses `admin` from Tokens issued while they were.
-      const scopes = (token.scopes as Scope[]).filter((s) => row.admin || s !== 'admin')
-      return {
-        userId: token.userId,
-        scopes,
-        sourceId: token.sourceId ?? undefined,
-        expiresAt: token.expiresAt ?? undefined,
-      }
-    },
-
-    edgeUser(email, { provision }) {
-      const normalised = normaliseEmail(email)
-      return db.privileged(async (tx) => {
-        const byEmail = () => tx.select().from(users).where(eq(users.email, normalised))
-        let [user] = await byEmail()
-        if (user === undefined) {
-          if (!provision || !allowlisted(normalised)) return null
-          await tx
-            .insert(users)
-            .values({ id: crypto.randomUUID(), name: normalised, email: normalised, admin: false })
-            .onConflictDoNothing()
-          ;[user] = await byEmail()
+      async createTeam(input) {
+        const id = input.id ?? crypto.randomUUID()
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+          throw HubError.invalid('A Team id is 1 to 64 letters, digits, _ or -')
         }
-        return user === undefined ? null : { userId: user.id, scopes: userScopes(user.admin) }
-      })
-    },
+        const [row] = await run((tx) =>
+          guarded(tx.insert(teams).values({ id, name: input.name }).returning(), {
+            conflict: 'A User or Team with that id, or a Team with that name, already exists',
+          }),
+        )
+        if (row === undefined) throw new Error('insert into core.teams returned no row')
+        return { id: row.id, name: row.name }
+      },
 
-    async teamRole(teamId, userId) {
-      const [row] = await db.privileged((tx) =>
-        tx
-          .select({ role: teamMembers.role })
-          .from(teamMembers)
-          .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))),
-      )
-      return row?.role ?? null
-    },
+      async setTeamMember(teamId, userId, role) {
+        await run((tx) =>
+          guarded(
+            tx
+              .insert(teamMembers)
+              .values({ teamId, userId, role })
+              .onConflictDoUpdate({
+                target: [teamMembers.teamId, teamMembers.userId],
+                set: { role },
+              }),
+            { missing: `No Team ${teamId} or no User ${userId}` },
+          ),
+        )
+      },
 
-    ownerKind: (ownerId) => db.privileged((tx) => ownerKind(tx, ownerId)),
+      async removeTeamMember(teamId, userId) {
+        await run((tx) =>
+          tx
+            .delete(teamMembers)
+            .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))),
+        )
+      },
+
+      async createSource(userId, input) {
+        const [row] = await run((tx) =>
+          guarded(
+            tx
+              .insert(sources)
+              .values({ id: input.id ?? crypto.randomUUID(), ownerId: userId, name: input.name })
+              .returning(),
+            {
+              conflict: `A Source with that id, or named "${input.name}", already exists`,
+              missing: `No User ${userId}`,
+            },
+          ),
+        )
+        if (row === undefined) throw new Error('insert into core.sources returned no row')
+        return toSource(row)
+      },
+
+      issueToken: (userId, input) => run((tx) => issue(tx, userId, input)),
+
+      async revokeToken(tokenId) {
+        await run((tx) =>
+          tx
+            .update(tokens)
+            .set({ revokedAt: clock() })
+            .where(and(eq(tokens.id, tokenId), sql`${tokens.revokedAt} is null`)),
+        )
+      },
+
+      async accounts(userId) {
+        const found = await run((tx) =>
+          tx
+            .select()
+            .from(accounts)
+            .where(eq(accounts.ownerId, userId))
+            .orderBy(asc(accounts.createdAt), asc(accounts.id)),
+        )
+        return found.map(toAccount)
+      },
+
+      async ownSource(userId, sourceId) {
+        const [row] = await run((tx) =>
+          tx
+            .select()
+            .from(sources)
+            .where(and(eq(sources.id, sourceId), eq(sources.ownerId, userId)))
+            .for('update'),
+        )
+        return row === undefined ? null : toSource(row)
+      },
+
+      async ownToken(userId, tokenId) {
+        const [row] = await run((tx) =>
+          tx
+            .select()
+            .from(tokens)
+            .where(and(eq(tokens.id, tokenId), eq(tokens.userId, userId)))
+            .for('update'),
+        )
+        return row === undefined ? null : toToken(row)
+      },
+
+      async ownAccount(userId, accountId) {
+        const [row] = await run((tx) =>
+          tx
+            .select()
+            .from(accounts)
+            .where(and(eq(accounts.id, accountId), eq(accounts.ownerId, userId)))
+            .for('update'),
+        )
+        return row === undefined ? null : toAccount(row)
+      },
+
+      async ownGrant(userId, grantId) {
+        const [row] = await run((tx) =>
+          tx
+            .select()
+            .from(grants)
+            .where(
+              and(
+                eq(grants.id, grantId),
+                inArray(
+                  grants.accountId,
+                  tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.ownerId, userId)),
+                ),
+              ),
+            )
+            .for('update'),
+        )
+        return row === undefined ? null : toGrant(row)
+      },
+
+      async setAccountLabel(accountId, label) {
+        const updated = await run((tx) =>
+          tx
+            .update(accounts)
+            .set({ label: label === null || label.trim() === '' ? null : label.trim() })
+            .where(eq(accounts.id, accountId))
+            .returning({ id: accounts.id }),
+        )
+        if (updated.length === 0) throw HubError.notFound(`No Account ${accountId}`)
+      },
+
+      async grant(input) {
+        if (!options.modules.includes(input.module)) {
+          throw HubError.invalid(`No Module "${input.module}"`)
+        }
+        if ((input.userId === undefined) === (input.teamId === undefined)) {
+          throw HubError.invalid('A Grant is to exactly one User or one Team')
+        }
+        const [row] = await run((tx) =>
+          guarded(
+            tx
+              .insert(grants)
+              .values({
+                id: crypto.randomUUID(),
+                module: input.module,
+                accountId: input.accountId,
+                userId: input.userId ?? null,
+                teamId: input.teamId ?? null,
+              })
+              .returning(),
+            {
+              conflict: 'That Grant already exists',
+              missing: 'No such Account, User or Team',
+            },
+          ),
+        )
+        if (row === undefined) throw new Error('insert into core.grants returned no row')
+        return toGrant(row)
+      },
+
+      async revokeGrant(grantId) {
+        await run((tx) => tx.delete(grants).where(eq(grants.id, grantId)))
+      },
+
+      createFirstUser: (input = {}) =>
+        run(async (tx) => {
+          // Two first starts at once: the second waits, then sees the first admin.
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtext('embertrail.bootstrap'))`)
+          const [used] = await tx.select({ id: bootstrap.id }).from(bootstrap)
+          const [admin] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.admin, true))
+            .limit(1)
+          if (used !== undefined || admin !== undefined) return null
+          const email = input.email === undefined ? null : normaliseEmail(input.email)
+          // An Edge Identity may have signed this person up before bootstrap ran.
+          const [promoted] =
+            email === null
+              ? []
+              : await tx
+                  .update(users)
+                  .set({ admin: true })
+                  .where(eq(users.email, email))
+                  .returning()
+          const [row] =
+            promoted === undefined
+              ? await tx
+                  .insert(users)
+                  .values({
+                    id: crypto.randomUUID(),
+                    name: input.name ?? 'admin',
+                    email,
+                    admin: true,
+                  })
+                  .returning()
+              : [promoted]
+          if (row === undefined) throw new Error('insert into core.users returned no row')
+          await tx.insert(bootstrap).values({ id: true, userId: row.id })
+          const issued = await issue(tx, row.id, {
+            kind: 'management',
+            scopes: options.scopes,
+            name: 'bootstrap',
+          })
+          return { user: toUser(row), token: issued.token }
+        }),
+
+      async users() {
+        const found = await run((tx) =>
+          tx.select().from(users).orderBy(asc(users.createdAt), asc(users.id)),
+        )
+        return found.map(toUser)
+      },
+
+      async teams() {
+        return run(async (tx) => {
+          const found = await tx.select().from(teams).orderBy(asc(teams.createdAt), asc(teams.id))
+          const members = await tx
+            .select()
+            .from(teamMembers)
+            .orderBy(asc(teamMembers.teamId), asc(teamMembers.userId))
+          return found.map((team) => ({
+            id: team.id,
+            name: team.name,
+            members: members
+              .filter((m) => m.teamId === team.id)
+              .map((m) => ({ userId: m.userId, role: m.role })),
+          }))
+        })
+      },
+
+      async sources(userId) {
+        const found = await run((tx) =>
+          tx
+            .select()
+            .from(sources)
+            .where(userId === undefined ? undefined : eq(sources.ownerId, userId))
+            .orderBy(asc(sources.createdAt), asc(sources.id)),
+        )
+        return found.map(toSource)
+      },
+
+      async renameSource(sourceId, name) {
+        const [row] = await run((tx) =>
+          guarded(tx.update(sources).set({ name }).where(eq(sources.id, sourceId)).returning(), {
+            conflict: `A Source named "${name}" already exists`,
+          }),
+        )
+        if (row === undefined) throw HubError.notFound(`No Source ${sourceId}`)
+        return toSource(row)
+      },
+
+      async tokens(userId) {
+        const found = await run((tx) =>
+          tx
+            .select()
+            .from(tokens)
+            .where(eq(tokens.userId, userId))
+            .orderBy(asc(tokens.createdAt), asc(tokens.id)),
+        )
+        return found.map(toToken)
+      },
+
+      async grants(userId) {
+        const found = await run((tx) =>
+          tx
+            .select({ grant: grants })
+            .from(grants)
+            .innerJoin(accounts, eq(accounts.id, grants.accountId))
+            .where(eq(accounts.ownerId, userId))
+            .orderBy(asc(grants.createdAt), asc(grants.id)),
+        )
+        return found.map(({ grant }) => toGrant(grant))
+      },
+
+      async token(parsed) {
+        const hash = await hashSecret(parsed.secret)
+        const [row] = await run((tx) =>
+          tx
+            .select({ token: tokens, admin: users.admin })
+            .from(tokens)
+            .innerJoin(users, eq(users.id, tokens.userId))
+            .where(eq(tokens.id, parsed.id)),
+        )
+        if (row === undefined || !sameHash(hash, row.token.secretHash)) return null
+        const { token } = row
+        if (token.revokedAt !== null) return null
+        if (token.expiresAt !== null && token.expiresAt.getTime() <= clock().getTime()) return null
+        // A User who is no longer an admin loses `admin` from Tokens issued while they were.
+        const scopes = (token.scopes as Scope[]).filter((s) => row.admin || s !== 'admin')
+        return {
+          userId: token.userId,
+          scopes,
+          sourceId: token.sourceId ?? undefined,
+          expiresAt: token.expiresAt ?? undefined,
+        }
+      },
+
+      edgeUser(email, { provision }) {
+        const normalised = normaliseEmail(email)
+        return run(async (tx) => {
+          const byEmail = () => tx.select().from(users).where(eq(users.email, normalised))
+          let [user] = await byEmail()
+          if (user === undefined) {
+            if (!provision || !allowlisted(normalised)) return null
+            await tx
+              .insert(users)
+              .values({
+                id: crypto.randomUUID(),
+                name: normalised,
+                email: normalised,
+                admin: false,
+              })
+              .onConflictDoNothing()
+            ;[user] = await byEmail()
+          }
+          return user === undefined ? null : { userId: user.id, scopes: userScopes(user.admin) }
+        })
+      },
+
+      async teamRole(teamId, userId) {
+        const [row] = await run((tx) =>
+          tx
+            .select({ role: teamMembers.role })
+            .from(teamMembers)
+            .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))),
+        )
+        return row?.role ?? null
+      },
+
+      ownerKind: (ownerId) => run((tx) => ownerKind(tx, ownerId)),
+
+      in: (tx) => over((fn) => fn(tx)),
+    }
   }
+
+  return over((fn) => options.db.privileged(fn))
 }

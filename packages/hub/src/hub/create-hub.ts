@@ -163,22 +163,22 @@ export function assembleHub(options: HubOptions, extra: readonly HubOp[] = []): 
    * Grants and memberships. False when there is no such record.
    */
   const removeRecord =
-    (table: 'users' | 'teams' | 'sources', column: 'owner_id' | 'source_id') => (id: string) =>
-      db.privileged(async (tx) => {
-        const [found] = await rows(
-          tx,
-          sql`select 1 from ${sql.raw(`core.${table}`)} where id = ${id} for update`,
-        )
-        if (found === undefined) return false
-        await deleteRows(tx, column, id)
-        await tx.execute(sql`delete from ${sql.raw(`core.${table}`)} where id = ${id}`)
-        return true
-      })
-  const remove: CoreCtx['remove'] = {
-    user: removeRecord('users', 'owner_id'),
-    team: removeRecord('teams', 'owner_id'),
-    source: removeRecord('sources', 'source_id'),
-  }
+    (tx: ScopedDb, table: 'users' | 'teams' | 'sources', column: 'owner_id' | 'source_id') =>
+    async (id: string) => {
+      const [found] = await rows(
+        tx,
+        sql`select 1 from ${sql.raw(`core.${table}`)} where id = ${id} for update`,
+      )
+      if (found === undefined) return false
+      await deleteRows(tx, column, id)
+      await tx.execute(sql`delete from ${sql.raw(`core.${table}`)} where id = ${id}`)
+      return true
+    }
+  const remove = (tx: ScopedDb): CoreCtx['remove'] => ({
+    user: removeRecord(tx, 'users', 'owner_id'),
+    team: removeRecord(tx, 'teams', 'owner_id'),
+    source: removeRecord(tx, 'sources', 'source_id'),
+  })
 
   function exportOwner(
     name: string,
