@@ -30,7 +30,17 @@ pnpm --filter @mitcsutt/embertrail-dashboard seed                 # the demo dat
 pnpm --filter @mitcsutt/embertrail-dashboard dev                  # the Dashboard on Vite
 ```
 
-The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. Until the dev proxy lands (#72 D2) the Dashboard makes no request to the Hub, so `dev` shows the shell and its placeholder pages only. When D2 lands it proxies `/api` to the Hub and injects the Token the CLI stored, so the loop needs no further setup; update this section then.
+The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. `dev` (and `preview`) proxy `/api` to the Hub and add the Token, so after `embertrail login` the loop needs no further setup. See [Reaching the Hub](#reaching-the-hub).
+
+## Reaching the Hub
+
+The Hub allows no cross-origin requests, so the Dashboard is served from the same origin as the Hub's API behind a proxy that also holds the Token: it never reaches the browser.
+
+- **`config.json`** (`public/config.json`, read at start with `cache: 'no-store'`, so a reload picks up an edit and no rebuild is needed): `{ "hubUrl": "", "headers"?: { … } }`. `hubUrl: ""` (the default) is the page's own origin; otherwise an absolute `http(s)` URL, which must allow the browser (the Hub does not yet send CORS headers, so this suits a Hub that is served from the same origin). `headers` are sent with every request, for an access proxy that wants a static header. The file is checked with zod; a bad file shows a message naming the field. It is the one request that does not go through the client (a justified `eslint-disable` in `src/config/runtimeConfig`).
+- **`pnpm dev` and `pnpm preview`** proxy `/api` to the Hub and add `Authorization: Bearer <Token>` (`scripts/hubProxy.ts`, used by `vite.config.ts`). The Hub is `EMBERTRAIL_HUB`, else the one `embertrail login` stored, else `http://localhost:8787`. The Token is `EMBERTRAIL_TOKEN`, else the stored one, and a stored Token is sent only to the Hub it was stored for. The Token must hold `otel:read`, `store:read` and `store:write` and must not be bound to one Source (`getSelf` refuses those). Vite prints the Hub it proxies to, never the Token.
+- **The Hub client** is one `createClient` built from the config in `src/lib/hub` (`createHub`, `useHub()`, `useSelf()`), provided by `HubProvider` in `app/components`. Only data modules call it.
+- **`HubStatus`** (`app/components/HubStatus`) wraps the router: it loads the config, builds the client and calls `getInventory` once before rendering the app. A bad file, an unreachable Hub (a network error or a proxy's 502/503/504), a 401 and a 403 each show a message that names the address in use (this page's origin when `hubUrl` is empty), with a "Try again" button. The copy is in `app/utils/hubProblem`.
+- **`useSelf()`** returns the Hub's `getSelf` answer (the header shows "Signed in as …") and `canEdit` (the Token holds `store:write`). A Hub without `getSelf`, or a failed call, leaves `self` undefined and `canEdit` true, so editing is not hidden by a missing endpoint; a write reports its own 403.
 
 ## Layout
 
@@ -39,12 +49,16 @@ The layout follows Kiln's app structure ([ADR 0037](https://github.com/mitcsutt/
 ```
 apps/dashboard/
   index.html  vite.config.ts  vitest.config.ts
+  public/config.json       # runtime config
+  scripts/                 # seed.ts, hubProxy.ts (the dev proxy's Hub and Token)
   test/                    # test setup, outside src/
   src/
     main.tsx               # entry: styles, router, providers
     routes/                # thin file routes
-    app/components/        # AppShell, Providers (the composition root)
-    lib/                   # configured clients, one module each
+    app/components/        # AppShell, Providers, HubProvider, HubStatus
+    app/utils/             # hubProblem: the copy for a Hub that can't be used
+    config/runtimeConfig/  # config.json: load and validate
+    lib/                   # configured clients, one module each (hub, queryClient)
     features/
       filters/types/       # BoardFilters, QueryContext
       widgets/types/       # WidgetDefinition
@@ -56,7 +70,7 @@ Routes: `/` redirects to `/boards/overview`; `/boards/$boardId`, `/sessions` and
 
 What the structure rule allows, so a new folder does not fail lint after the code is written:
 
-- Inside a feature (`src/features/<name>/`), a module folder sits inside one of `components`, `hooks`, `stores`, `utils`, `constants`, `types`, `schemas`, `pages` or `data`. Nothing else is a folder name there, and a module folder cannot hold another module folder. (`src/app`, `src/config`, `src/lib` and `src/routes` are the top-level folders.) A Catalogue of 20 Widgets is therefore flat module folders (one per Widget) in `features/widgets/utils/` or `components/`, not a `catalogue/` folder.
+- Inside a feature (`src/features/<name>/`), a module folder sits inside one of `components`, `hooks`, `stores`, `utils`, `constants`, `types`, `schemas`, `pages` or `data`. Nothing else is a folder name there, and a module folder cannot hold another module folder. (`src/app`, `src/config`, `src/lib` and `src/routes` are the top-level folders.) A `lib/` module is one file named after it plus `index.ts`, so a component goes in `app/components`. A Catalogue of 20 Widgets is therefore flat module folders (one per Widget) in `features/widgets/utils/` or `components/`, not a `catalogue/` folder.
 - `test/`, `scripts/` and `e2e/` sit outside `src/`, so the structure rule and the client-only rule do not apply to them; the React and base lint rules do. `tsconfig.json` includes all three (the type-aware lint needs a file in a tsconfig), so a new top-level folder of code needs adding there too.
 
 ### Feature graph

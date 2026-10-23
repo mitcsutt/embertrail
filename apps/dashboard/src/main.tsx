@@ -6,6 +6,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { HubStatus } from '#app/components/HubStatus'
 import { Providers } from '#app/components/Providers'
 import { routeTree } from '#routeTree'
 
@@ -23,7 +24,9 @@ if (!root) throw new Error('index.html has no #root element')
 createRoot(root).render(
   <StrictMode>
     <Providers>
-      <RouterProvider router={router} />
+      <HubStatus>
+        <RouterProvider router={router} />
+      </HubStatus>
     </Providers>
   </StrictMode>,
 )

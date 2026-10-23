@@ -9,9 +9,12 @@ import {
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { useSelf } from '#lib/hub'
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const onSessions = pathname.startsWith('/sessions')
+  const { self } = useSelf()
 
   return (
     <KilnAppShell>
@@ -31,7 +34,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </NavLinks.Item>
               </NavLinks>
             </Inline>
-            <ModeToggle />
+            <Inline gap={3}>
+              {self === undefined ? null : (
+                <Text size="sm" tone="muted">
+                  Signed in as {self.user.name}
+                </Text>
+              )}
+              <ModeToggle />
+            </Inline>
           </Inline>
         </Container>
       </KilnAppShell.Header>
