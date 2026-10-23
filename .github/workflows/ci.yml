@@ -90,14 +90,15 @@ jobs:
   dashboard-e2e:
     name: Dashboard e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
-      # `--with-deps` runs apt, which intermittently takes 10-14 minutes on hosted runners (20-30s
-      # otherwise); the specs take about 3 minutes, so the job limit leaves room for a slow install.
+      # No `--with-deps`: the runner image already has every library Chromium needs (Playwright
+      # fails the launch naming any that go missing), and that apt step only added fonts and
+      # upgrades, yet intermittently took 8-14 minutes on a slow Ubuntu mirror.
       - name: Install Chromium
-        run: pnpm --filter @mitcsutt/embertrail-dashboard exec playwright install --with-deps chromium
+        run: pnpm --filter @mitcsutt/embertrail-dashboard exec playwright install chromium
       - name: Run the browser specs
         run: pnpm --filter @mitcsutt/embertrail-dashboard e2e
       - name: Upload traces and the report
