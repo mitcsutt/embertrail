@@ -28,7 +28,7 @@ export function isCrossOrigin(headers: Record<string, string | string[] | undefi
   }
 }
 
-const trim =(url: string): string => url.replace(/\/+$/, '')
+const trim = (url: string): string => url.replace(/\/+$/, '')
 
 /**
  * The Hub is `EMBERTRAIL_HUB`, else the one `embertrail login` stored, else `defaultHub`. The Token is
