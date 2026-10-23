@@ -120,7 +120,7 @@ features/widgets/
   utils/                     # formats, chartColorOrder, describeError, asCatalogueEntry
 ```
 
-- **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried, a network failure once.
+- **One query per Widget**, keyed on the exact request (`['widget', request]`). A filter change that builds a new request refetches that Widget once; one that builds the same request (a Board filter the Widget ignores, a pinned override) does not. A 4xx the Hub answered is not retried; a 5xx or a network failure is retried once.
 - **The frame** maps `loading`, `empty` and `error` onto kiln-charts' `ChartFrame`. An error shows the Hub's `detail` when it sent one, with a Retry; `empty` is what `isEmpty(data)` says (no rows, or a sender that sends no cost). The `View` is drawn only when the status is `ready`. A `stat` leaves the title to its `Stat`.
 - **The Hub client** comes from `WidgetClientProvider`. Until the runtime config and `HubStatus` gate land (#72 D2) nothing mounts it; the app will mount it with the client it builds from the config.
 - **Formats** (`utils/formats`) write dollars, token counts, percentages and durations in the browser's locale. `chartColorOrder({ models, types })` is the `order` for the Board-wide `ChartColorScope`, so a model keeps its colour in every chart.
