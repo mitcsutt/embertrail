@@ -1,6 +1,8 @@
 // A Hub in memory, for component tests. PGLite does not boot under jsdom, so a test that renders
 // the app cannot use `dashboardTestHub`; this answers the handful of operations the app calls,
-// through the real client, so errors, headers and paging behave as they do against a Hub.
+// through the real client, so errors, headers and paging behave as they do against a Hub. Boards
+// are stored with a version: a write against `If-Match` or `If-None-Match` is checked the way the
+// Hub checks it, so a stale one is refused with 412.
 
 import { createClient } from '@mitcsutt/embertrail-client'
 import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
@@ -25,6 +27,12 @@ export interface FakeHub {
   requests: { line: string; path: string; body?: unknown }[]
   /** The Query API requests a Widget sends. */
   widgetRequests(): FakeHub['requests']
+  /** The stored Board with this id, as the Hub holds it now. */
+  board(id: string): unknown
+  /** Another client saves a Board: it moves to its next version, as a concurrent save would. */
+  saveElsewhere(id: string, data: unknown): void
+  /** Another client deletes a Board. */
+  deleteElsewhere(id: string): void
 }
 
 const json = (body: unknown, init: ResponseInit = {}) => {
@@ -41,21 +49,30 @@ const problem = (status: number, type: string) =>
 
 const owner = { kind: 'user', id: 'u1' }
 
-const document = (id: string, data: unknown) => ({
+const document = (id: string, data: unknown, version: number) => ({
   namespace: boardNamespace,
   id,
   owner,
-  version: 1,
+  version,
   created_at: '2026-11-01T00:00:00Z',
   updated_at: '2026-11-01T00:00:00Z',
   data,
 })
 
+interface Stored {
+  data: unknown
+  version: number
+}
+
+const etagOf = (version: number) => `"${String(version)}"`
+
 export function fakeHub(options: FakeHubOptions = {}): FakeHub {
-  const boards = new Map(Object.entries(options.boards ?? {}))
+  const boards = new Map<string, Stored>(
+    Object.entries(options.boards ?? {}).map(([id, data]) => [id, { data, version: 1 }]),
+  )
   const requests: FakeHub['requests'] = []
 
-  const respond = (method: string, url: URL, body: unknown): Response => {
+  const respond = (method: string, url: URL, request: Request, body: unknown): Response => {
     const path = url.pathname
     if (path === '/api/v1/self') {
       return json({
@@ -106,18 +123,47 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
     }
 
     const store = new RegExp(`^/api/v1/store/${boardNamespace}(?:/([^/]+))?$`).exec(path)
-    if (store !== null && method === 'GET') {
-      const id = store[1]
-      if (id === undefined) {
-        return json({
-          items: [...boards].map(([key, data]) => document(key, data)),
-          next_cursor: null,
-        })
-      }
-      const data = boards.get(id)
-      return data === undefined
+    if (store === null) return problem(404, 'not-found')
+    const id = store[1]
+    if (method === 'GET' && id === undefined) {
+      return json({
+        items: [...boards].map(([key, { data, version }]) => document(key, data, version)),
+        next_cursor: null,
+      })
+    }
+    if (id === undefined) return problem(404, 'not-found')
+    const current = boards.get(id)
+    if (method === 'GET') {
+      return current === undefined
         ? problem(404, 'not-found')
-        : json(document(id, data), { headers: { ETag: '"1"' } })
+        : json(document(id, current.data, current.version), {
+            headers: { ETag: etagOf(current.version) },
+          })
+    }
+    const ifMatch = request.headers.get('if-match')
+    if (method === 'PUT') {
+      if (request.headers.get('if-none-match') === '*' && current !== undefined) {
+        return problem(412, 'precondition-failed')
+      }
+      if (ifMatch !== null && current === undefined) return problem(404, 'not-found')
+      if (ifMatch !== null && current !== undefined && ifMatch !== etagOf(current.version)) {
+        return problem(412, 'precondition-failed')
+      }
+      const version = (current?.version ?? 0) + 1
+      const { data } = body as { data: unknown }
+      boards.set(id, { data, version })
+      return json(document(id, data, version), {
+        status: current === undefined ? 201 : 200,
+        headers: { ETag: etagOf(version) },
+      })
+    }
+    if (method === 'DELETE') {
+      if (current === undefined) return problem(404, 'not-found')
+      if (ifMatch !== null && ifMatch !== etagOf(current.version)) {
+        return problem(412, 'precondition-failed')
+      }
+      boards.delete(id)
+      return new Response(null, { status: 204 })
     }
     return problem(404, 'not-found')
   }
@@ -134,7 +180,7 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         path: url.pathname,
         ...(body === undefined ? {} : { body }),
       })
-      return respond(request.method, url, body)
+      return respond(request.method, url, request, body)
     },
   })
 
@@ -145,5 +191,12 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
       requests.filter(({ path }) =>
         ['/api/v1/metrics/query', '/api/v1/events/query', '/api/v1/sessions'].includes(path),
       ),
+    board: (id) => boards.get(id)?.data,
+    saveElsewhere(id, data) {
+      boards.set(id, { data, version: (boards.get(id)?.version ?? 0) + 1 })
+    },
+    deleteElsewhere(id) {
+      boards.delete(id)
+    },
   }
 }

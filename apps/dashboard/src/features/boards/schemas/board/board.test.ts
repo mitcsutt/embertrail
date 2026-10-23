@@ -52,7 +52,7 @@ describe.each([
   it('accepts a Board with pinned overrides, a Query Widget and an absolute range', () => {
     const custom = board((draft) => {
       draft.filters = {
-        time: { kind: 'absolute', from: '2026-10-01T00:00:00+02:00', to: '2026-11-01T00:00:00Z' },
+        time: { kind: 'absolute', from: '2026-10-01', to: '2026-11-01' },
         model: 'm',
       }
       draft.items.push({
@@ -192,5 +192,27 @@ describe('what only the zod schema checks', () => {
         }),
       ),
     ).toContain('Runs past column 12')
+  })
+})
+
+describe('absolute ranges', () => {
+  const absolute = (from: string, to: string) =>
+    boardSchema.safeParse(
+      board((draft) => {
+        draft.filters = { time: { kind: 'absolute', from, to } }
+      }),
+    )
+
+  it('are calendar dates, as the filters resolve them', () => {
+    expect(absolute('2026-10-01', '2026-10-31').success).toBe(true)
+    expect(absolute('2026-10-01', '2026-10-01').success).toBe(true)
+  })
+
+  it.each([
+    ['an instant', '2026-10-01T00:00:00Z', '2026-10-31'],
+    ['a date that does not exist', '2026-02-30', '2026-03-01'],
+    ['a range that ends before it starts', '2026-10-31', '2026-10-01'],
+  ])('refuse %s', (_what, from, to) => {
+    expect(absolute(from, to).success).toBe(false)
   })
 })

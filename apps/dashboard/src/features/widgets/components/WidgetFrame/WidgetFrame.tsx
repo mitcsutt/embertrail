@@ -1,5 +1,5 @@
 import { ChartFrame, type ChartStatus } from '@mitcsutt/kiln-charts'
-import { Button, Card } from '@mitcsutt/kiln-ui'
+import { Badge, Button, Card, Inline } from '@mitcsutt/kiln-ui'
 import type { ReactNode } from 'react'
 
 import { describeError } from '#features/widgets/utils/describeError'
@@ -10,6 +10,8 @@ export interface WidgetFrameProps {
   /** Shown in the error state, with the Hub's `detail` when it sent one. */
   error?: unknown
   onRetry?: () => void
+  /** Which filters are pinned on this Widget, if any; the frame says so. */
+  pinned?: string
   /** A stat names itself, so it asks the frame not to repeat the title above it. */
   showTitle?: boolean
   /** `auto` for content that sizes itself (a stat, a table); `fill` for a chart in a grid cell. */
@@ -27,15 +29,23 @@ export function WidgetFrame({
   status,
   error,
   onRetry,
+  pinned,
   showTitle = true,
   height = 'fill',
   children,
 }: WidgetFrameProps) {
   return (
     <Card variant="outline" role="group" aria-label={title}>
-      {showTitle ? (
+      {showTitle || pinned !== undefined ? (
         <Card.Header>
-          <Card.Title level={3}>{title}</Card.Title>
+          <Inline gap={2} align="center" justify="between">
+            {showTitle ? <Card.Title level={3}>{title}</Card.Title> : null}
+            {pinned === undefined ? null : (
+              <Badge tone="accent" size="sm" title={pinned}>
+                {`Pinned: ${pinned}`}
+              </Badge>
+            )}
+          </Inline>
         </Card.Header>
       ) : null}
       <Card.Body>

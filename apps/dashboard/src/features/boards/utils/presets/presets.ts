@@ -149,7 +149,11 @@ export function presetBoard(id: PresetId, widgets: readonly PresetWidget[]): Boa
   }
 }
 
-/** A Preset is read-only. Customising it starts a Board of the same Widgets under a new name. */
+/**
+ * A Preset is read-only. Customising it starts a Board of the same Widgets under a new name: the
+ * Preset's with " (copy)", except for the empty one, which is already a name for a new Board.
+ */
 export function customisePreset(preset: BoardDocument): BoardDocument {
-  return { ...structuredClone(preset), name: `${preset.name} (copy)` }
+  const name = preset.items.length === 0 ? preset.name : `${preset.name} (copy)`
+  return { ...structuredClone(preset), name }
 }

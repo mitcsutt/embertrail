@@ -60,7 +60,7 @@ function StoredBoard({ id }: { id: string }) {
       </Container>
     )
   }
-  return <BoardView key={id} board={data.board} preset={false} />
+  return <BoardView key={id} board={data.board} preset={false} stored={data} />
 }
 
 /** A Board by id: a Preset or a stored Board, migrated on read. */

@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 
+import { stubDndBrowserApis } from '@mitcsutt/kiln-dnd/testing'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
@@ -42,3 +43,6 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
 if (typeof window !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
   Element.prototype.scrollIntoView = noop
 }
+
+// kiln-dnd's drag engine calls browser APIs jsdom lacks; with them stubbed, keyboard drags work.
+if (typeof window !== 'undefined') stubDndBrowserApis()
