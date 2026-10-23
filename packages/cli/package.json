@@ -12,6 +12,10 @@
     "url": "https://github.com/mitcsutt/embertrail/issues"
   },
   "type": "module",
+  "exports": {
+    "./config": "./src/config.ts",
+    "./io": "./src/io.ts"
+  },
   "scripts": {
     "build": "node scripts/build.ts",
     "lint": "eslint --max-warnings=0 .",
@@ -38,7 +42,10 @@
     "node": ">=24.11.0"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      "./package.json": "./package.json"
+    }
   },
   "bin": {
     "embertrail": "dist/bin.js"

@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@hono/node-server": "catalog:",
+    "@mitcsutt/embertrail-cli": "workspace:*",
     "@mitcsutt/embertrail-hub": "workspace:*",
     "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",

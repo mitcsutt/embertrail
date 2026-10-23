@@ -416,6 +416,9 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 2.1.5(hono@4.13.13)
+      '@mitcsutt/embertrail-cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@mitcsutt/embertrail-hub':
         specifier: workspace:*
         version: link:../../packages/hub

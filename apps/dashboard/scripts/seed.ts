@@ -8,11 +8,11 @@
 
 import { parseArgs } from 'node:util'
 
+import { readConfig } from '@mitcsutt/embertrail-cli/config'
+import { processIo } from '@mitcsutt/embertrail-cli/io'
 import { createClient, items } from '@mitcsutt/embertrail-client'
 
 import { demoDataset, demoSource } from '../test/demo/index.ts'
-import { readConfig } from '../../../packages/cli/src/config.ts'
-import { processIo } from '../../../packages/cli/src/io.ts'
 
 const { values } = parseArgs({
   options: {
