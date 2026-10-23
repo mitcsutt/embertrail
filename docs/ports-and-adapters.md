@@ -89,7 +89,7 @@ const hub = createHub({
 // hub.directory (Users, Teams, Sources, Tokens, Accounts, Grants; createFirstUser)
 ```
 
-- **Docker** (`apps/server`, #37): config from env, `migrate()` then `boot()` in the entrypoint before listening, `fetch` through a Node server, `runRetention()` on an interval.
+- **Docker** (`apps/server`, #37; [`self-hosting.md`](self-hosting.md)): config from env, `embertrail migrate` in the image's entrypoint, then `boot()` before listening, `fetch` through `@hono/node-server`, `runRetention()` hourly when `RETENTION_DAYS` is set.
 - **Cloudflare** (`apps/worker`, #38): config from bindings, `fetch` from the Worker handler, `runRetention()` from a cron trigger. `embertrail migrate` runs before deploy, never at Worker startup.
 
 `createHub` throws `HubBootError` when a Module breaks the contract; `boot()` checks the database ([what fails boot](writing-a-module.md#what-fails-boot)). `fetch` runs `boot()` once before the first op.

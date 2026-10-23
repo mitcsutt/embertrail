@@ -1,0 +1,38 @@
+# The Hub on the Docker Platform: `docker compose up` (docs/self-hosting.md).
+# The first start prints your management Token once; read it with `docker compose logs hub`.
+services:
+  hub:
+    image: ghcr.io/mitcsutt/embertrail:${EMBERTRAIL_VERSION:-latest}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://embertrail:${POSTGRES_PASSWORD:-embertrail}@postgres:5432/embertrail
+      # Set BOOTSTRAP_TOKEN (32+ characters) to turn the zero-config start off and bootstrap yourself.
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
+      RETENTION_DAYS: ${RETENTION_DAYS:-}
+      # What the printed `embertrail login` line says; change it with a reverse proxy or another port.
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:${EMBERTRAIL_PORT:-8787}}
+    ports:
+      # Local only. Put a reverse proxy with TLS in front before exposing the Hub.
+      - '127.0.0.1:${EMBERTRAIL_PORT:-8787}:8787'
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: embertrail
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-embertrail}
+      POSTGRES_DB: embertrail
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U embertrail -d embertrail']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres-data:

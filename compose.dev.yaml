@@ -1,5 +1,5 @@
 # Local Postgres for `pnpm test`, matching CI's service container (docs/development.md).
-# Not the Docker Platform's compose file: that ships with apps/server (#37).
+# Not the Docker Platform's compose file: that is `compose.yaml` (docs/self-hosting.md).
 services:
   postgres:
     image: postgres:17

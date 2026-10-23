@@ -1,5 +1,4 @@
-/** The package name, until the package has real exports. */
-export const packageName = '@mitcsutt/embertrail-server'
-
+// What other packages import. The server itself starts from `main.ts`, which the image bundles.
 export { dockerDb } from './db'
 export type { DockerDbOptions } from './db'
+export { hubModules } from './modules'
