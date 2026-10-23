@@ -24,9 +24,10 @@ export type Auth =
 
 /**
  * What the pipeline opens around an op: `scoped` is one transaction as the caller, under
- * row-level security (a Module's ops); `none` leaves the op to reach the database itself.
+ * row-level security (a Module's ops); `privileged` is one transaction outside row-level
+ * security, for an op that serves no one caller's rows; `none` leaves the op to reach the database itself.
  */
-export type Transaction = 'scoped' | 'none'
+export type Transaction = 'scoped' | 'privileged' | 'none'
 
 /** What the Hub hands every op, whoever defined it. */
 export interface Services {
@@ -190,6 +191,7 @@ export function pipeline(deps: PipelineDeps) {
       return op.kind === 'raw' ? op.run(call) : answer(op, await op.run(input, call))
     }
     if (op.transaction === 'none') return () => respond(undefined)
+    if (op.transaction === 'privileged') return () => db.privileged(respond)
     const { userId, ownerId, sourceId } = needs(caller, 'a caller')
     const session: DbSession = { role: 'app', userId, ownerId, sourceId }
     // The reply is parsed inside the transaction, so output that fails its schema rolls back.

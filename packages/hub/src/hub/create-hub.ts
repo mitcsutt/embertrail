@@ -92,7 +92,9 @@ function defaultExporter(module: Module): Exporter {
  * Port. Throws `HubBootError` when a Module breaks the contract.
  */
 export function migrateModules(db: DbPort, modules: readonly Module[]): Promise<MigrationReport> {
-  return migrate(db, checkModules(modules))
+  const ordered = checkModules(modules)
+  checkPaths(hubOps(ordered))
+  return migrate(db, ordered)
 }
 
 /**

@@ -11,6 +11,7 @@ import type { ClosableDbPort } from '../testing/pglite'
 import { assembleHub } from './create-hub'
 import type { Hub } from './create-hub'
 import { hubOps } from './ops'
+import { needs } from './pipeline'
 import type { HubOp, TypedHubOp } from './pipeline'
 
 // Every route goes through one pipeline (#79): these fixtures prove that its documented
@@ -84,7 +85,25 @@ const replies = defineModule({
   },
 })
 
-const extra: readonly HubOp[] = [echo, coreReply]
+/** Counts the users it reads through the pipeline's privileged transaction. */
+const countUsers: TypedHubOp = {
+  ...fixture,
+  method: 'GET',
+  key: 'count-users',
+  path: '/api/v1/fixture/count-users',
+  summary: 'Counts the users',
+  transaction: 'privileged',
+  input: z.object({}),
+  output: z.object({ users: z.number() }),
+  statuses: [200],
+  etag: false,
+  run: async (_input, call) => {
+    const rows = await needs(call.db, 'a transaction').select().from(users)
+    return { users: rows.length }
+  },
+}
+
+const extra: readonly HubOp[] = [echo, coreReply, countUsers]
 const bootstrapToken = 'b'.repeat(40)
 
 type Operation = Record<string, unknown>
@@ -235,5 +254,12 @@ describe('the op pipeline', () => {
       expect(answered.headers.get('etag')).toBe('"v1"')
       expect(await answered.json()).toEqual({ ok: true })
     })
+  })
+
+  it('runs a privileged op inside one privileged transaction', async () => {
+    const answered = await call('GET', '/api/v1/fixture/count-users')
+    expect(answered.status).toBe(200)
+    const { users: count } = (await answered.json()) as { users: number }
+    expect(count).toBeGreaterThanOrEqual(1)
   })
 })
