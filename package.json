@@ -24,6 +24,7 @@
     "@commitlint/config-conventional": "catalog:",
     "@mitcsutt/kiln-eslint-config": "catalog:",
     "@mitcsutt/kiln-prettier-config": "catalog:",
+    "@mitcsutt/kiln-structure": "catalog:",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@redocly/cli": "catalog:",
     "@secretlint/secretlint-rule-preset-recommend": "catalog:",

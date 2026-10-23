@@ -29,3 +29,6 @@ worker-configuration.d.ts
 
 # Local agent settings
 .claude/settings.local.json
+
+# Written by eslint-plugin-project-structure (kiln-structure)
+projectStructure.cache.json

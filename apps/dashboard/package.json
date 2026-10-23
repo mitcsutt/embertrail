@@ -5,22 +5,47 @@
   "description": "The Dashboard: a Kiln app that reads the Query API",
   "license": "Apache-2.0",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "imports": {
+    "#assets/*": "./src/assets/*",
+    "#routeTree": "./src/routeTree.gen.ts",
+    "#*": "./src/*/index.ts"
   },
   "scripts": {
+    "build": "vite build",
+    "dev": "vite",
     "lint": "eslint --max-warnings=0 .",
+    "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mitcsutt/embertrail-client": "workspace:*"
+    "@mitcsutt/embertrail-client": "workspace:*",
+    "@mitcsutt/kiln-charts": "catalog:",
+    "@mitcsutt/kiln-dnd": "catalog:",
+    "@mitcsutt/kiln-ui": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@date-fns/tz": "catalog:",
+    "date-fns": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-is": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@tanstack/router-plugin": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "eslint": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }
