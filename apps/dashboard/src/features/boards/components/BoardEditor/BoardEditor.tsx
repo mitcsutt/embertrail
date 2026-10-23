@@ -1,4 +1,14 @@
-import { Alert, Button, Container, Dialog, Heading, Inline, Input, Stack } from '@mitcsutt/kiln-ui'
+import {
+  Alert,
+  Button,
+  Container,
+  Dialog,
+  Heading,
+  Inline,
+  Input,
+  Stack,
+  Text,
+} from '@mitcsutt/kiln-ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
@@ -12,8 +22,10 @@ import {
   boardQueryOptions,
   deleteBoard,
   saveBoard,
+  teamOf,
 } from '#features/boards/data/boards'
 import type { StoredBoard } from '#features/boards/data/boards'
+import { useBoardAccess } from '#features/boards/hooks/useBoardAccess'
 import type { BoardDocument } from '#features/boards/types/board'
 import {
   addSectionItem,
@@ -48,6 +60,10 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [stored] = useState(opened)
+  const { teams } = useBoardAccess()
+  // A Team's Board is written as the Team; the Owner never changes in edit mode.
+  const team = teamOf(stored.owner)
+  const teamName = teams.find(({ id }) => id === team)?.name ?? team
   const [draft, setDraft] = useState<BoardDocument>(stored.board)
   const dirty = !sameBoard(draft, stored.board)
   const { filters, setFilters, tz } = useBoardFilters(draft.filters)
@@ -86,7 +102,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   }
 
   const save = useMutation({
-    mutationFn: () => saveBoard(client, stored.id, draft, stored.etag),
+    mutationFn: () => saveBoard(client, stored.id, draft, stored.etag, { team }),
     onSuccess: (saved) => {
       queryClient.setQueryData(boardQueryOptions(client, stored.id).queryKey, saved)
       void queryClient.invalidateQueries({ queryKey: ['boards', 'list'] })
@@ -98,7 +114,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
   })
 
   const remove = useMutation({
-    mutationFn: () => deleteBoard(client, stored.id, stored.etag),
+    mutationFn: () => deleteBoard(client, stored.id, stored.etag, { team }),
     onSuccess: () => {
       forgetBoard()
       goToOverview()
@@ -138,6 +154,11 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
             <Heading level={1} size="2xl">
               Edit Board
             </Heading>
+            {teamName === undefined ? null : (
+              <Text size="sm" tone="muted">
+                Owned by {teamName}
+              </Text>
+            )}
             <Input
               aria-label="Board name"
               maxLength={200}
