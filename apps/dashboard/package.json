@@ -15,6 +15,7 @@
     "dev": "vite",
     "lint": "eslint --max-warnings=0 .",
     "preview": "vite preview",
+    "seed": "node scripts/seed.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -33,6 +34,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@hono/node-server": "catalog:",
+    "@mitcsutt/embertrail-cli": "workspace:*",
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
     "@tanstack/router-plugin": "catalog:",
     "@testing-library/jest-dom": "catalog:",

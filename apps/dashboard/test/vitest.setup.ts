@@ -7,5 +7,6 @@ afterEach(() => {
   cleanup()
 })
 
-// TanStack Router restores scroll on navigation; jsdom doesn't implement it.
-window.scrollTo = () => undefined
+// TanStack Router restores scroll on navigation; jsdom doesn't implement it. Node-environment
+// tests (the demo dataset and seed) have no window.
+if (typeof window !== 'undefined') window.scrollTo = () => undefined
