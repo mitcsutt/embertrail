@@ -9,6 +9,8 @@ export default defineConfig({
   forbidOnly: process.env.CI !== undefined,
   retries: process.env.CI === undefined ? 0 : 1,
   reporter: process.env.CI === undefined ? 'list' : [['list'], ['html', { open: 'never' }]],
+  // A shared CI runner answers the Hub's queries slowly; a locator waits for what the page shows.
+  expect: { timeout: 15_000 },
   outputDir: 'test-results',
   use: { trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

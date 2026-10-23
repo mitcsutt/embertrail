@@ -56,6 +56,12 @@ export async function startStack(): Promise<Stack> {
   await new Promise<void>((resolve) => hubServer.once('listening', resolve))
   const hubUrl = `http://127.0.0.1:${String((hubServer.address() as AddressInfo).port)}`
 
+  // The first request pays for the Hub's cold start; make it here, not inside a spec's timeout.
+  const warm = await fetch(`${hubUrl}/api/v1/inventory`, {
+    headers: { authorization: `Bearer ${hub.token}` },
+  })
+  if (!warm.ok) throw new Error(`The Hub answered its warm-up with ${String(warm.status)}`)
+
   await build({ root: dashboardRoot, logLevel: 'warn' })
   const previews = [
     await startPreview(hubUrl, hub.token),
