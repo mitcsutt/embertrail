@@ -354,4 +354,5 @@ pnpm --filter @mitcsutt/embertrail-dashboard e2e
 - **Source, Account and model filters are single-select**, because `GET /sessions` takes one value of each. A Widget that cannot honour a filter says so (`session.count` has no `model`).
 - **Editing needs a wide window.** kiln-dnd edits only the widest breakpoint; below it the grid is read-only and says so.
 - **Pointer drags are tested in Chromium only**; keyboard moves and resizes are tested in jsdom and Chromium.
+- **The Model mix legend can spill below its card** when the Widget is resized short (layout quirk; tracked as a follow-up).
 - **No Widget packs yet** (ADR-0014): the Catalogue is the 20 curated Widgets plus the Query Widget.
