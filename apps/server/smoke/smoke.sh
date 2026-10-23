@@ -51,8 +51,10 @@ events=$(api POST /api/v1/events/query "$management" --data '{"mode":"list","fro
 
 echo "smoke: a restart prints no second Token and creates no second User"
 compose restart hub
-compose up --detach --wait
-[ "$(tokens | wc -l)" -eq 1 ] || fail "a restart printed another Token"
+for _ in $(seq 60); do curl --silent --fail "$hub/api/v1/openapi.json" >/dev/null && break; sleep 1; done
+curl --silent --fail "$hub/api/v1/openapi.json" >/dev/null || fail "the Hub did not come back after the restart"
+# The log may start empty after a restart, so only a Token other than the first is a failure.
+[ -z "$(tokens | grep -vxF "$management" || true)" ] || fail "a restart printed another Token"
 [ "$(api GET /api/v1/admin/users "$management" | jq 'length')" -eq 1 ] || fail "expected one User"
 
 echo "smoke: ok"
