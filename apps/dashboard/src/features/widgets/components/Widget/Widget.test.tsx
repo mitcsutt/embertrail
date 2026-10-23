@@ -239,24 +239,27 @@ describe('Widget', () => {
       1,
     ],
     ['a network error, after one retry', new TypeError('Failed to fetch'), 2],
-  ])('still draws Cost by Account with ids for names when the Inventory fails with %s', async (_name, failure, calls) => {
-    const queryMetrics = vi.fn<Call>().mockResolvedValue({
-      rows: [
-        { group: { 'embertrail.account_id': 'a-1' }, value: 3 },
-        { group: { 'embertrail.account_id': 'a-2' }, value: 9 },
-      ],
-      meta: {},
-    })
-    const getInventory = vi.fn<Call>().mockRejectedValue(failure)
-    await renderWidget('cost-by-account', clientWith({ queryMetrics, getInventory }))
+  ])(
+    'still draws Cost by Account with ids for names when the Inventory fails with %s',
+    async (_name, failure, calls) => {
+      const queryMetrics = vi.fn<Call>().mockResolvedValue({
+        rows: [
+          { group: { 'embertrail.account_id': 'a-1' }, value: 3 },
+          { group: { 'embertrail.account_id': 'a-2' }, value: 9 },
+        ],
+        meta: {},
+      })
+      const getInventory = vi.fn<Call>().mockRejectedValue(failure)
+      await renderWidget('cost-by-account', clientWith({ queryMetrics, getInventory }))
 
-    // The default retry (3 attempts, backed off to about 7s) would outlast this timeout.
-    const table = within(await screen.findByRole('table', {}, { timeout: 3000 }))
-    const [, second, first] = table.getAllByRole('row')
-    expect(second).toHaveTextContent(`a-2${formatUsd(9)}`)
-    expect(first).toHaveTextContent(`a-1${formatUsd(3)}`)
-    expect(getInventory).toHaveBeenCalledTimes(calls)
-  })
+      // The default retry (3 attempts, backed off to about 7s) would outlast this timeout.
+      const table = within(await screen.findByRole('table', {}, { timeout: 3000 }))
+      const [, second, first] = table.getAllByRole('row')
+      expect(second).toHaveTextContent(`a-2${formatUsd(9)}`)
+      expect(first).toHaveTextContent(`a-1${formatUsd(3)}`)
+      expect(getInventory).toHaveBeenCalledTimes(calls)
+    },
+  )
 
   it('draws Sessions per day stacked by start type', async () => {
     const queryMetrics = vi.fn<Call>().mockResolvedValue({
