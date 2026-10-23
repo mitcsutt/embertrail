@@ -12,7 +12,23 @@ export interface HubProxy {
   headers: Record<string, string>
 }
 
-const trim = (url: string): string => url.replace(/\/+$/, '')
+/**
+ * Whether a request came from a page on another origin. The proxy adds the Token, so it must refuse
+ * these: a simple cross-site request needs no preflight and would otherwise be written as the user.
+ */
+export function isCrossOrigin(headers: Record<string, string | string[] | undefined>): boolean {
+  const site = headers['sec-fetch-site']
+  if (site !== undefined && site !== 'same-origin' && site !== 'none') return true
+  const origin = headers.origin
+  if (origin === undefined) return false
+  try {
+    return typeof origin !== 'string' || new URL(origin).host !== headers.host
+  } catch {
+    return true
+  }
+}
+
+const trim =(url: string): string => url.replace(/\/+$/, '')
 
 /**
  * The Hub is `EMBERTRAIL_HUB`, else the one `embertrail login` stored, else `defaultHub`. The Token is

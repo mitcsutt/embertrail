@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { defaultHub, resolveHubProxy } from '../scripts/hubProxy.ts'
+import { defaultHub, isCrossOrigin, resolveHubProxy } from '../scripts/hubProxy.ts'
 
 let dir: string
 let emptyDir: string
@@ -34,6 +34,23 @@ function io(configDir: string, env: Record<string, string> = {}) {
 }
 
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` })
+
+describe('isCrossOrigin', () => {
+  const host = 'localhost:5173'
+
+  it('accepts requests the Dashboard itself makes', () => {
+    expect(isCrossOrigin({ host })).toBe(false)
+    expect(isCrossOrigin({ host, 'sec-fetch-site': 'same-origin' })).toBe(false)
+    expect(isCrossOrigin({ host, origin: `http://${host}` })).toBe(false)
+  })
+
+  it('refuses a request from another site, however the browser says so', () => {
+    expect(isCrossOrigin({ host, 'sec-fetch-site': 'cross-site' })).toBe(true)
+    expect(isCrossOrigin({ host, 'sec-fetch-site': 'same-site' })).toBe(true)
+    expect(isCrossOrigin({ host, origin: 'http://evil.test' })).toBe(true)
+    expect(isCrossOrigin({ host, origin: 'null' })).toBe(true)
+  })
+})
 
 describe('resolveHubProxy', () => {
   it('uses the local Hub with no Token when nothing is set or stored', async () => {

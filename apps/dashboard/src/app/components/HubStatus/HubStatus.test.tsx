@@ -122,10 +122,11 @@ describe('HubStatus', () => {
     ).toBeInTheDocument()
   })
 
-  it('names this page and the proxy when the proxy answers 502 for the Hub', async () => {
+  it('names this page and the proxy when the dev proxy cannot reach the Hub', async () => {
     stubFetch({
       '/config.json': config(''),
-      '/api/v1/inventory': () => new Response('Bad gateway', { status: 502 }),
+      '/api/v1/inventory': () =>
+        new Response('', { status: 500, headers: { 'content-type': 'text/plain' } }),
     })
     renderGate()
 

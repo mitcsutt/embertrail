@@ -20,7 +20,8 @@ export function describeHubProblem(
       : undefined
   const detail = error instanceof ProblemError ? error.detail : undefined
 
-  if (status === undefined || gateway.has(status)) {
+  const proxyFailed = sameOrigin && error instanceof UnexpectedResponseError && status === 500
+  if (status === undefined || gateway.has(status) || proxyFailed) {
     return {
       title: `Can't reach the Hub at ${display}`,
       body: sameOrigin
