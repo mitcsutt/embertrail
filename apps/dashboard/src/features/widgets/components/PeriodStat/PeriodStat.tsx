@@ -1,11 +1,11 @@
 import { TZDate } from '@date-fns/tz'
 import { Sparkline } from '@mitcsutt/kiln-charts'
 import { Stat, type StatDelta } from '@mitcsutt/kiln-ui'
-import { addDays, addHours, startOfDay } from 'date-fns'
+import { addDays, addHours } from 'date-fns'
 
 import type { QueryContext } from '#features/filters/types/filters'
 import type { WidgetDefinition, WidgetGroup } from '#features/widgets/types/widget'
-import { bucketedRows } from '#features/widgets/utils/aggregateRows'
+import { bucketedRows, valuedRows } from '#features/widgets/utils/aggregateRows'
 import { chartBucket } from '#features/widgets/utils/chartBucket'
 import { filterClause } from '#features/widgets/utils/filterClause'
 import { formatPercent } from '#features/widgets/utils/formats'
@@ -20,10 +20,12 @@ export interface PeriodPoint {
 export interface PeriodStatData {
   /** The window's total; `null` when the Hub holds none of the Metric in either window. */
   total: number | null
-  /** The total of the window of as many days before it; `null` when it holds none. */
+  /** The total of the window of as many days before it, as far into it as the window is; `null` when it holds none. */
   previous: number | null
   /** How many local days each window spans. */
   days: number
+  /** Whether the window is still running, so `previous` covers only as much of the window before as has passed. */
+  running: boolean
   /** The window bucket by bucket, a quiet bucket as zero, for the sparkline. */
   points: PeriodPoint[]
   bucket: 'hour' | 'day'
@@ -64,45 +66,35 @@ function everyBucket(
   return points
 }
 
-/** The bucket the request asks for: the hour while the window runs, otherwise the chart's. */
-const requestBucket = (ctx: Pick<QueryContext, 'from' | 'to' | 'tz' | 'now'>) =>
-  previousWindow(ctx).until === ctx.to ? chartBucket(ctx) : 'hour'
-
 /**
- * Splits one answer over both windows into the Board's window and the one before it. A bucket
- * belongs to the window it starts in. While the Board's window is still running, both are cut at
- * the same time into them, and the hours are folded into days for a window of days.
+ * Reads the answer to the two requests `periodStat` makes: the Board's window up to now by the
+ * chart's bucket, and the window before it, cut at the same time into it, as one total. Neither
+ * counts a partial bucket in full, whatever the bucket.
  */
 export function selectPeriod(
   response: unknown,
   ctx: Pick<QueryContext, 'from' | 'to' | 'tz' | 'now'>,
 ): PeriodStatData {
   const bucket = chartBucket(ctx)
-  const { days, until, previousUntil } = previousWindow(ctx)
-  const start = Date.parse(ctx.from)
-  const previousEnd = Date.parse(previousUntil)
-  const folded = new Map<number, number>()
-  let previous: number | null = null
-  for (const row of bucketedRows(response)) {
-    const time = Date.parse(row.bucket)
-    if (time < start) {
-      if (time < previousEnd) previous = (previous ?? 0) + row.value
-    } else {
-      const key = bucket === 'day' ? startOfDay(at(row.bucket, ctx.tz)).getTime() : time
-      folded.set(key, (folded.get(key) ?? 0) + row.value)
-    }
-  }
-  const current = [...folded].map(([time, value]) => ({
-    at: new Date(time).toISOString(),
-    value,
-  }))
+  const { days, until } = previousWindow(ctx)
+  const [series, before] = response as [unknown, unknown]
+  const current = bucketedRows(series).map((row) => ({ at: row.bucket, value: row.value }))
+  const earlier = valuedRows(before)
+  const previous = earlier.length > 0 ? earlier.reduce((sum, row) => sum + row.value, 0) : null
   const total =
     current.length > 0
       ? current.reduce((sum, point) => sum + point.value, 0)
       : previous === null
         ? null
         : 0
-  return { total, previous, days, points: everyBucket(current, ctx, until, bucket), bucket }
+  return {
+    total,
+    previous,
+    days,
+    running: until !== ctx.to,
+    points: everyBucket(current, ctx, until, bucket),
+    bucket,
+  }
 }
 
 /**
@@ -122,6 +114,9 @@ export function periodDelta({ total, previous }: PeriodStatData): StatDelta | un
 
 const before = (days: number) => (days === 1 ? 'the day before' : `the ${String(days)} days before`)
 
+const byNow = (days: number) =>
+  days === 1 ? 'by this time the day before' : `by this time in the ${String(days)} days before`
+
 /**
  * The line under the figure, kept to a few words so a row of six KPIs stays one line each: the
  * figure it is compared with. `periodComparison` says it in full, as the tooltip.
@@ -132,13 +127,15 @@ export function periodHint(data: PeriodStatData, format: (value: number) => stri
 
 /** What the change is measured against, in full. */
 export function periodComparison(data: PeriodStatData, format: (value: number) => string): string {
-  if (data.previous === null) return `Nothing in ${before(data.days)}`
-  return `Against ${format(data.previous)} in ${before(data.days)}`
+  if (data.previous === null) {
+    return `Nothing ${data.running ? byNow(data.days) : `in ${before(data.days)}`}`
+  }
+  return `Against ${format(data.previous)} ${data.running ? byNow(data.days) : `in ${before(data.days)}`}`
 }
 
 /**
  * A KPI over the Board's window: the total, its change against the window of as many days before
- * it, and a sparkline of the window. One request covers both windows.
+ * it, and a sparkline of the window. Two queries: the window by bucket, and the window before it as one total.
  */
 export function periodStat(spec: PeriodStatSpec): WidgetDefinition<PeriodStatData> {
   return {
@@ -151,18 +148,22 @@ export function periodStat(spec: PeriodStatSpec): WidgetDefinition<PeriodStatDat
     minSize: { w: 2, h: 3 },
     window: 'board',
     filters: spec.filters,
-    request: (ctx) => ({
-      op: 'queryMetrics',
-      body: {
+    request: (ctx) => {
+      const window = previousWindow(ctx)
+      const body = {
         metric: spec.metric,
-        aggregation: 'sum',
-        from: previousWindow(ctx).from,
-        to: previousWindow(ctx).until,
+        aggregation: 'sum' as const,
         tz: ctx.tz,
-        bucket: requestBucket(ctx),
         ...filterClause(ctx),
-      },
-    }),
+      }
+      return {
+        op: 'queryMetricsEach',
+        bodies: [
+          { ...body, from: ctx.from, to: window.until, bucket: chartBucket(ctx) },
+          { ...body, from: window.from, to: window.previousUntil },
+        ],
+      }
+    },
     select: (response, ctx) => selectPeriod(response, ctx),
     isEmpty: ({ total }) => total === null,
     View: ({ data, ctx, label }) => (

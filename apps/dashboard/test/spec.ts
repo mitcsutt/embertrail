@@ -74,6 +74,9 @@ export function assertSpecRequest(request: WidgetRequest): void {
     case 'queryMetrics':
       assertBody('/api/v1/metrics/query', request.body)
       break
+    case 'queryMetricsEach':
+      for (const body of request.bodies) assertBody('/api/v1/metrics/query', body)
+      break
     case 'queryEvents':
       assertBody('/api/v1/events/query', request.body)
       break

@@ -66,6 +66,11 @@ describe('QueryContext and WidgetRequest', () => {
       switch (request.op) {
         case 'queryMetrics':
           return hub.client.queryMetrics({ body: request.body })
+        case 'queryMetricsEach': {
+          const [body] = request.bodies
+          if (body === undefined) throw new Error('no body')
+          return hub.client.queryMetrics({ body })
+        }
         case 'queryEvents':
           return hub.client.queryEvents({ body: request.body })
         case 'listSessions':
