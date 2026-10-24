@@ -1,0 +1,71 @@
+/* A button drawn with Kiln's field tokens, so it reads as the search box it opens. */
+.trigger {
+  --_border: var(--field-border, var(--color-line-control));
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  inline-size: 16rem;
+  min-block-size: var(--control-sm);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--_border);
+  border-radius: var(--field-radius, var(--radius-field));
+  background-color: var(--field-bg, var(--color-surface));
+  color: var(--color-ink-subtle);
+  font-family: var(--font-text);
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: text;
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+
+.trigger:hover {
+  --_border: color-mix(
+    in oklab,
+    var(--field-border, var(--color-line-control)),
+    var(--color-ink) 35%
+  );
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.trigger > svg {
+  flex: none;
+  inline-size: 1.15em;
+  block-size: 1.15em;
+}
+
+.placeholder {
+  flex: 1;
+  text-align: start;
+}
+
+.shortcut {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+@media (width < 40em) {
+  .trigger {
+    inline-size: auto;
+    min-inline-size: var(--control-sm);
+    justify-content: center;
+  }
+
+  .placeholder {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shortcut {
+    display: none;
+  }
+}

@@ -1,6 +1,7 @@
-import { Heading, Inline, Link, Stack, Stat, Tag, Text } from '@mitcsutt/kiln-ui'
+import { Inline, Link, Stack, Stat, Tag, Text } from '@mitcsutt/kiln-ui'
 import { Link as RouterLink } from '@tanstack/react-router'
 
+import { PageHeader } from '#components/PageHeader'
 import { useLocale } from '#features/locale/hooks/useLocale'
 import { useMoney } from '#features/locale/hooks/useMoney'
 import type { SessionDetail } from '#features/sessions/data/session'
@@ -18,9 +19,10 @@ export function SessionHeader({ session, tz }: SessionHeaderProps) {
   const tokens = Object.values(session.tokens).reduce((a, b) => a + b, 0)
   return (
     <Stack gap={3}>
-      <Heading level={1} size="2xl">
-        Session {shortId(session.id)}
-      </Heading>
+      <PageHeader
+        title={`Session ${shortId(session.id)}`}
+        description="One Session: its totals and its Events, oldest first."
+      />
       <Inline gap={3} wrap>
         <Text tone="muted">{session.id}</Text>
         {session.group === null ? null : (

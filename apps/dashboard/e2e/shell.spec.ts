@@ -8,7 +8,7 @@ test.use({ baseURL: origin('E2E_ORIGIN') })
 test('the shell loads and shows who the Hub says is signed in', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/boards\/overview$/)
-  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Board list' })).toBeVisible()
   await expect(page.getByText('Signed in as dashboard')).toBeVisible()
 })
 

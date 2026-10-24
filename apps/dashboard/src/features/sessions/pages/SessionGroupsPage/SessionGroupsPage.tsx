@@ -1,16 +1,8 @@
-import {
-  Alert,
-  Button,
-  Container,
-  EmptyState,
-  Heading,
-  Skeleton,
-  Stack,
-  Text,
-} from '@mitcsutt/kiln-ui'
+import { Alert, Button, Container, EmptyState, Skeleton, Stack, Text } from '@mitcsutt/kiln-ui'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
+import { PageHeader } from '#components/PageHeader'
 import { FilterBar } from '#features/filters/components/FilterBar'
 import { useInventory } from '#features/filters/data/inventory'
 import { useBoardFilters } from '#features/filters/hooks/useBoardFilters'
@@ -68,9 +60,10 @@ export function SessionGroupsPage() {
   return (
     <Container width="full">
       <Stack gap={4}>
-        <Heading level={1} size="2xl">
-          Session Groups
-        </Heading>
+        <PageHeader
+          title="Session Groups"
+          description="Sessions grouped by Session Group, with each group's cost and tokens."
+        />
         <FilterBar
           filters={filters}
           onChange={setFilters}

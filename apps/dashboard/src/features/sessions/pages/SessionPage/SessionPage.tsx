@@ -1,8 +1,9 @@
 import { isProblemError } from '@mitcsutt/embertrail-client'
-import { Alert, Button, Container, EmptyState, Heading, Skeleton, Stack } from '@mitcsutt/kiln-ui'
+import { Alert, Button, Container, EmptyState, Skeleton, Stack } from '@mitcsutt/kiln-ui'
 import { Link, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
+import { SectionTitle } from '#components/SectionTitle'
 import { useBrowserTimeZone } from '#features/filters/hooks/useBrowserTimeZone'
 import { BackControl } from '#features/sessions/components/BackControl'
 import { EventTimeline } from '#features/sessions/components/EventTimeline'
@@ -63,15 +64,13 @@ export function SessionPage() {
 
   return (
     <Container width="full">
-      <Stack gap={5}>
+      <Stack gap={4}>
         <div>
           <BackControl />
         </div>
         <SessionHeader session={session.data} tz={tz} />
         <Stack gap={3}>
-          <Heading level={2} size="lg">
-            Events
-          </Heading>
+          <SectionTitle title="Events" />
           {span === undefined ? (
             <EmptyState
               title="No Events"

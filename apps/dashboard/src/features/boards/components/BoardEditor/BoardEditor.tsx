@@ -1,8 +1,9 @@
-import { Alert, Button, Container, Dialog, Heading, Inline, Input, Stack } from '@mitcsutt/kiln-ui'
+import { Alert, Button, Container, Dialog, Inline, Input, Stack } from '@mitcsutt/kiln-ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
+import { PageHeader } from '#components/PageHeader'
 import { AddSectionDialog } from '#features/boards/components/AddSectionDialog'
 import { BoardGrid } from '#features/boards/components/BoardGrid'
 import { CataloguePicker } from '#features/boards/components/CataloguePicker'
@@ -160,9 +161,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
       <Stack gap={4}>
         <Inline justify="between" align="end" gap={3}>
           <Stack gap={2}>
-            <Heading level={1} size="2xl">
-              Edit Board
-            </Heading>
+            <PageHeader title="Edit Board" description="Add, move and resize Widgets, then save." />
             <Input
               aria-label="Board name"
               maxLength={200}

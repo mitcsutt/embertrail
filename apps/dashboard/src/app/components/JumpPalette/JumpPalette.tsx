@@ -1,12 +1,43 @@
-import { Button, CommandPalette } from '@mitcsutt/kiln-ui'
+import { CommandPalette, Kbd, SearchIcon } from '@mitcsutt/kiln-ui'
 import type { CommandAction } from '@mitcsutt/kiln-ui'
 import { useNavigate } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { forwardRef, useMemo, type ButtonHTMLAttributes } from 'react'
 
 import { useBoardList } from '#features/boards/data/boards'
 import { useBoardSections } from '#features/boards/hooks/useBoardSections'
 import { usePresetList } from '#features/boards/hooks/usePresetList'
 import { useHub } from '#lib/hub'
+
+import styles from './JumpPalette.module.css'
+
+const isApple = (): boolean =>
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+
+/**
+ * The palette's trigger, drawn as a search field so it reads as one: an icon, the placeholder and
+ * the shortcut. Below `sm` the text and shortcut give way to the icon alone.
+ */
+const SearchTrigger = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
+  function SearchTrigger(props, ref) {
+    const apple = isApple()
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={styles.trigger}
+        aria-keyshortcuts="Control+K Meta+K"
+        {...props}
+      >
+        <SearchIcon aria-hidden />
+        <span className={styles.placeholder}>Jump to…</span>
+        <span className={styles.shortcut} aria-hidden>
+          <Kbd size="sm">{apple ? '⌘' : 'Ctrl'}</Kbd>
+          <Kbd size="sm">K</Kbd>
+        </span>
+      </button>
+    )
+  },
+)
 
 /** ⌘K (Ctrl+K elsewhere): jump to any Board, or to the Session Groups. */
 export function JumpPalette() {
@@ -47,11 +78,7 @@ export function JumpPalette() {
       label="Jump to"
       placeholder="Jump to a Board or page"
       actions={actions}
-      trigger={
-        <Button variant="ghost" size="sm" aria-keyshortcuts="Control+K Meta+K">
-          Jump to…
-        </Button>
-      }
+      trigger={<SearchTrigger />}
     />
   )
 }
