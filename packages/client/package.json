@@ -1,6 +1,6 @@
 {
   "name": "@mitcsutt/embertrail-client",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Typed client for the Embertrail Query API",
   "license": "Apache-2.0",
   "repository": {

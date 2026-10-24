@@ -6,7 +6,7 @@ npm publishing uses trusted publishing (OIDC) with provenance, the same way Kiln
 
 ## How to cut a release
 
-1. **Set the version.** In a pull request, change `version` in `packages/cli/package.json` to the new version and merge it to `main`.
+1. **Set the version.** In a pull request, run `pnpm changeset version`. It moves the Hub, the images and the CLI to the new version together, consumes the pending changesets and writes the changelogs. Merge it to `main`.
 2. **Tag the merge commit and push the tag.**
 
    ```sh

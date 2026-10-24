@@ -1,6 +1,6 @@
 {
   "name": "@mitcsutt/embertrail-hub",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "The Hub's core: Ports, the Module contract and identity",
   "license": "Apache-2.0",

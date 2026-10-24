@@ -1,6 +1,6 @@
 {
   "name": "@mitcsutt/embertrail-modules",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "The Modules a Hub built from this repository loads, and the migrate entry over them",
   "license": "Apache-2.0",
