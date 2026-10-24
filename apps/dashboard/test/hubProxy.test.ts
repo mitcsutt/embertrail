@@ -30,6 +30,9 @@ function io(configDir: string, env: Record<string, string> = {}) {
     fetch: globalThis.fetch,
     stdout: () => undefined,
     stderr: () => undefined,
+    hostname: 'test-host',
+    exec: () => Promise.reject(new Error('the proxy runs no programs')),
+    portFree: () => Promise.resolve(true),
   }
 }
 

@@ -5,6 +5,8 @@ import {
   userSettingsPath,
   writeSettings,
 } from '../claude-code.ts'
+import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
+
 import type { Command } from '../command.ts'
 import { CliError } from '../errors.ts'
 import { printable } from '../output.ts'
@@ -24,6 +26,74 @@ function configuredToken(settings: Record<string, unknown>, hub: string): string
     env as Record<string, unknown>
   if (endpoint !== hub || typeof headers !== 'string') return undefined
   return /^Authorization=Bearer (et_\S+)$/.exec(headers)?.[1]
+}
+
+export interface ClaudeCodeResult {
+  source: Schemas['Source']
+  /** Whether the Source was created now, rather than found. */
+  created: boolean
+  settings: string
+  /** Whether the settings file was written. */
+  changed: boolean
+}
+
+/**
+ * Points Claude Code's settings in `path` at `hub` as the Source `name`: the logic of
+ * `setup claude-code`, which `up` runs too. `client` is logged in with `managementToken`.
+ */
+export async function connectClaudeCode(options: {
+  hub: string
+  managementToken: string
+  client: EmbertrailClient
+  name: string
+  path: string
+}): Promise<ClaudeCodeResult> {
+  const { hub, managementToken, client, name, path } = options
+  // Read before creating anything, so a settings file that cannot be changed costs nothing.
+  const settings = await readSettings(path)
+
+  const existing = (await client.listSources()).items.find((source) => source.name === name)
+  let source
+  let ingestToken: string
+  if (existing === undefined) {
+    const created = await client.createSource({ body: { name } })
+    source = created.source
+    ingestToken = created.token.token
+  } else {
+    source = existing
+    const tokens = (await client.listTokens()).items
+    const configured = configuredToken(settings, hub)
+    const kept = tokens.find(
+      (record) =>
+        record.id === (configured === undefined ? undefined : tokenId(configured)) &&
+        record.kind === 'ingest' &&
+        record.source_id === existing.id &&
+        record.revoked_at === null &&
+        (record.expires_at === null || Date.parse(record.expires_at) > Date.now()),
+    )
+    if (configured !== undefined && kept !== undefined) {
+      ingestToken = configured
+    } else {
+      const callerId = tokenId(managementToken)
+      const caller = tokens.find((record) => record.id === callerId)
+      const scopes = (caller?.scopes ?? []).filter((scope) => writeScope.test(scope))
+      if (scopes.length === 0) {
+        throw new CliError(
+          `Source "${name}" exists, and the logged-in Token holds no Module :write Scope to give its new Token`,
+        )
+      }
+      const issued = await client.issueToken({
+        body: { kind: 'ingest', scopes, source_id: existing.id, name: `claude-code on ${name}` },
+      })
+      ingestToken = issued.token
+    }
+  }
+
+  const changed = await writeSettings(
+    path,
+    applyTelemetry(settings, telemetryEnv(hub, ingestToken)),
+  )
+  return { source, created: existing === undefined, settings: path, changed }
 }
 
 export const setupClaudeCode: Command = {
@@ -49,60 +119,20 @@ export const setupClaudeCode: Command = {
     },
   },
   async run(ctx, args) {
-    const name = args.string('source') ?? ''
     const { hub, token: managementToken } = await ctx.login()
-    const client = await ctx.client()
-    const path = args.string('settings') ?? userSettingsPath(ctx.io)
-    // Read before creating anything, so a settings file that cannot be changed costs nothing.
-    const settings = await readSettings(path)
-
-    const existing = (await client.listSources()).items.find((source) => source.name === name)
-    let source
-    let ingestToken: string
-    if (existing === undefined) {
-      const created = await client.createSource({ body: { name } })
-      source = created.source
-      ingestToken = created.token.token
-    } else {
-      source = existing
-      const tokens = (await client.listTokens()).items
-      const configured = configuredToken(settings, hub)
-      const kept = tokens.find(
-        (record) =>
-          record.id === (configured === undefined ? undefined : tokenId(configured)) &&
-          record.kind === 'ingest' &&
-          record.source_id === existing.id &&
-          record.revoked_at === null &&
-          (record.expires_at === null || Date.parse(record.expires_at) > Date.now()),
-      )
-      if (configured !== undefined && kept !== undefined) {
-        ingestToken = configured
-      } else {
-        const callerId = tokenId(managementToken)
-        const caller = tokens.find((record) => record.id === callerId)
-        const scopes = (caller?.scopes ?? []).filter((scope) => writeScope.test(scope))
-        if (scopes.length === 0) {
-          throw new CliError(
-            `Source "${name}" exists, and the logged-in Token holds no Module :write Scope to give its new Token`,
-          )
-        }
-        const issued = await client.issueToken({
-          body: { kind: 'ingest', scopes, source_id: existing.id, name: `claude-code on ${name}` },
-        })
-        ingestToken = issued.token
-      }
-    }
-
-    const changed = await writeSettings(
-      path,
-      applyTelemetry(settings, telemetryEnv(hub, ingestToken)),
-    )
+    const { source, created, settings, changed } = await connectClaudeCode({
+      hub,
+      managementToken,
+      client: await ctx.client(),
+      name: args.string('source') ?? '',
+      path: args.string('settings') ?? userSettingsPath(ctx.io),
+    })
 
     ctx.print(
-      { source, settings: path, changed },
+      { source, settings, changed },
       [
-        `${existing === undefined ? 'Created' : 'Reusing'} Source "${printable(source.name)}" (${source.id}).`,
-        `${changed ? 'Wrote' : 'Kept'} the telemetry settings in ${path}.`,
+        `${created ? 'Created' : 'Reusing'} Source "${printable(source.name)}" (${source.id}).`,
+        `${changed ? 'Wrote' : 'Kept'} the telemetry settings in ${settings}.`,
         'Restart Claude Code to start sending. The ingest Token is in that file; keep it private.',
       ].join('\n'),
     )

@@ -11,6 +11,13 @@ import type { Io } from '../io.ts'
 
 export const hubUrl = 'http://hub.test'
 
+/** The parts of `Io` beyond the Hub and the terminal, for tests that run no programs. */
+export const noPrograms: Pick<Io, 'hostname' | 'exec' | 'portFree'> = {
+  hostname: 'test-host',
+  exec: () => Promise.reject(new Error('this test runs no programs')),
+  portFree: () => Promise.resolve(true),
+}
+
 export interface Result {
   code: number
   out: string
@@ -51,6 +58,7 @@ export async function startHarness(): Promise<Harness> {
       let out = ''
       let err = ''
       const io: Io = {
+        ...noPrograms,
         env,
         home,
         fetch: (input, init) => t.hub.fetch(new Request(input, init)),

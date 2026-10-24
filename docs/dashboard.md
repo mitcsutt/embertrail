@@ -29,13 +29,13 @@ pnpm --filter @mitcsutt/embertrail-dashboard e2e        # Playwright on Chromium
 ### The development loop
 
 ```sh
-docker compose up -d                                              # the Hub, on 127.0.0.1:8787
-embertrail login --hub http://localhost:8787 --token <the Token the first start printed>
+pnpm --filter @mitcsutt/embertrail-cli build
+node packages/cli/dist/bin.js up --build-from . --no-claude-code  # the Hub on 127.0.0.1:8787, the CLI logged in
 pnpm --filter @mitcsutt/embertrail-dashboard seed                 # the demo dataset, see below
 pnpm --filter @mitcsutt/embertrail-dashboard dev                  # the Dashboard on Vite
 ```
 
-The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. `dev` (and `preview`) proxy `/api` to the Hub and add the Token, so after `embertrail login` the loop needs no further setup. See [Reaching the Hub](#reaching-the-hub).
+`up` is [the local stack](cli.md#the-local-stack); it also starts the Docker Dashboard on 8080, which the Vite one does not need. The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. `dev` (and `preview`) proxy `/api` to the Hub and add the Token, so after `embertrail login` the loop needs no further setup. See [Reaching the Hub](#reaching-the-hub).
 
 ## Reaching the Hub
 
@@ -298,8 +298,7 @@ For the default options (`--now 2026-11-04T13:00:00Z --tz Europe/Berlin`): 157 S
 With a Hub running ([`self-hosting.md`](self-hosting.md)) and the `embertrail` CLI logged in to it:
 
 ```sh
-docker compose up -d
-embertrail login --hub http://localhost:8787 --token <the Token the first start printed>
+embertrail up            # or a Hub run by hand, and embertrail login with its Token
 pnpm --filter @mitcsutt/embertrail-dashboard seed
 ```
 
