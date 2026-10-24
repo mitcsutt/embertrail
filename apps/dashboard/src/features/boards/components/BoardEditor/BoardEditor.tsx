@@ -161,7 +161,7 @@ export function BoardEditor({ stored: opened, onExit: exit }: BoardEditorProps) 
       <Stack gap={4}>
         <Inline justify="between" align="end" gap={3}>
           <Stack gap={2}>
-            <PageHeader title="Edit Board" />
+            <PageHeader title="Edit Board" description="Add, move and resize Widgets, then save." />
             <Input
               aria-label="Board name"
               maxLength={200}

@@ -121,6 +121,7 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
       <Stack gap={4}>
         <PageHeader
           title={board.name}
+          description="Your agents' spend and usage for the filters below."
           actions={
             canCreate ? (
               <Inline gap={2} align="center">

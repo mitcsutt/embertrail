@@ -1,4 +1,4 @@
-import { NavLinks, Stack, Text } from '@mitcsutt/kiln-ui'
+import { Box, NavLinks, Stack, Text } from '@mitcsutt/kiln-ui'
 import { Link, useParams } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
@@ -46,9 +46,11 @@ export function BoardNav() {
       {list('Presets', presets)}
       {sections.map(({ key, label, boards }) => (
         <Stack key={key} gap={1}>
-          <Text size="xs" tone="muted">
-            {label}
-          </Text>
+          <Box paddingX={3}>
+            <Text size="xs" tone="muted">
+              {label}
+            </Text>
+          </Box>
           {list(label, boards)}
         </Stack>
       ))}
