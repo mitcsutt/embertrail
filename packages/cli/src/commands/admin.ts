@@ -1,6 +1,6 @@
 import type { Command } from '../command.ts'
 import { UsageError } from '../errors.ts'
-import { dash, listing } from '../output.ts'
+import { dash, listing, printable } from '../output.ts'
 
 const role = ['member', 'editor'] as const
 
@@ -47,7 +47,7 @@ export const adminCommands: Command[] = [
       ctx.print(
         { user, token },
         [
-          `Created User "${user.name}" (${user.id}).`,
+          `Created User "${printable(user.name)}" (${user.id}).`,
           ...(token === null ? [] : [`Token (shown once): ${token}`]),
         ].join('\n'),
       )
@@ -98,7 +98,7 @@ export const adminCommands: Command[] = [
       ).createTeam({
         body: { name: args.positional(0), ...(id === undefined ? {} : { id }) },
       })
-      ctx.print(team, `Created Team "${team.name}" (${team.id}).`)
+      ctx.print(team, `Created Team "${printable(team.name)}" (${team.id}).`)
     },
   },
   {

@@ -10,7 +10,7 @@ curl -s "$HUB/api/v1/sql" -H "authorization: Bearer $TOKEN" -H 'content-type: ap
 
 ## The contract
 
-- **Scope:** `sql:read`. `Embertrail-Owner: team:<id>` works as on any other endpoint.
+- **Scope:** `sql:read`. `Embertrail-Owner: team:<id>` works as on any other endpoint. A Token bound to a Source (an ingest Token) is refused with 403 `forbidden`, even if it held the Scope.
 - **Body:** `sql` (1 to 20,000 characters, one statement; a trailing `;` is fine) and optional `params` (up to 100 strings, numbers, booleans or nulls) for `$1`, `$2`… Every param must be referenced. A placeholder one past `params` binds to the endpoint's row-limit parameter instead of failing, so reference only `$1` to `$N` for your N params.
 - **Rows:** at most 10,000; `truncated: true` when there were more.
 - **Values:** `timestamptz` as RFC 3339 in UTC (`2026-10-01T07:30:00.123456Z`), `numeric` and `int8` (and arrays of them) as strings, `json`/`jsonb` as JSON, everything else as Postgres's `to_json` gives it. `columns[].type` is the `pg_type` name, with `[]` for arrays (`int8[]`).

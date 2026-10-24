@@ -16,6 +16,16 @@ map "$http_sec_fetch_site|$http_origin|$http_host" $refuse_api {
     "~^(|same-origin|none)\|https?://(?<origin_host>[^|]+)\|\k<origin_host>$" 0;
 }
 
+# Refuse /api for a Host the Dashboard isn't reached by. Without this, a DNS-rebinding page
+# (a name that first resolves to the attacker, then to this machine) is same-origin to itself, so
+# it passes the map above and is written as the Token's User. `$host` is the Host header without
+# its port, lowercased; the pattern is localhost, 127.0.0.1, [::1] and EMBERTRAIL_DASHBOARD_HOSTS
+# (docker/15-dashboard-hosts.envsh). The static app answers any Host: it holds no Token.
+map $host $refuse_host {
+    default 1;
+    "~^(${EMBERTRAIL_DASHBOARD_HOSTS_REGEX})$" 0;
+}
+
 server {
     listen 8080;
     server_name _;
@@ -25,6 +35,7 @@ server {
     resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
 
     location /api/ {
+        if ($refuse_host) { return 421; }
         if ($refuse_api) { return 404; }
         set $hub_upstream "${EMBERTRAIL_HUB_UPSTREAM}";
         proxy_pass $hub_upstream;

@@ -8,7 +8,7 @@ import type { Problem } from '@mitcsutt/embertrail-client'
 import type { Command } from '../command.ts'
 import { unreachable } from '../command.ts'
 import { CliError, UsageError } from '../errors.ts'
-import { dash, listing } from '../output.ts'
+import { dash, listing, printable } from '../output.ts'
 
 const kinds = ['ingest', 'read', 'management'] as const
 
@@ -54,7 +54,7 @@ export const selfCommands: Command[] = [
       })
       ctx.print(
         { source, token },
-        `Created Source "${source.name}" (${source.id}).\nIngest Token (shown once): ${token.token}`,
+        `Created Source "${printable(source.name)}" (${source.id}).\nIngest Token (shown once): ${token.token}`,
       )
     },
   },
@@ -72,7 +72,7 @@ export const selfCommands: Command[] = [
         path: { source_id: args.positional(0) },
         body: { name: args.positional(1) },
       })
-      ctx.print(source, `Renamed Source ${source.id} to "${source.name}".`)
+      ctx.print(source, `Renamed Source ${source.id} to "${printable(source.name)}".`)
     },
   },
   {
@@ -207,7 +207,7 @@ export const selfCommands: Command[] = [
         path: { account_id: args.positional(0) },
         body: { label: label ?? null },
       })
-      ctx.print(account, `Account ${account.id} is now "${account.label}".`)
+      ctx.print(account, `Account ${account.id} is now "${printable(account.label)}".`)
     },
   },
   {

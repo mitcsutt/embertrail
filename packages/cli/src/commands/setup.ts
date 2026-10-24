@@ -7,6 +7,7 @@ import {
 } from '../claude-code.ts'
 import type { Command } from '../command.ts'
 import { CliError } from '../errors.ts'
+import { printable } from '../output.ts'
 
 /** A Token's id: `et_<id>_<secret>`. */
 function tokenId(token: string): string | undefined {
@@ -100,7 +101,7 @@ export const setupClaudeCode: Command = {
     ctx.print(
       { source, settings: path, changed },
       [
-        `${existing === undefined ? 'Created' : 'Reusing'} Source "${source.name}" (${source.id}).`,
+        `${existing === undefined ? 'Created' : 'Reusing'} Source "${printable(source.name)}" (${source.id}).`,
         `${changed ? 'Wrote' : 'Kept'} the telemetry settings in ${path}.`,
         'Restart Claude Code to start sending. The ingest Token is in that file; keep it private.',
       ].join('\n'),

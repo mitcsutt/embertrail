@@ -1,5 +1,7 @@
 import { isProblemError, UnexpectedResponseError } from '@mitcsutt/embertrail-client'
 
+import { printable } from './output.ts'
+
 /** A failure with a message meant for the person running the command. Exit code 1. */
 export class CliError extends Error {
   override readonly name = 'CliError'
@@ -16,9 +18,10 @@ export class UsageError extends Error {
  */
 export function describeError(error: unknown): string {
   if (isProblemError(error)) {
-    const lines = [`error: ${error.title} (${String(error.status)})`]
-    if (error.detail !== undefined) lines.push(`  ${error.detail}`)
-    for (const field of error.errors) lines.push(`  ${field.pointer}: ${field.message}`)
+    const lines = [`error: ${printable(error.title)} (${String(error.status)})`]
+    if (error.detail !== undefined) lines.push(`  ${printable(error.detail)}`)
+    for (const field of error.errors)
+      lines.push(`  ${printable(field.pointer)}: ${printable(field.message)}`)
     lines.push(`  request_id: ${error.request_id}`)
     return lines.join('\n')
   }

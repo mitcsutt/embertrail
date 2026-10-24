@@ -1675,7 +1675,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
     }
@@ -1898,7 +1898,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -1942,7 +1942,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       409: components['responses']['Conflict']
       500: components['responses']['Internal']
     }
@@ -1966,7 +1966,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
@@ -1998,7 +1998,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2035,7 +2035,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       409: components['responses']['Conflict']
       500: components['responses']['Internal']
     }
@@ -2059,7 +2059,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2102,7 +2102,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2127,7 +2127,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2151,7 +2151,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2174,7 +2174,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2198,7 +2198,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2221,7 +2221,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2260,7 +2260,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       409: components['responses']['Conflict']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
@@ -2299,7 +2299,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       409: components['responses']['Conflict']
       500: components['responses']['Internal']
@@ -2324,7 +2324,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2350,7 +2350,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2394,7 +2394,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       422: components['responses']['Unprocessable']
       500: components['responses']['Internal']
@@ -2419,7 +2419,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2445,7 +2445,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2482,7 +2482,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2508,7 +2508,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       500: components['responses']['Internal']
     }
   }
@@ -2548,7 +2548,7 @@ export interface operations {
       }
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       409: components['responses']['Conflict']
       422: components['responses']['Unprocessable']
@@ -2574,7 +2574,7 @@ export interface operations {
         content?: never
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }
@@ -2601,7 +2601,7 @@ export interface operations {
         }
       }
       401: components['responses']['Unauthorized']
-      403: components['responses']['Forbidden']
+      403: components['responses']['ForbiddenSourceBound']
       404: components['responses']['NotFound']
       500: components['responses']['Internal']
     }

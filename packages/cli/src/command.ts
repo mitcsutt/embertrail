@@ -6,6 +6,7 @@ import { readConfig } from './config.ts'
 import type { StoredConfig } from './config.ts'
 import { CliError } from './errors.ts'
 import type { Io } from './io.ts'
+import { printable } from './output.ts'
 
 /** What a command runs with. */
 export interface Context {
@@ -65,7 +66,10 @@ export function makeContext(io: Io, json: boolean): Context {
     io,
     json,
     print(data, text) {
-      io.stdout(`${json ? JSON.stringify(data, null, 2) : text}\n`)
+      // Server text in `text` is already `printable`; this keeps any other line from driving the terminal.
+      io.stdout(
+        `${json ? JSON.stringify(data, null, 2) : text.split('\n').map(printable).join('\n')}\n`,
+      )
     },
     login,
     async client() {
