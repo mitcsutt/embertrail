@@ -59,12 +59,7 @@ export interface FileRouteTypes {
   fullPaths: '/' | '/boards/$boardId' | '/sessions/$sessionId' | '/sessions/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/boards/$boardId' | '/sessions/$sessionId' | '/sessions'
-  id:
-    | '__root__'
-    | '/'
-    | '/boards/$boardId'
-    | '/sessions/$sessionId'
-    | '/sessions/'
+  id: '__root__' | '/' | '/boards/$boardId' | '/sessions/$sessionId' | '/sessions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {

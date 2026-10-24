@@ -1,5 +1,6 @@
 import { Stat } from '@mitcsutt/kiln-ui'
 
+import { useLocale } from '#features/locale/hooks/useLocale'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { filterClause } from '#features/widgets/utils/filterClause'
@@ -34,7 +35,14 @@ export const sessionsToday: WidgetDefinition<SessionsTodayData> = {
     sessions: aggregateRows(response)[0]?.value ?? null,
   }),
   isEmpty: ({ sessions }) => sessions === null,
-  View: ({ data, label }) => (
-    <Stat label={label} size="lg" value={new Intl.NumberFormat().format(data.sessions ?? 0)} />
-  ),
+  View: ({ data, label }) => {
+    const { locale } = useLocale()
+    return (
+      <Stat
+        label={label}
+        size="lg"
+        value={new Intl.NumberFormat(locale).format(data.sessions ?? 0)}
+      />
+    )
+  },
 }

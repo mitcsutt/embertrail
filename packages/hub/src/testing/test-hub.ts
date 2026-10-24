@@ -10,6 +10,7 @@ import { noEdgeIdentity } from '../identity/edge'
 import type { EdgeIdentityPort } from '../identity/edge'
 import { sources, teamMembers, teams, users } from '../identity/tables'
 import type { Module, Scope } from '../module/define'
+import type { RatesPort } from '../rates/rates'
 import { pgliteDb } from './pglite'
 import type { ClosableDbPort } from './pglite'
 
@@ -30,6 +31,8 @@ export interface TestHubOptions {
   clock?: () => Date
   /** Defaults to none. Pass `fakeEdgeIdentity(map)` to send Edge Identities. */
   edgeIdentity?: EdgeIdentityPort
+  /** Defaults to `noRates()`. */
+  rates?: RatesPort
 }
 
 export interface AsOptions {
@@ -98,7 +101,11 @@ export async function testHub(options: TestHubOptions): Promise<TestHub> {
   const errors: unknown[] = []
   const hub = createHub({
     config: options.config ?? {},
-    ports: { db, edgeIdentity: options.edgeIdentity ?? noEdgeIdentity() },
+    ports: {
+      db,
+      edgeIdentity: options.edgeIdentity ?? noEdgeIdentity(),
+      ...(options.rates === undefined ? {} : { rates: options.rates }),
+    },
     modules: options.modules,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
     onError: (error) => errors.push(error),

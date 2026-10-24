@@ -35,10 +35,7 @@
                   ]
                 }
               },
-              "required": [
-                "kind",
-                "range"
-              ],
+              "required": ["kind", "range"],
               "additionalProperties": false
             },
             {
@@ -57,11 +54,7 @@
                   "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                 }
               },
-              "required": [
-                "kind",
-                "from",
-                "to"
-              ],
+              "required": ["kind", "from", "to"],
               "additionalProperties": false
             }
           ]
@@ -82,9 +75,7 @@
           "maxLength": 200
         }
       },
-      "required": [
-        "time"
-      ],
+      "required": ["time"],
       "additionalProperties": false
     },
     "items": {
@@ -133,10 +124,7 @@
                             ]
                           }
                         },
-                        "required": [
-                          "kind",
-                          "range"
-                        ],
+                        "required": ["kind", "range"],
                         "additionalProperties": false
                       },
                       {
@@ -155,11 +143,7 @@
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                           }
                         },
-                        "required": [
-                          "kind",
-                          "from",
-                          "to"
-                        ],
+                        "required": ["kind", "from", "to"],
                         "additionalProperties": false
                       }
                     ]
@@ -183,11 +167,7 @@
                 "additionalProperties": false
               }
             },
-            "required": [
-              "i",
-              "type",
-              "widget"
-            ],
+            "required": ["i", "type", "widget"],
             "additionalProperties": false
           },
           {
@@ -226,21 +206,10 @@
                           },
                           "aggregation": {
                             "type": "string",
-                            "enum": [
-                              "sum",
-                              "avg",
-                              "min",
-                              "max",
-                              "count",
-                              "last"
-                            ]
+                            "enum": ["sum", "avg", "min", "max", "count", "last"]
                           }
                         },
-                        "required": [
-                          "kind",
-                          "name",
-                          "aggregation"
-                        ],
+                        "required": ["kind", "name", "aggregation"],
                         "additionalProperties": false
                       },
                       {
@@ -267,17 +236,11 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "fn"
-                            ],
+                            "required": ["fn"],
                             "additionalProperties": false
                           }
                         },
-                        "required": [
-                          "kind",
-                          "name",
-                          "aggregation"
-                        ],
+                        "required": ["kind", "name", "aggregation"],
                         "additionalProperties": false
                       }
                     ]
@@ -293,13 +256,7 @@
                   },
                   "bucket": {
                     "type": "string",
-                    "enum": [
-                      "minute",
-                      "hour",
-                      "day",
-                      "week",
-                      "month"
-                    ]
+                    "enum": ["minute", "hour", "day", "week", "month"]
                   },
                   "filter": {
                     "maxItems": 50,
@@ -316,28 +273,13 @@
                             },
                             "op": {
                               "type": "string",
-                              "enum": [
-                                "eq",
-                                "neq",
-                                "gt",
-                                "gte",
-                                "lt",
-                                "lte"
-                              ]
+                              "enum": ["eq", "neq", "gt", "gte", "lt", "lte"]
                             },
                             "value": {
-                              "type": [
-                                "string",
-                                "number",
-                                "boolean"
-                              ]
+                              "type": ["string", "number", "boolean"]
                             }
                           },
-                          "required": [
-                            "key",
-                            "op",
-                            "value"
-                          ],
+                          "required": ["key", "op", "value"],
                           "additionalProperties": false
                         },
                         {
@@ -350,29 +292,18 @@
                             },
                             "op": {
                               "type": "string",
-                              "enum": [
-                                "in",
-                                "not_in"
-                              ]
+                              "enum": ["in", "not_in"]
                             },
                             "value": {
                               "minItems": 1,
                               "maxItems": 100,
                               "type": "array",
                               "items": {
-                                "type": [
-                                  "string",
-                                  "number",
-                                  "boolean"
-                                ]
+                                "type": ["string", "number", "boolean"]
                               }
                             }
                           },
-                          "required": [
-                            "key",
-                            "op",
-                            "value"
-                          ],
+                          "required": ["key", "op", "value"],
                           "additionalProperties": false
                         },
                         {
@@ -385,16 +316,10 @@
                             },
                             "op": {
                               "type": "string",
-                              "enum": [
-                                "exists",
-                                "not_exists"
-                              ]
+                              "enum": ["exists", "not_exists"]
                             }
                           },
-                          "required": [
-                            "key",
-                            "op"
-                          ],
+                          "required": ["key", "op"],
                           "additionalProperties": false
                         }
                       ]
@@ -402,15 +327,7 @@
                   },
                   "chart": {
                     "type": "string",
-                    "enum": [
-                      "stat",
-                      "series",
-                      "bars",
-                      "bar-list",
-                      "share",
-                      "table",
-                      "heatmap"
-                    ]
+                    "enum": ["stat", "series", "bars", "bar-list", "share", "table", "heatmap"]
                   },
                   "limit": {
                     "type": "integer",
@@ -418,12 +335,7 @@
                     "maximum": 9007199254740991
                   }
                 },
-                "required": [
-                  "source",
-                  "groupBy",
-                  "filter",
-                  "chart"
-                ],
+                "required": ["source", "groupBy", "filter", "chart"],
                 "additionalProperties": false
               },
               "override": {
@@ -450,10 +362,7 @@
                             ]
                           }
                         },
-                        "required": [
-                          "kind",
-                          "range"
-                        ],
+                        "required": ["kind", "range"],
                         "additionalProperties": false
                       },
                       {
@@ -472,11 +381,7 @@
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                           }
                         },
-                        "required": [
-                          "kind",
-                          "from",
-                          "to"
-                        ],
+                        "required": ["kind", "from", "to"],
                         "additionalProperties": false
                       }
                     ]
@@ -500,12 +405,7 @@
                 "additionalProperties": false
               }
             },
-            "required": [
-              "i",
-              "type",
-              "title",
-              "query"
-            ],
+            "required": ["i", "type", "title", "query"],
             "additionalProperties": false
           },
           {
@@ -526,11 +426,7 @@
                 "maxLength": 200
               }
             },
-            "required": [
-              "i",
-              "type",
-              "title"
-            ],
+            "required": ["i", "type", "title"],
             "additionalProperties": false
           }
         ]
@@ -571,23 +467,11 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "i",
-          "x",
-          "y",
-          "w",
-          "h"
-        ],
+        "required": ["i", "x", "y", "w", "h"],
         "additionalProperties": false
       }
     }
   },
-  "required": [
-    "schema_version",
-    "name",
-    "filters",
-    "items",
-    "layout"
-  ],
+  "required": ["schema_version", "name", "filters", "items", "layout"],
   "additionalProperties": false
 }

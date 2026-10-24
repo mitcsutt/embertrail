@@ -1,5 +1,6 @@
 import { Bars } from '@mitcsutt/kiln-charts'
 
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { bucketedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 import { filterClause } from '#features/widgets/utils/filterClause'
@@ -47,17 +48,20 @@ export const eachDayByModel: WidgetDefinition<EachDayByModelData> = {
     })),
   }),
   isEmpty: ({ rows }) => rows.length === 0,
-  View: ({ data, ctx, label }) => (
-    <Bars
-      data={data.rows.map((row) => ({ ...row }))}
-      x="day"
-      label={label}
-      height="fill"
-      pivot={{ by: 'model', value: 'cost' }}
-      stacked
-      format={{ style: 'currency', currency: 'USD' }}
-      xFormat="date"
-      timeZone={ctx.tz}
-    />
-  ),
+  View: ({ data, ctx, label }) => {
+    const money = useMoney()
+    return (
+      <Bars
+        data={data.rows.map((row) => ({ ...row, cost: money.scale(row.cost) }))}
+        x="day"
+        label={label}
+        height="fill"
+        pivot={{ by: 'model', value: 'cost' }}
+        stacked
+        format={money.plain}
+        xFormat="date"
+        timeZone={ctx.tz}
+      />
+    )
+  },
 }

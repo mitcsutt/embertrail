@@ -9,6 +9,7 @@ import type { Lifecycle } from '../lifecycle/lifecycle'
 import { isReply } from '../module/define'
 import type { Caller, HttpMethod, OpStatus, Scope, SourceBinding } from '../module/define'
 import { HubError } from '../module/errors'
+import type { RatesPort } from '../rates/rates'
 import { OutputError, parseOutput, readInput, validate } from './http'
 import type { OpenApiDocument } from './openapi'
 
@@ -39,6 +40,7 @@ export interface Services {
   /** The loaded Modules' names. */
   modules: readonly string[]
   openapi: OpenApiDocument
+  rates: RatesPort
   remove: Lifecycle['remove']
   exportOwner: Lifecycle['exportOwner']
 }

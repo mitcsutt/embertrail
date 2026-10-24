@@ -12,6 +12,7 @@ describe('readConfig', () => {
       port: 8787,
       host: '0.0.0.0',
       publicUrl: undefined,
+      exchangeRates: true,
       hub: { allowedEmails: [], allowedDomains: [] },
     })
   })
@@ -27,8 +28,14 @@ describe('readConfig', () => {
       ALLOWED_EMAILS: 'a@example.com, b@example.com',
       ALLOWED_DOMAINS: 'example.com',
       RETENTION_DAYS: '90',
+      EXCHANGE_RATES: 'off',
     })
-    expect(config).toMatchObject({ poolSize: 4, port: 9000, host: '127.0.0.1' })
+    expect(config).toMatchObject({
+      poolSize: 4,
+      port: 9000,
+      host: '127.0.0.1',
+      exchangeRates: false,
+    })
     expect(config.hub).toEqual({
       bootstrapToken: 'x'.repeat(32),
       allowedEmails: ['a@example.com', 'b@example.com'],

@@ -27,6 +27,15 @@ export type { Hub, HubOptions, Ports } from './hub/create-hub'
 export type { HubConfig } from './hub/boot'
 export type { OpenApiDocument } from './hub/openapi'
 
+export { ecbRates, noRates, parseEcb } from './rates/rates'
+export type {
+  EcbRatesOptions,
+  RatesPort,
+  RatesResult,
+  RatesSnapshot,
+  RatesStatus,
+} from './rates/rates'
+
 export { drizzleDbPort } from './db/port'
 export type { DbPort, DbSession, ScopedDb } from './db/port'
 export type { AppliedMigration, MigrationReport } from './db/migrate'

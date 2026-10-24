@@ -1,9 +1,5 @@
 // How the Session views write numbers and times; the browser's locale unless one is given.
 
-export function formatCost(value: number, locale?: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(value)
-}
-
 /** A token count in short form: `12K`, `3.4M`. */
 export function formatCount(value: number, locale?: string): string {
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(

@@ -3,7 +3,8 @@ import { Link, Table } from '@mitcsutt/kiln-ui'
 import { Link as RouterLink } from '@tanstack/react-router'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
-import { formatUsd } from '#features/widgets/utils/formats'
+import { useLocale } from '#features/locale/hooks/useLocale'
+import { useMoney } from '#features/locale/hooks/useMoney'
 
 export interface TopSession {
   id: string
@@ -48,7 +49,9 @@ export const topSessions: WidgetDefinition<TopSessionsData> = {
   }),
   isEmpty: ({ sessions }) => sessions.length === 0,
   View: ({ data, ctx, label }) => {
-    const started = new Intl.DateTimeFormat(undefined, {
+    const money = useMoney()
+    const { locale } = useLocale()
+    const started = new Intl.DateTimeFormat(locale, {
       timeZone: ctx.tz,
       month: 'short',
       day: 'numeric',
@@ -79,7 +82,7 @@ export const topSessions: WidgetDefinition<TopSessionsData> = {
                 {session.startedAt === null ? '–' : started.format(new Date(session.startedAt))}
               </Table.Cell>
               <Table.Cell>{session.models.join(', ')}</Table.Cell>
-              <Table.Cell numeric>{formatUsd(session.cost)}</Table.Cell>
+              <Table.Cell numeric>{money.format(session.cost)}</Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

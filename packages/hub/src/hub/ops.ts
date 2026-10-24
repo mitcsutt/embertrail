@@ -56,6 +56,16 @@ const selfOutput = z.object({
   teams: z.array(z.object({ id: z.string(), name: z.string(), editor: z.boolean() })),
 })
 
+/** `Rates` in spec/query-api.yaml. */
+const ratesOutput = z.object({
+  status: z.enum(['ok', 'stale', 'off', 'unavailable']),
+  base: z.enum(['USD']),
+  source: z.string().nullable(),
+  date: z.string().nullable(),
+  fetched_at: z.string().nullable(),
+  rates: z.record(z.string(), z.number()).nullable(),
+})
+
 /** `SqlResult` in spec/query-api.yaml. */
 const sqlOutput = z.object({
   columns: z.array(z.object({ name: z.string(), type: z.string() })),
@@ -194,6 +204,37 @@ const ownOps: readonly HubOp[] = [
           name: t.name,
           editor: t.role === 'editor',
         })),
+      }
+    },
+  },
+  {
+    kind: 'typed',
+    module: 'core',
+    key: 'getRates',
+    method: 'GET',
+    path: '/api/v1/rates',
+    summary: 'Daily exchange rates, to show USD costs in another currency',
+    description:
+      'Units of each currency per 1 USD, from the ECB’s daily reference rates, which the Hub fetches and caches. `status` says whether they are fresh (`ok`), the last good copy after a failed refresh (`stale`), switched off on this Hub (`off`) or not obtainable yet (`unavailable`); the last two carry no `rates`. Any authenticated caller may ask. A Token bound to a Source is refused.',
+    tags: ['self'],
+    auth: { kind: 'caller', source: 'refuse' },
+    transaction: 'none',
+    input: z.object({}),
+    output: ratesOutput,
+    headers: {},
+    statuses: [200],
+    etag: false,
+    stamped: 'strip',
+    ownerHeader: false,
+    async run(_, call) {
+      const { status, snapshot } = await call.hub.rates.get()
+      return {
+        status,
+        base: 'USD' as const,
+        source: snapshot?.source ?? null,
+        date: snapshot?.date ?? null,
+        fetched_at: snapshot?.fetchedAt.toISOString() ?? null,
+        rates: snapshot === null ? null : { ...snapshot.rates },
       }
     },
   },

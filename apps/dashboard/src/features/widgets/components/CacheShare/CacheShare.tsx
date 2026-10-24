@@ -1,6 +1,7 @@
 import { Stat } from '@mitcsutt/kiln-ui'
 
 import type { WidgetDefinition } from '#features/widgets/types/widget'
+import { useLocale } from '#features/locale/hooks/useLocale'
 import { formatPercent } from '#features/widgets/utils/formats'
 import { aggregateRows } from '#features/widgets/utils/aggregateRows'
 import { filterClause } from '#features/widgets/utils/filterClause'
@@ -41,12 +42,15 @@ export const cacheShare: WidgetDefinition<CacheShareData> = {
     return { share: input === 0 ? null : (tokens.cacheRead ?? 0) / input }
   },
   isEmpty: ({ share }) => share === null,
-  View: ({ data, label }) => (
-    <Stat
-      label={label}
-      size="lg"
-      value={formatPercent(data.share ?? 0)}
-      hint="of input read from the cache"
-    />
-  ),
+  View: ({ data, label }) => {
+    const { locale } = useLocale()
+    return (
+      <Stat
+        label={label}
+        size="lg"
+        value={formatPercent(data.share ?? 0, locale)}
+        hint="of input read from the cache"
+      />
+    )
+  },
 }

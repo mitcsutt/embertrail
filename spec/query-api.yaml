@@ -867,6 +867,32 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/Internal' }
 
+  /api/v1/rates:
+    get:
+      tags: [self]
+      operationId: getRates
+      summary: Daily exchange rates
+      description: |
+        Units of each currency per 1 USD, from the European Central Bank's
+        daily reference rates, which the Hub fetches and keeps. Claude Code
+        reports cost in USD, so a Dashboard multiplies by `rates[code]` to
+        show another currency, and labels the figure an estimate at `date`.
+        `status` is `ok` when the copy is fresh, `stale` when it is the last
+        good copy after a refresh failed, `off` when this Hub makes no
+        outbound request, and `unavailable` when it has no copy yet; the last
+        two carry no `rates`. Any authenticated caller may ask, whatever
+        Scopes the Token holds. A Token bound to a Source is refused.
+      x-embertrail-module: core
+      responses:
+        '200':
+          description: The rates, or why there are none.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rates' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/Internal' }
+
   /api/v1/self/sources:
     get:
       tags: [self]
@@ -2106,6 +2132,31 @@ components:
                   editor:
                     type: boolean
                     description: Whether the caller may write documents the Team owns.
+    Rates:
+      type: object
+      required: [status, base, source, date, fetched_at, rates]
+      properties:
+        status:
+          type: string
+          enum: [ok, stale, 'off', unavailable]
+        base:
+          type: string
+          enum: [USD]
+          description: What every rate is per one unit of.
+        source:
+          type: [string, 'null']
+          description: Who published the rates; `ecb` is the European Central Bank.
+        date:
+          type: [string, 'null']
+          description: The day the rates were published for, `YYYY-MM-DD`.
+        fetched_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the Hub fetched them.
+        rates:
+          type: [object, 'null']
+          description: Currency code (ISO 4217) to units per 1 USD, including `USD` (1).
+          additionalProperties: { type: number }
     Team:
       type: object
       required: [id, name]

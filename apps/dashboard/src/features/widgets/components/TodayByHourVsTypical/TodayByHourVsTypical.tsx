@@ -1,5 +1,6 @@
 import { Chart } from '@mitcsutt/kiln-charts'
 
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { todayVsTypical } from '#features/widgets/utils/localHours'
 import { bucketedRows } from '#features/widgets/utils/aggregateRows'
@@ -54,21 +55,28 @@ export const todayByHourVsTypical: WidgetDefinition<TodayByHourVsTypicalData> = 
     }
   },
   isEmpty: ({ hasCost }) => !hasCost,
-  View: ({ data, label }) => (
-    <Chart
-      data={data.hours.map((hour) => ({ ...hour }))}
-      x="hour"
-      label={label}
-      height="fill"
-      format={{ style: 'currency', currency: 'USD' }}
-    >
-      <Chart.Grid />
-      <Chart.XAxis />
-      <Chart.YAxis />
-      <Chart.Line dataKey="today" label="Today" />
-      <Chart.Line dataKey="typical" label="Typical day" variant="dashed" />
-      <Chart.Tooltip />
-      <Chart.Legend />
-    </Chart>
-  ),
+  View: ({ data, label }) => {
+    const money = useMoney()
+    return (
+      <Chart
+        data={data.hours.map(({ hour, today, typical }) => ({
+          hour,
+          today: today === null ? null : money.scale(today),
+          typical: typical === null ? null : money.scale(typical),
+        }))}
+        x="hour"
+        label={label}
+        height="fill"
+        format={money.plain}
+      >
+        <Chart.Grid />
+        <Chart.XAxis />
+        <Chart.YAxis />
+        <Chart.Line dataKey="today" label="Today" />
+        <Chart.Line dataKey="typical" label="Typical day" variant="dashed" />
+        <Chart.Tooltip />
+        <Chart.Legend />
+      </Chart>
+    )
+  },
 }

@@ -20,6 +20,8 @@ const envSchema = z.object({
   ALLOWED_EMAILS: z.string().default('').transform(list),
   ALLOWED_DOMAINS: z.string().default('').transform(list),
   RETENTION_DAYS: count.optional(),
+  /** `off` stops the Hub fetching exchange rates; it makes no other outbound request. */
+  EXCHANGE_RATES: z.enum(['ecb', 'off']).default('ecb'),
   /** Where people reach the Hub, for the login command printed with the first Token. */
   PUBLIC_URL: z.url().optional(),
 })
@@ -30,6 +32,8 @@ export interface ServerConfig {
   port: number
   host: string
   publicUrl: string | undefined
+  /** Whether the Hub fetches the ECB's daily exchange rates. */
+  exchangeRates: boolean
   /** The Hub's own config; the core validates it again at boot. */
   hub: HubConfig
 }
@@ -52,6 +56,7 @@ export function readConfig(env: Record<string, string | undefined>): ServerConfi
     port: e.PORT,
     host: e.HOST,
     publicUrl: e.PUBLIC_URL,
+    exchangeRates: e.EXCHANGE_RATES === 'ecb',
     hub: {
       allowedEmails: e.ALLOWED_EMAILS,
       allowedDomains: e.ALLOWED_DOMAINS,

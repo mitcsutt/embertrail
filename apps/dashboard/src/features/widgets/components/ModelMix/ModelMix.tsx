@@ -1,5 +1,6 @@
 import { Share } from '@mitcsutt/kiln-charts'
 
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { valuedRows, groupLabel } from '#features/widgets/utils/aggregateRows'
 import { filterClause } from '#features/widgets/utils/filterClause'
@@ -42,24 +43,27 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
     })),
   }),
   isEmpty: ({ models }) => models.length === 0,
-  View: ({ data, label }) => (
-    // The legend lists every model and has no height of its own, so a short Widget scrolls it.
-    // The scroller is focusable and named so the keyboard can scroll it.
-    <div
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region needs keyboard access
-      tabIndex={0}
-      role="region"
-      aria-label={label}
-      style={{ height: '100%', minHeight: 0, overflow: 'auto' }}
-    >
-      <Share
-        data={data.models.map((row) => ({ ...row }))}
-        pivot={{ by: 'model', value: 'cost' }}
-        label={label}
-        height="fill"
-        format={{ style: 'currency', currency: 'USD' }}
-        totalLabel="total"
-      />
-    </div>
-  ),
+  View: ({ data, label }) => {
+    const money = useMoney()
+    return (
+      // The legend lists every model and has no height of its own, so a short Widget scrolls it.
+      // The scroller is focusable and named so the keyboard can scroll it.
+      <div
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region needs keyboard access
+        tabIndex={0}
+        role="region"
+        aria-label={label}
+        style={{ height: '100%', minHeight: 0, overflow: 'auto' }}
+      >
+        <Share
+          data={data.models.map((row) => ({ ...row, cost: money.scale(row.cost) }))}
+          pivot={{ by: 'model', value: 'cost' }}
+          label={label}
+          height="fill"
+          format={money.plain}
+          totalLabel="total"
+        />
+      </div>
+    )
+  },
 }

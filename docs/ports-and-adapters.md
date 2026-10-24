@@ -1,6 +1,6 @@
 # Ports and Adapters
 
-The Hub's core imports no database driver and no platform SDK (ADR-0004). It depends on **Ports**, and each Platform supplies **Adapters** that pass one shared contract suite ([#26](https://github.com/mitcsutt/embertrail/issues/26)). v1 has two Ports: Db and Edge Identity. Blob, Vector and Queue stay documented interfaces until a Module needs one (#17).
+The Hub's core imports no database driver and no platform SDK (ADR-0004). It depends on **Ports**, and each Platform supplies **Adapters** that pass one shared contract suite ([#26](https://github.com/mitcsutt/embertrail/issues/26)). v1 has two Ports: Db and Edge Identity. A third, optional Port, Rates, supplies daily exchange rates ([`locale.md`](locale.md)). Blob, Vector and Queue stay documented interfaces until a Module needs one (#17).
 
 ## The Db Port
 

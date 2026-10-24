@@ -1,0 +1,1 @@
+export { LocaleSettings } from './LocaleSettings'

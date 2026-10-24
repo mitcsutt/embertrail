@@ -1,5 +1,6 @@
 import { Table } from '@mitcsutt/kiln-ui'
 
+import { useLocale } from '#features/locale/hooks/useLocale'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { formatPercent } from '#features/widgets/utils/formats'
 import { aggregateRows, groupLabel } from '#features/widgets/utils/aggregateRows'
@@ -54,26 +55,29 @@ export const toolFailures: WidgetDefinition<ToolFailuresData> = {
     }
   },
   isEmpty: ({ tools }) => tools.length === 0,
-  View: ({ data, label }) => (
-    <Table label={label} density="compact">
-      <Table.Head>
-        <Table.Row>
-          <Table.HeaderCell>Tool</Table.HeaderCell>
-          <Table.HeaderCell numeric>Calls</Table.HeaderCell>
-          <Table.HeaderCell numeric>Failed</Table.HeaderCell>
-          <Table.HeaderCell numeric>Failure rate</Table.HeaderCell>
-        </Table.Row>
-      </Table.Head>
-      <Table.Body>
-        {data.tools.map((tool) => (
-          <Table.Row key={tool.tool}>
-            <Table.Cell rowHeader>{tool.tool}</Table.Cell>
-            <Table.Cell numeric>{tool.calls.toLocaleString()}</Table.Cell>
-            <Table.Cell numeric>{tool.failures.toLocaleString()}</Table.Cell>
-            <Table.Cell numeric>{formatPercent(tool.failures / tool.calls)}</Table.Cell>
+  View: ({ data, label }) => {
+    const { locale } = useLocale()
+    return (
+      <Table label={label} density="compact">
+        <Table.Head>
+          <Table.Row>
+            <Table.HeaderCell>Tool</Table.HeaderCell>
+            <Table.HeaderCell numeric>Calls</Table.HeaderCell>
+            <Table.HeaderCell numeric>Failed</Table.HeaderCell>
+            <Table.HeaderCell numeric>Failure rate</Table.HeaderCell>
           </Table.Row>
-        ))}
-      </Table.Body>
-    </Table>
-  ),
+        </Table.Head>
+        <Table.Body>
+          {data.tools.map((tool) => (
+            <Table.Row key={tool.tool}>
+              <Table.Cell rowHeader>{tool.tool}</Table.Cell>
+              <Table.Cell numeric>{tool.calls.toLocaleString(locale)}</Table.Cell>
+              <Table.Cell numeric>{tool.failures.toLocaleString(locale)}</Table.Cell>
+              <Table.Cell numeric>{formatPercent(tool.failures / tool.calls, locale)}</Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
+    )
+  },
 }

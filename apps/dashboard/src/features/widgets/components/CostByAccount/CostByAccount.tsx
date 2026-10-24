@@ -1,5 +1,6 @@
 import { Bars } from '@mitcsutt/kiln-charts'
 
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { Inventory } from '#features/filters/data/inventory'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { aggregateRows } from '#features/widgets/utils/aggregateRows'
@@ -50,19 +51,22 @@ export const costByAccount: WidgetDefinition<CostByAccountData> = {
       .toSorted((a, b) => b.cost - a.cost),
   }),
   isEmpty: ({ accounts }) => accounts.length === 0,
-  View: ({ data, label, inventory }) => (
-    <Bars
-      data={data.accounts.map(({ accountId, cost }, index) => ({
-        account: accountName(accountId, inventory, data, index),
-        cost,
-      }))}
-      x="account"
-      label={label}
-      height="fill"
-      series={[{ key: 'cost', label: 'Cost' }]}
-      format={{ style: 'currency', currency: 'USD' }}
-    />
-  ),
+  View: ({ data, label, inventory }) => {
+    const money = useMoney()
+    return (
+      <Bars
+        data={data.accounts.map(({ accountId, cost }, index) => ({
+          account: accountName(accountId, inventory, data, index),
+          cost: money.scale(cost),
+        }))}
+        x="account"
+        label={label}
+        height="fill"
+        series={[{ key: 'cost', label: 'Cost' }]}
+        format={money.plain}
+      />
+    )
+  },
 }
 
 /**

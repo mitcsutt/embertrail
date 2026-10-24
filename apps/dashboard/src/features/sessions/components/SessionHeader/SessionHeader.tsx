@@ -1,8 +1,10 @@
 import { Heading, Inline, Link, Stack, Stat, Tag, Text } from '@mitcsutt/kiln-ui'
 import { Link as RouterLink } from '@tanstack/react-router'
 
+import { useLocale } from '#features/locale/hooks/useLocale'
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { SessionDetail } from '#features/sessions/data/session'
-import { formatCost, formatCount, formatTime, shortId } from '#features/sessions/utils/formats'
+import { formatCount, formatTime, shortId } from '#features/sessions/utils/formats'
 
 export interface SessionHeaderProps {
   session: SessionDetail
@@ -11,6 +13,8 @@ export interface SessionHeaderProps {
 
 /** A Session at a glance: where it sits in its group, its totals, and the Sessions below it. */
 export function SessionHeader({ session, tz }: SessionHeaderProps) {
+  const money = useMoney()
+  const { locale } = useLocale()
   const tokens = Object.values(session.tokens).reduce((a, b) => a + b, 0)
   return (
     <Stack gap={3}>
@@ -44,11 +48,15 @@ export function SessionHeader({ session, tz }: SessionHeaderProps) {
         <Stat
           size="sm"
           label="Cost"
-          value={session.cost_usd === null ? '–' : formatCost(session.cost_usd)}
+          value={session.cost_usd === null ? '–' : money.format(session.cost_usd)}
         />
-        <Stat size="sm" label="Tokens" value={formatCount(tokens)} />
-        <Stat size="sm" label="Started" value={formatTime(session.started_at, tz)} />
-        <Stat size="sm" label="Last seen" value={formatTime(session.last_seen_at, tz)} />
+        <Stat size="sm" label="Tokens" value={formatCount(tokens, locale)} />
+        <Stat size="sm" label="Started" value={formatTime(session.started_at, tz, {}, locale)} />
+        <Stat
+          size="sm"
+          label="Last seen"
+          value={formatTime(session.last_seen_at, tz, {}, locale)}
+        />
         <Stat size="sm" label="Models" value={session.models.join(', ') || '–'} />
       </Inline>
       {session.children.length === 0 ? null : (

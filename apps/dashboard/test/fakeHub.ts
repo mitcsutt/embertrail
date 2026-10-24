@@ -23,6 +23,8 @@ export interface FakeHubOptions {
   /** The Events a list query pages through, `eventPageSize` at a time, whatever the filter. */
   events?: Schemas['Event'][]
   eventPageSize?: number
+  /** What `getRates` answers; by default the Hub makes no outbound request (`off`). */
+  rates?: Schemas['Rates']
 }
 
 export interface FakeHub {
@@ -90,6 +92,18 @@ export function fakeHub(options: FakeHubOptions = {}): FakeHub {
         scopes: options.scopes ?? ['otel:read', 'store:read', 'store:write'],
         teams: options.teams ?? [],
       })
+    }
+    if (path === '/api/v1/rates') {
+      return json(
+        options.rates ?? {
+          status: 'off',
+          base: 'USD',
+          source: null,
+          date: null,
+          fetched_at: null,
+          rates: null,
+        },
+      )
     }
     if (path === '/api/v1/inventory') {
       return json({

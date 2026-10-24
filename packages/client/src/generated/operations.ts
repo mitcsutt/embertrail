@@ -74,6 +74,7 @@ export const operationTable = {
     responseHeaders: [],
   },
   getSelf: { method: 'GET', path: '/api/v1/self', responseHeaders: [] },
+  getRates: { method: 'GET', path: '/api/v1/rates', responseHeaders: [] },
   listSources: { method: 'GET', path: '/api/v1/self/sources', responseHeaders: [] },
   createSource: { method: 'POST', path: '/api/v1/self/sources', responseHeaders: [] },
   renameSource: { method: 'PUT', path: '/api/v1/self/sources/{source_id}', responseHeaders: [] },
@@ -340,6 +341,15 @@ export interface Operations {
   getSelf: {
     input?: Record<never, never>
     output: operations['getSelf']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Daily exchange rates
+   *
+   * `GET /api/v1/rates`
+   */
+  getRates: {
+    input?: Record<never, never>
+    output: operations['getRates']['responses'][200]['content']['application/json']
   }
   /**
    * List your Sources
