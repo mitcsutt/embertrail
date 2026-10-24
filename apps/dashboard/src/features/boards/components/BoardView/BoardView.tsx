@@ -86,7 +86,15 @@ interface ViewedBoardProps {
  * Said above the grid when the window holds no Signal at all, so a Board of empty cards says why
  * and what to do: widen the range in one click, or connect Claude Code.
  */
-function NoTelemetry({ longest, onWiden }: { longest: boolean; onWiden: () => void }) {
+function NoTelemetry({
+  longest,
+  last90,
+  onWiden,
+}: {
+  longest: boolean
+  last90: boolean
+  onWiden: () => void
+}) {
   return (
     <EmptyState
       framed
@@ -94,7 +102,7 @@ function NoTelemetry({ longest, onWiden }: { longest: boolean; onWiden: () => vo
       description={
         longest ? (
           <>
-            Nothing has reached this Hub in the last 90 days. Connect Claude Code with{' '}
+            Nothing has reached this Hub {last90 ? 'in the last 90 days' : 'in this period'}. Connect Claude Code with{' '}
             <Code>embertrail setup claude-code</Code>, then come back.
           </>
         ) : (
@@ -209,7 +217,8 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
         inventory.data?.metrics.length === 0 &&
         inventory.data.events.length === 0 ? (
           <NoTelemetry
-            longest={Date.parse(window.to) - Date.parse(window.from) >= 89 * 86_400_000}
+            longest={Date.parse(window.to) - Date.parse(window.from) >= 90 * 86_400_000 - 3_600_000}
+            last90={filters.time.kind === 'relative' && filters.time.range === 'last-90-days'}
             onWiden={() => {
               setFilters({ time: { kind: 'relative', range: 'last-90-days' } })
             }}
