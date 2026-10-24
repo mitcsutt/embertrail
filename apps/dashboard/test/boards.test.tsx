@@ -75,8 +75,11 @@ describe('BoardPage', () => {
   it('asks the Hub once for each Widget a filter change affects, and for no other', async () => {
     const hub = fakeHub()
     const { router } = openBoard('/boards/everything', hub.client)
+    // A KPI Widget asks twice: its series up to now, and the window before it as one exact total.
+    const asks = (widgets: typeof catalogue) =>
+      widgets.reduce((sum, widget) => sum + (widget.id.startsWith('period-') ? 2 : 1), 0)
     await waitFor(() => {
-      expect(hub.widgetRequests()).toHaveLength(catalogue.length)
+      expect(hub.widgetRequests()).toHaveLength(asks(catalogue))
     })
     const before = hub.widgetRequests().length
 
@@ -87,10 +90,10 @@ describe('BoardPage', () => {
     expect(following.length).toBeGreaterThan(0)
     expect(following.length).toBeLessThan(catalogue.length)
     await waitFor(() => {
-      expect(hub.widgetRequests().length - before).toBe(following.length)
+      expect(hub.widgetRequests().length - before).toBe(asks(following))
     })
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(hub.widgetRequests().length - before).toBe(following.length)
+    expect(hub.widgetRequests().length - before).toBe(asks(following))
   })
 
   it('draws a stored Board with its sections, unknown Widgets and Query Widgets', async () => {
