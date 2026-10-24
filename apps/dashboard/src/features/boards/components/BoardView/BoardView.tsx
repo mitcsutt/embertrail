@@ -102,8 +102,8 @@ function NoTelemetry({
       description={
         longest ? (
           <>
-            Nothing has reached this Hub {last90 ? 'in the last 90 days' : 'in this period'}. Connect Claude Code with{' '}
-            <Code>embertrail setup claude-code</Code>, then come back.
+            Nothing has reached this Hub {last90 ? 'in the last 90 days' : 'in this period'}.
+            Connect Claude Code with <Code>embertrail setup claude-code</Code>, then come back.
           </>
         ) : (
           <>
