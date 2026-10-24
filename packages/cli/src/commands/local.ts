@@ -298,8 +298,8 @@ const up: Command = {
     }
 
     const kept = [
-      ...(keepLogin && stored !== undefined ? [`this CLI's login to ${stored.hub}`] : []),
-      ...(keepTarget && target !== undefined ? [`Claude Code's target ${target}`] : []),
+      ...(keepLogin ? [`this CLI's login to ${stored.hub}`] : []),
+      ...(keepTarget ? [`Claude Code's target ${target}`] : []),
     ]
 
     const dashboard = dashboardUrl(stack.state)
@@ -574,7 +574,7 @@ const reset: Command = {
       ...ctx.io,
       env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
     }).catch(() => undefined)
-    const loggedOut = config !== undefined && config.token === stack.state.managementToken
+    const loggedOut = config?.token === stack.state.managementToken
     const savedLogin = loggedOut && (await readIfThere(configBackup(ctx.io))) !== undefined
     if (loggedOut) {
       if (savedLogin) await rename(configBackup(ctx.io), configPath(ctx.io))
