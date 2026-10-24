@@ -27,8 +27,8 @@ export const todayByHourVsTypical: WidgetDefinition<TodayByHourVsTypicalData> = 
   title: 'Today by hour vs typical',
   description: 'Cost so far today in each hour, against the mean of the other 27 days.',
   kind: 'series',
-  size: { w: 8, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 7, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'last-28-days',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

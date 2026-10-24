@@ -22,7 +22,7 @@ beforeAll(() => {
 const id = 'b-spend00001'
 
 const stored: BoardDocument = {
-  schema_version: 1,
+  schema_version: 2,
   name: 'My spend',
   filters: { time: { kind: 'relative', range: 'last-7-days' } },
   items: [

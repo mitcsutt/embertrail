@@ -4,6 +4,7 @@
 // curated Widget requests (#16) all find data in it, including a Session Group three levels deep
 // and a Label that moves a Session between groups.
 
+import { runRequest } from '#features/widgets/data/runRequest'
 import type { OperationInput } from '@mitcsutt/embertrail-client'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -281,13 +282,11 @@ describe('the demo dataset on a test Hub', () => {
       '%s finds data',
       async (name, index) => {
         const request = defined(widgets()[index], name)[1]
-        const answer =
-          request.op === 'queryMetrics'
-            ? await hub.client.queryMetrics({ body: request.body })
-            : request.op === 'queryEvents'
-              ? await hub.client.queryEvents({ body: request.body })
-              : await hub.client.listSessions({ query: request.query })
-        const found = answer as { rows?: unknown[]; items?: unknown[] }
+        const answer = await runRequest(hub.client, request)
+        const found = (Array.isArray(answer) ? answer[0] : answer) as {
+          rows?: unknown[]
+          items?: unknown[]
+        }
         expect(
           (found.rows ?? found.items ?? []).length,
           `${name} has data to show`,

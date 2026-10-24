@@ -20,8 +20,8 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
   title: 'Model mix',
   description: 'How the period’s cost splits between models.',
   kind: 'share',
-  size: { w: 4, h: 4 },
-  minSize: { w: 3, h: 3 },
+  size: { w: 4, h: 6 },
+  minSize: { w: 3, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({
@@ -47,7 +47,9 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
     const money = useMoney()
     return (
       // The legend lists every model and has no height of its own, so a short Widget scrolls it.
-      // The scroller is focusable and named so the keyboard can scroll it.
+      // The scroller is focusable and named so the keyboard can scroll it. The ring is as tall as
+      // the chart and ignores the width, so a chart that filled the card would push the legend out
+      // of a narrow one; at a fixed height the legend sits beside the ring or wraps under it.
       <div
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region needs keyboard access
         tabIndex={0}
@@ -59,7 +61,7 @@ export const modelMix: WidgetDefinition<ModelMixData> = {
           data={data.models.map((row) => ({ ...row, cost: money.scale(row.cost) }))}
           pivot={{ by: 'model', value: 'cost' }}
           label={label}
-          height="fill"
+          height={180}
           format={money.plain}
           totalLabel="total"
         />

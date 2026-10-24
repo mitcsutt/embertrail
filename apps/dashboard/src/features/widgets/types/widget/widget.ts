@@ -16,6 +16,7 @@ export type WidgetWindow = 'board' | FixedWindow
 
 export type WidgetRequest =
   | { op: 'queryMetrics'; body: OperationInput<'queryMetrics'>['body'] }
+  | { op: 'queryMetricsEach'; bodies: OperationInput<'queryMetrics'>['body'][] }
   | { op: 'queryEvents'; body: OperationInput<'queryEvents'>['body'] }
   | { op: 'listSessions'; query: OperationInput<'listSessions'>['query'] }
 

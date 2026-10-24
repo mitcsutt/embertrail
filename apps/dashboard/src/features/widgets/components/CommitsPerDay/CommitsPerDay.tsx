@@ -20,8 +20,8 @@ export const commitsPerDay: WidgetDefinition<CommitsPerDayData> = {
   title: 'Commits per day',
   description: 'Commits Claude made each day.',
   kind: 'bars',
-  size: { w: 6, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 6, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account'],
   request: (ctx) => ({

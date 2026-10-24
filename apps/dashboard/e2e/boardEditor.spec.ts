@@ -26,7 +26,7 @@ async function customiseOverview(page: Page): Promise<string> {
   await expect(page.getByRole('heading', { level: 1, name: 'Edit Board' })).toBeVisible()
   const match = /\/boards\/(b-[a-z0-9]+)/.exec(page.url())
   if (match?.[1] === undefined) throw new Error(`Not a stored Board: ${page.url()}`)
-  await expect(page.getByRole('button', { name: /Move Cost today/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Move Top sessions/ })).toBeVisible()
   return match[1]
 }
 
@@ -65,13 +65,13 @@ test('a Board is customised, rearranged by pointer, saved, and still arranged af
   const id = await customiseOverview(page)
   const before = await storedLayout(page, id)
 
-  await drag(page, page.getByRole('button', { name: /Move Cost today/ }), { x: 360, y: 0 })
+  await drag(page, page.getByRole('button', { name: /Move Top sessions/ }), { x: 360, y: 0 })
   await drag(page, page.locator('[data-kiln-dnd-resize]').first(), { x: 120, y: 80 })
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible()
 
   const saved = await storedLayout(page, id)
-  expect(cellOf(saved, 'cost-today')).not.toEqual(cellOf(before, 'cost-today'))
+  expect(cellOf(saved, 'top-sessions')).not.toEqual(cellOf(before, 'top-sessions'))
 
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Overview (copy)' })).toBeVisible()
@@ -83,7 +83,7 @@ test('a keyboard move is saved too', async ({ page }) => {
   const id = await customiseOverview(page)
   const before = await storedLayout(page, id)
 
-  const handle = page.getByRole('button', { name: /Move Cost today/ })
+  const handle = page.getByRole('button', { name: /Move Top sessions/ })
   await handle.focus()
   await page.keyboard.press('Space')
   await page.keyboard.press('ArrowDown')
@@ -93,8 +93,8 @@ test('a keyboard move is saved too', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible()
 
   const saved = await storedLayout(page, id)
-  expect(cellOf(saved, 'cost-today')).not.toEqual(cellOf(before, 'cost-today'))
-  expect(cellOf(saved, 'cost-today').w).toBe(cellOf(before, 'cost-today').w + 1)
+  expect(cellOf(saved, 'top-sessions')).not.toEqual(cellOf(before, 'top-sessions'))
+  expect(cellOf(saved, 'top-sessions').w).toBe(cellOf(before, 'top-sessions').w + 1)
 })
 
 test('Overview is unchanged by customising it, and a save that lost to another is not lost silently', async ({
@@ -133,7 +133,7 @@ test('the Model mix legend stays inside its card at the smallest size the grid a
   const handle = page.getByRole('button', { name: /Move Model mix/ })
   await handle.focus()
   await page.keyboard.press('Space')
-  // Down to the Widget's minimum size, 3 × 3, and one more press to prove the grid stops there.
+  // Down to the Widget's minimum size, 3 × 4, and more presses to prove the grid stops there.
   for (let step = 0; step < 3; step += 1) {
     await page.keyboard.press('Shift+ArrowUp')
     await page.keyboard.press('Shift+ArrowLeft')

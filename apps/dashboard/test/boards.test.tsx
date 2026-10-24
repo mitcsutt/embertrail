@@ -14,7 +14,7 @@ import { fakeHub } from './fakeHub.ts'
 import { openBoard } from './openBoard.tsx'
 
 const storedBoard: BoardDocument = {
-  schema_version: 1,
+  schema_version: 2,
   name: 'My spend',
   filters: { time: { kind: 'relative', range: 'last-7-days' } },
   items: [
@@ -75,8 +75,11 @@ describe('BoardPage', () => {
   it('asks the Hub once for each Widget a filter change affects, and for no other', async () => {
     const hub = fakeHub()
     const { router } = openBoard('/boards/everything', hub.client)
+    // A KPI Widget asks twice: its series up to now, and the window before it as one exact total.
+    const asks = (widgets: typeof catalogue) =>
+      widgets.reduce((sum, widget) => sum + (widget.id.startsWith('period-') ? 2 : 1), 0)
     await waitFor(() => {
-      expect(hub.widgetRequests()).toHaveLength(catalogue.length)
+      expect(hub.widgetRequests()).toHaveLength(asks(catalogue))
     })
     const before = hub.widgetRequests().length
 
@@ -87,10 +90,10 @@ describe('BoardPage', () => {
     expect(following.length).toBeGreaterThan(0)
     expect(following.length).toBeLessThan(catalogue.length)
     await waitFor(() => {
-      expect(hub.widgetRequests().length - before).toBe(following.length)
+      expect(hub.widgetRequests().length - before).toBe(asks(following))
     })
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(hub.widgetRequests().length - before).toBe(following.length)
+    expect(hub.widgetRequests().length - before).toBe(asks(following))
   })
 
   it('draws a stored Board with its sections, unknown Widgets and Query Widgets', async () => {
@@ -111,6 +114,31 @@ describe('BoardPage', () => {
     })
   })
 
+  it('says once that the window holds no telemetry, and looks further back in one click', async () => {
+    // The fake Hub's Inventory lists no Metric and no Event.
+    const { router } = openBoard('/boards/overview', fakeHub().client)
+
+    expect(await screen.findByText('No telemetry in this period')).toBeVisible()
+    expect(screen.getAllByText('No telemetry in this period')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Show the last 90 days' }))
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ range: 'last-90-days' })
+    })
+    expect(
+      await screen.findByText(/Nothing has reached this Hub in the last 90 days/),
+    ).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Show the last 90 days' })).not.toBeInTheDocument()
+  })
+
+  it('does not offer to shorten a custom range longer than 90 days', async () => {
+    openBoard('/boards/overview?range=custom&from=2026-01-01&to=2026-08-01', fakeHub().client)
+
+    expect(await screen.findByText(/Nothing has reached this Hub in this period/)).toBeVisible()
+    expect(screen.queryByText(/in the last 90 days/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show the last 90 days' })).not.toBeInTheDocument()
+  })
+
   it('says so when the Board does not exist', async () => {
     openBoard('/boards/b-nosuchboard', fakeHub().client)
 
@@ -118,7 +146,7 @@ describe('BoardPage', () => {
   })
 
   it('says why a stored Board cannot be shown', async () => {
-    const hub = fakeHub({ boards: { 'b-broken0001': { schema_version: 1, name: 5 } } })
+    const hub = fakeHub({ boards: { 'b-broken0001': { schema_version: 2, name: 5 } } })
     openBoard('/boards/b-broken0001', hub.client)
 
     expect(await screen.findByText('This Board cannot be shown')).toBeVisible()

@@ -1,6 +1,7 @@
 export {
   boardMigrations,
   currentBoardVersion,
+  doubleRows,
   InvalidBoardError,
   migrateBoard,
   UnsupportedBoardVersionError,

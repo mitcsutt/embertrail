@@ -18,6 +18,6 @@ describe('Top tools', () => {
 
   it('is empty when no tool was called', async () => {
     renderWidget('top-tools', [])
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 })

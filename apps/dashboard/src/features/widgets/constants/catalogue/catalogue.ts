@@ -4,6 +4,12 @@ import { costThisWeek } from '#features/widgets/components/CostThisWeek'
 import { costToday } from '#features/widgets/components/CostToday'
 import { eachDayByModel } from '#features/widgets/components/EachDayByModel'
 import { modelMix } from '#features/widgets/components/ModelMix'
+import { periodActiveTime } from '#features/widgets/components/PeriodActiveTime'
+import { periodCommits } from '#features/widgets/components/PeriodCommits'
+import { periodCost } from '#features/widgets/components/PeriodCost'
+import { periodLinesChanged } from '#features/widgets/components/PeriodLinesChanged'
+import { periodSessions } from '#features/widgets/components/PeriodSessions'
+import { periodTokens } from '#features/widgets/components/PeriodTokens'
 import { sessionsPerDay } from '#features/widgets/components/SessionsPerDay'
 import { sessionsToday } from '#features/widgets/components/SessionsToday'
 import { tokensByType } from '#features/widgets/components/TokensByType'
@@ -21,23 +27,32 @@ import { requestLatency } from '#features/widgets/components/RequestLatency'
 import type { WidgetDefinition } from '#features/widgets/types/widget'
 import { asCatalogueEntry } from '#features/widgets/utils/asCatalogueEntry'
 
-/** Every Widget a Board can hold, in Catalogue order (grouped as #16 lists them). */
+/**
+ * Every Widget a Board can hold, in Catalogue order (grouped as #16 lists them). Each group opens with
+ * its KPI over the Board's window, where it has one.
+ */
 export const catalogue: readonly WidgetDefinition[] = [
+  asCatalogueEntry(periodCost),
   asCatalogueEntry(costToday),
   asCatalogueEntry(costThisWeek),
   asCatalogueEntry(eachDayByModel),
   asCatalogueEntry(costByAccount),
+  asCatalogueEntry(periodSessions),
   asCatalogueEntry(sessionsToday),
   asCatalogueEntry(topSessions),
   asCatalogueEntry(sessionsPerDay),
+  asCatalogueEntry(periodTokens),
   asCatalogueEntry(modelMix),
   asCatalogueEntry(cacheShare),
   asCatalogueEntry(tokensByType),
   asCatalogueEntry(topTools),
   asCatalogueEntry(toolFailures),
   asCatalogueEntry(editAcceptance),
+  asCatalogueEntry(periodLinesChanged),
+  asCatalogueEntry(periodCommits),
   asCatalogueEntry(linesChangedPerDay),
   asCatalogueEntry(commitsPerDay),
+  asCatalogueEntry(periodActiveTime),
   asCatalogueEntry(todayByHourVsTypical),
   asCatalogueEntry(whenYouWork),
   asCatalogueEntry(activeTimePerDay),

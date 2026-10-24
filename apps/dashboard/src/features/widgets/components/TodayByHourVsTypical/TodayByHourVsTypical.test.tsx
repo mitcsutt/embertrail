@@ -24,6 +24,6 @@ describe('Today by hour vs typical', () => {
 
   it('is empty when the Hub holds no cost', async () => {
     renderWidget('today-by-hour-vs-typical', [])
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 })

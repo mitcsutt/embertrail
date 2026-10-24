@@ -8,11 +8,14 @@ export function Widget({
   definition,
   ctx,
   pinned,
+  level,
 }: {
   definition: WidgetDefinition
   ctx: QueryContext
   /** Which filters the Board pins on this Widget, for the frame to say. */
   pinned?: string
+  /** The title's heading level, from the Board's sections. */
+  level?: 2 | 3
 }) {
   const { status, data, inventory, error, refetch } = useWidgetData(definition, ctx)
   return (
@@ -22,7 +25,10 @@ export function Widget({
       error={error}
       onRetry={refetch}
       pinned={pinned}
-      showTitle={definition.kind !== 'stat'}
+      level={level}
+      filtered={ctx.filter.length > 0}
+      // A stat names itself, but only once it draws: loading, empty or failed, the frame does.
+      showTitle={definition.kind !== 'stat' || status !== 'ready'}
       height={definition.kind === 'bars' || definition.kind === 'series' ? 'fill' : 'auto'}
     >
       {data === undefined ? null : (

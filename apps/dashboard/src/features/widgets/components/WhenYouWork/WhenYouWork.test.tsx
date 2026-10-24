@@ -23,6 +23,6 @@ describe('When you work', () => {
 
   it('is empty when the Hub holds no active time', async () => {
     renderWidget('when-you-work', [])
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 })
