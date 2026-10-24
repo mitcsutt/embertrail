@@ -1,0 +1,17 @@
+# Sourced by the nginx image's entrypoint before it fills in the config template (the same way
+# as its own 15-local-resolvers.envsh). Turns EMBERTRAIL_DASHBOARD_HOSTS, a comma-separated list
+# of extra host names, into the regular expression default.conf.template matches `$host`
+# against. `$host` carries no port, so list names without one. See docs/self-hosting.md#the-dashboard.
+
+hosts_regex='localhost|127\.0\.0\.1|\[::1\]'
+set -f # no globbing of the list below
+for host in $(printf '%s' "${EMBERTRAIL_DASHBOARD_HOSTS:-}" | tr 'A-Z,' 'a-z '); do
+  # A name, an IPv4 literal or a bracketed IPv6 literal; nothing that could change the pattern.
+  if ! printf '%s' "$host" | grep -Eq '^([a-z0-9._-]+|\[[0-9a-f:.]+\])$'; then
+    echo "EMBERTRAIL_DASHBOARD_HOSTS: '$host' is not a host name; list names without a port, separated by commas" >&2
+    exit 1
+  fi
+  hosts_regex="$hosts_regex|$(printf '%s' "$host" | sed 's/[.[]/\\&/g; s/\]/\\]/g')"
+done
+set +f
+export EMBERTRAIL_DASHBOARD_HOSTS_REGEX="$hosts_regex"

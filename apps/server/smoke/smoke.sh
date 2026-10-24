@@ -82,6 +82,15 @@ for header in 'Sec-Fetch-Site: cross-site' 'Origin: http://other.example'; do
   [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "$header" "$dashboard/api/v1/self")" = 404 ] || fail "'$header' reached the Hub"
 done
 [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Origin: $dashboard" --header 'Sec-Fetch-Site: same-origin' "$dashboard/api/v1/self")" = 200 ] || fail "a same-origin request was refused"
+# A DNS-rebinding page is same-origin to itself under another name, so only the Host gives it away.
+rebound=$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Host: rebind.example:$DASHBOARD_PORT" \
+  --header "Origin: http://rebind.example:$DASHBOARD_PORT" --header 'Sec-Fetch-Site: same-origin' "$dashboard/api/v1/self")
+[ "$rebound" = 421 ] || fail "a request for another Host reached the Hub ($rebound)"
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Host: localhost:$DASHBOARD_PORT" --header "Origin: $dashboard" --header 'Sec-Fetch-Site: same-origin' "$dashboard/api/v1/self")" = 200 ] || fail "a request for localhost was refused"
+# A name listed in EMBERTRAIL_DASHBOARD_HOSTS is served, upper case and with a port, and others still are not.
+EMBERTRAIL_DASHBOARD_HOSTS='Dash.example' EMBERTRAIL_DASHBOARD_TOKEN="$management" compose --profile dashboard up --detach --wait dashboard
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Host: dash.example:$DASHBOARD_PORT" --header "Origin: http://dash.example:$DASHBOARD_PORT" --header 'Sec-Fetch-Site: same-origin' "$dashboard/api/v1/self")" = 200 ] || fail "a listed Host was refused"
+[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --header "Host: rebind.example:$DASHBOARD_PORT" --header 'Sec-Fetch-Site: same-origin' "$dashboard/api/v1/self")" = 421 ] || fail "an unlisted Host reached the Hub"
 
 echo "smoke: ingesting the fixtures with the credentials the CLI wrote"
 for pair in logs-startup:logs logs-turn:logs metrics-first:metrics metrics-second:metrics; do

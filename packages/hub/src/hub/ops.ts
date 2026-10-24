@@ -209,7 +209,7 @@ const ownOps: readonly HubOp[] = [
     tags: ['sql'],
     // One read-only statement under the caller's row-level security (#34). `runSql` opens its
     // own transaction as the read-only role.
-    auth: { kind: 'scope', scope: 'sql:read', source: 'accept' },
+    auth: { kind: 'scope', scope: 'sql:read', source: 'refuse' },
     transaction: 'none',
     input: sqlInput,
     output: sqlOutput,
@@ -238,7 +238,7 @@ function fromCoreOp(op: CoreOp): HubOp {
     summary: op.summary,
     description: op.description,
     tags: [op.tag],
-    auth: { kind: 'scope', scope: op.scope, source: 'accept' },
+    auth: { kind: 'scope', scope: op.scope, source: 'refuse' },
     transaction: 'privileged',
     input: op.input,
     output: op.output,

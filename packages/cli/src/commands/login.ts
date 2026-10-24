@@ -4,6 +4,7 @@ import { hubClient } from '../command.ts'
 import type { Command, Context } from '../command.ts'
 import { isLocalHub, normaliseHub, writeConfig } from '../config.ts'
 import { CliError } from '../errors.ts'
+import { printable } from '../output.ts'
 
 async function store(ctx: Context, hub: string, token: string, who: string) {
   const path = await writeConfig(ctx.io, { hub, token })
@@ -75,6 +76,6 @@ export const bootstrap: Command = {
     const { user, token } = await hubClient(ctx.io, hub, secret).bootstrap({
       body: { ...(name === undefined ? {} : { name }), ...(email === undefined ? {} : { email }) },
     })
-    await store(ctx, hub, token, ` as ${user.name} (${user.id})`)
+    await store(ctx, hub, token, ` as ${printable(user.name)} (${user.id})`)
   },
 }

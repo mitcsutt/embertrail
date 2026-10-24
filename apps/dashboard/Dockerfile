@@ -14,9 +14,11 @@ FROM nginxinc/nginx-unprivileged:alpine
 # The envsubst step fills the template in from these; compose.yaml passes its own values.
 ENV EMBERTRAIL_HUB_UPSTREAM=http://hub:8787 \
     EMBERTRAIL_DASHBOARD_TOKEN= \
+    EMBERTRAIL_DASHBOARD_HOSTS= \
     NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 COPY --from=build /repo/apps/dashboard/dist /usr/share/nginx/html
 COPY apps/dashboard/docker/default.conf.template /etc/nginx/templates/default.conf.template
+COPY --chmod=755 apps/dashboard/docker/15-dashboard-hosts.envsh /docker-entrypoint.d/15-dashboard-hosts.envsh
 EXPOSE 8080
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=10 \
   CMD ["wget", "--quiet", "--spider", "http://127.0.0.1:8080/config.json"]

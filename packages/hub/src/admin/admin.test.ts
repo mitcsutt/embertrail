@@ -73,6 +73,23 @@ describe('the Admin and self-management API', () => {
       },
     )
 
+    it('refuses a Source-bound Token on sql, a self op and an Admin op, even holding their Scopes', async () => {
+      // An ingest Token can't hold these Scopes today; the testing entry gives it them anyway.
+      const laptop = t.as('ada', ['sql:read', 'self:manage', 'admin'], { sourceId: 'laptop' })
+      for (const [method, path] of [
+        ['POST', '/api/v1/sql'],
+        ['GET', '/api/v1/self/sources'],
+        ['GET', '/api/v1/admin/users'],
+      ] as const) {
+        const answered = await call(laptop, method, path)
+        expect(answered.status, `${method} ${path}`).toBe(403)
+        expect(await body(answered)).toMatchObject({
+          type: 'urn:embertrail:problem:forbidden',
+          detail: 'Needs a Token not bound to a Source',
+        })
+      }
+    })
+
     it('only an Admin holds admin, so a demoted admin loses the Admin API', async () => {
       const ada = t.as('ada', ['admin'])
       expect((await ada.get('/api/v1/admin/users')).status).toBe(200)

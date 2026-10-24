@@ -37,6 +37,8 @@ services:
       # Hub's management Token works. Without one, the Dashboard shows a 401.
       EMBERTRAIL_DASHBOARD_TOKEN: ${EMBERTRAIL_DASHBOARD_TOKEN:-}
       EMBERTRAIL_HUB_UPSTREAM: ${EMBERTRAIL_HUB_UPSTREAM:-http://hub:8787}
+      # Host names besides localhost that /api is served for (a reverse proxy's public name).
+      EMBERTRAIL_DASHBOARD_HOSTS: ${EMBERTRAIL_DASHBOARD_HOSTS:-}
     ports:
       # Local only, like the Hub: this proxy writes as the Token's User to anyone who can reach it.
       - '127.0.0.1:${DASHBOARD_PORT:-8080}:8080'

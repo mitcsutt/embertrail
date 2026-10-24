@@ -332,6 +332,33 @@ describe('self-management', () => {
     expect((await h.cli('sources', 'list')).out).not.toContain('work desk')
   })
 
+  it('prints server-supplied names without control characters, and --json unchanged', async () => {
+    const name = 'a\u001b]52;c;ZXZpbA==\u0007b\nc\u009bd\u007fe'
+    const created = await h.cli('sources', 'create', name, '--json')
+    const { source } = JSON.parse(created.out) as { source: { id: string } }
+    try {
+      for (const args of [
+        ['sources', 'list'],
+        ['admin', 'sources', 'list'],
+      ]) {
+        const { out } = await h.cli(...args)
+        expect(out).toContain('a?]52;c;ZXZpbA==?b?c?d?e')
+        // eslint-disable-next-line no-control-regex
+        expect(out.replaceAll('\n', '')).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/)
+        const json = JSON.parse((await h.cli(...args, '--json')).out) as {
+          id: string
+          name: string
+        }[]
+        expect(json.find((item) => item.id === source.id)?.name).toBe(name)
+      }
+      const renamed = await h.cli('sources', 'rename', source.id, name)
+      // eslint-disable-next-line no-control-regex
+      expect(renamed.out.replaceAll('\n', '')).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/)
+    } finally {
+      await h.cli('sources', 'delete', source.id)
+    }
+  })
+
   it('issues, lists and revokes Tokens', async () => {
     const issued = await h.cli(
       'tokens',
