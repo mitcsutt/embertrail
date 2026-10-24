@@ -209,7 +209,7 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
         inventory.data?.metrics.length === 0 &&
         inventory.data.events.length === 0 ? (
           <NoTelemetry
-            longest={filters.time.kind === 'relative' && filters.time.range === 'last-90-days'}
+            longest={Date.parse(window.to) - Date.parse(window.from) >= 89 * 86_400_000}
             onWiden={() => {
               setFilters({ time: { kind: 'relative', range: 'last-90-days' } })
             }}

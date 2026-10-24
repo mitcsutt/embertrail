@@ -131,6 +131,15 @@ describe('BoardPage', () => {
     expect(screen.queryByRole('button', { name: 'Show the last 90 days' })).not.toBeInTheDocument()
   })
 
+  it('does not offer to shorten a custom range longer than 90 days', async () => {
+    openBoard('/boards/overview?range=custom&from=2026-01-01&to=2026-08-01', fakeHub().client)
+
+    expect(
+      await screen.findByText(/Nothing has reached this Hub in the last 90 days/),
+    ).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Show the last 90 days' })).not.toBeInTheDocument()
+  })
+
   it('says so when the Board does not exist', async () => {
     openBoard('/boards/b-nosuchboard', fakeHub().client)
 
