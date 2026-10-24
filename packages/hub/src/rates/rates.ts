@@ -1,5 +1,5 @@
 // The Rates Port: daily foreign-exchange rates, so a Dashboard can show the USD costs that
-// Claude Code reports in the viewer's own currency. See docs/currency.md.
+// Claude Code reports in the viewer's own currency. See docs/locale.md.
 
 /** One day's rates, in units of each currency per 1 USD. */
 export interface RatesSnapshot {

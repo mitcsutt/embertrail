@@ -42,7 +42,7 @@ Historical figures use **today's** rate, not the rate on the day of the spend, s
 | `off`         | `null`  | This Hub makes no outbound request                   |
 | `unavailable` | `null`  | Nothing fetched yet and the ECB could not be reached |
 
-`base` is always `USD`, `date` is the ECB's publication day and `fetched_at` is when the Hub fetched it. The Docker server builds `ecbRates()` unless `EXCHANGE_RATES=off` ([`self-hosting.md`](self-hosting.md#configuration)). `apps/worker` is not built yet: its entry passes `ecbRates()` the same way (Workers have `fetch`; the cache is per isolate, so the Worker refetches at most every six hours per isolate).
+`base` is always `USD`, `date` is the ECB's publication day and `fetched_at` is when the Hub fetched it. The Docker server builds `ecbRates()` unless `EXCHANGE_RATES=off` ([`self-hosting.md`](self-hosting.md#configuration)). `apps/worker` builds no Hub yet; when it does, it should pass `ecbRates()` (Workers have `fetch`; the cache is per isolate, so the Worker would refetch at most every six hours per isolate).
 
 ## The Dashboard
 
