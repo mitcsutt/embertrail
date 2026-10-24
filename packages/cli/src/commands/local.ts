@@ -345,9 +345,7 @@ const up: Command = {
           : [
               `Kept ${kept.join(' and ')}, which ${kept.length === 1 ? 'is' : 'are'} for another Hub. embertrail up --switch points ${kept.length === 1 ? 'it' : 'them'} here, backing up the old ${kept.length === 1 ? 'one' : 'ones'} beside ${kept.length === 1 ? 'it' : 'them'}.`,
             ]),
-        ...(overridden === undefined
-          ? []
-          : [overridden]),
+        ...(overridden === undefined ? [] : [overridden]),
         '',
         columns([
           ['  embertrail status', 'what is running, and where'],
