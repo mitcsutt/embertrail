@@ -25,6 +25,7 @@ const SearchTrigger = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
         ref={ref}
         type="button"
         className={styles.trigger}
+        aria-label="Jump to"
         aria-keyshortcuts="Control+K Meta+K"
         {...props}
       >
