@@ -1,4 +1,11 @@
-import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose'
+import {
+  createLocalJWKSet,
+  createRemoteJWKSet,
+  customFetch,
+  exportJWK,
+  generateKeyPair,
+  SignJWT,
+} from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { edgeIdentityChecks } from '../contract/index'
@@ -11,7 +18,9 @@ const plain = () => new Request(url)
 const withHeader = (name: string, value: string) => new Request(url, { headers: { [name]: value } })
 const access = (jwt: string) => withHeader('cf-access-jwt-assertion', jwt)
 
-type PrivateKey = Awaited<ReturnType<typeof generateKeyPair>>['privateKey']
+type KeyPair = Awaited<ReturnType<typeof generateKeyPair>>
+type PrivateKey = KeyPair['privateKey']
+type PublicKey = KeyPair['publicKey']
 
 function runChecks(fixture: () => EdgeIdentityFixture) {
   it.each(edgeIdentityChecks)('$name', async (check) => {
@@ -74,12 +83,62 @@ describe('cloudflareAccess', () => {
         ),
         access(await sign({ email: 'alice@example.com' }, { exp: '-1m' })),
         access(await sign({ email: 'alice@example.com' }, { key: stranger.privateKey })),
-        // A service token: valid, but names no User.
+      ],
+      // A service token: valid, but names no User.
+      unnamed: [
         access(await sign({ common_name: 'ci-bot' })),
+        access(await sign({ common_name: 'ci-bot', email: '' })),
       ],
       ignored: [withHeader('x-test-edge-identity', 'alice')],
     }
   })
 
   runChecks(() => fixture)
+})
+
+describe('cloudflareAccess key rotation', () => {
+  const teamDomain = 'team.cloudflareaccess.com'
+  const audience = 'aud-tag'
+
+  it('refetches the key set once for an unknown kid, then verifies', async () => {
+    const first = await generateKeyPair('RS256')
+    const second = await generateKeyPair('RS256')
+    const jwk = async (key: PublicKey, kid: string) => ({
+      ...(await exportJWK(key)),
+      kid,
+      alg: 'RS256',
+    })
+    // The team publishes only k1 at first, then rotates in k2.
+    let published = [await jwk(first.publicKey, 'k1')]
+    let fetches = 0
+    const keys = createRemoteJWKSet(new URL(`https://${teamDomain}/cdn-cgi/access/certs`), {
+      cooldownDuration: 0,
+      [customFetch]: () => {
+        fetches += 1
+        return Promise.resolve(Response.json({ keys: published }))
+      },
+    })
+    const port = cloudflareAccess({ teamDomain, audience, keys })
+    const sign = (kid: string, key: PrivateKey) =>
+      new SignJWT({ email: 'alice@example.com' })
+        .setProtectedHeader({ alg: 'RS256', kid })
+        .setIssuer(`https://${teamDomain}`)
+        .setAudience(audience)
+        .setExpirationTime('5m')
+        .sign(key)
+
+    expect(await port.verify(access(await sign('k1', first.privateKey)))).toEqual({
+      email: 'alice@example.com',
+    })
+    expect(fetches).toBe(1)
+    // A cached key needs no refetch.
+    await port.verify(access(await sign('k1', first.privateKey)))
+    expect(fetches).toBe(1)
+
+    published = [...published, await jwk(second.publicKey, 'k2')]
+    expect(await port.verify(access(await sign('k2', second.privateKey)))).toEqual({
+      email: 'alice@example.com',
+    })
+    expect(fetches).toBe(2)
+  })
 })
