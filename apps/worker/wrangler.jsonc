@@ -1,8 +1,27 @@
-// The Hub on the Cloudflare Platform. Bindings arrive with the Cloudflare Adapters (#38).
+// The Hub on the Cloudflare Platform, for dev and tests. It holds no account values: a real
+// deployment keeps its own wrangler config in a private repo (docs/cloudflare.md).
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "embertrail",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Access does not cover workers.dev or preview URLs, so neither is reachable.
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "../dashboard/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/v1/*"],
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://postgres:postgres@localhost:5432/embertrail",
+    },
+  ],
+  "triggers": { "crons": ["17 * * * *"] },
+  "observability": { "enabled": true },
 }
