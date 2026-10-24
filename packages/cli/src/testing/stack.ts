@@ -171,7 +171,6 @@ export function fakeLoki(entries: readonly LokiEntry[]) {
   const pages: string[] = []
   const handler = (request: Request): Response => {
     const url = new URL(request.url)
-    if (url.pathname === '/loki/api/v1/labels') return json({ status: 'success', data: [] })
     if (url.pathname !== '/loki/api/v1/query_range')
       return new Response('not found', { status: 404 })
     const start = BigInt(url.searchParams.get('start') ?? '0')

@@ -9,7 +9,7 @@
 
 Both share one replay core (`packages/cli/src/import/replay.ts`): entries are merged into requests of at most `--batch-bytes` (default 256 KiB, so one request stays well inside the Hub's 5 MiB body cap and a Worker's CPU limit), never splitting one entry. On a 413, a 503 or a Cloudflare 1102 the batch is halved and sent again; a 429, 502 or 504 is retried with backoff. `partialSuccess` refusals are counted and printed, and never stop the run.
 
-Each run first checks its input (the file is a regular file or `-`; Prometheus and Loki answer), so a mistyped path or URL leaves nothing behind. It then creates the Source if it is missing, issues an ingest Token for it that expires in a day, and revokes that Token when it ends (a revoke that fails is printed with the Token's id). It then reads back what the Hub holds for the Source and prints it beside what it read and sent:
+Each run creates the Source if it is missing, issues an ingest Token for it that expires in a day, and revokes that Token when it ends (a revoke that fails is printed with the Token's id). It then reads back what the Hub holds for the Source and prints it beside what it read and sent:
 
 ```
 Imported into Source "history" (9ad8…), 2026-09-24T09:00:00.000Z to 2026-10-24T09:00:00.000Z.
@@ -43,15 +43,15 @@ embertrail import prometheus-loki --source history \
   --prometheus http://localhost:9090 --loki http://localhost:3100 --from 30d
 ```
 
-| Option                  | Default                        | Meaning                                                                                                                                              |
-| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--from`, `--to`        | `30d` before `--to`, and now   | The window, `[from, to)`: ISO 8601, or for `--from` a duration such as `30d`                                                                         |
-| `--prometheus-selector` | `{__name__=~"claude_code_.+"}` | The series to read                                                                                                                                   |
-| `--loki-selector`       | `{service_name="claude-code"}` | The streams to read                                                                                                                                  |
-| `--gap`                 | `2m`                           | A counter silent for longer than this restarted from zero; keep it above twice the scrape interval                                                   |
-| `--chunk`               | `6h`                           | The window is read in pieces this long, cut at the same instants every run                                                                           |
-| `--loki-limit`          | `5000`                         | Lines per Loki query, at most its `max_entries_limit_per_query`                                                                                      |
-| `--state`, `--restart`  | a file beside the CLI config   | Progress: each piece is recorded once it is stored with nothing refused or unreadable, and the next run skips it; `--restart` reads everything again |
+| Option                  | Default                        | Meaning                                                                                                           |
+| ----------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `--from`, `--to`        | `30d` before `--to`, and now   | The window, `[from, to)`: ISO 8601, or for `--from` a duration such as `30d`                                      |
+| `--prometheus-selector` | `{__name__=~"claude_code_.+"}` | The series to read                                                                                                |
+| `--loki-selector`       | `{service_name="claude-code"}` | The streams to read                                                                                               |
+| `--gap`                 | `2m`                           | A counter silent for longer than this restarted from zero; keep it above twice the scrape interval                |
+| `--chunk`               | `6h`                           | The window is read in pieces this long, cut at the same instants every run                                        |
+| `--loki-limit`          | `5000`                         | Lines per Loki query, at most its `max_entries_limit_per_query`                                                   |
+| `--state`, `--restart`  | a file beside the CLI config   | Progress: each piece is recorded once it is stored, and the next run skips it; `--restart` reads everything again |
 
 Either URL may carry `user:password@`, which is sent as Basic auth and left out of every message.
 
