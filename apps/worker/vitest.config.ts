@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { cloudflareTest } from '@cloudflare/vitest-plugin'
 import { defineConfig } from 'vitest/config'
 
@@ -8,7 +8,7 @@ export default defineConfig({
       wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
         assets: {
-          directory: fileURLToPath(new URL('./test/assets', import.meta.url)),
+          directory: resolve(import.meta.dirname, 'test/assets'),
           binding: 'ASSETS',
         },
       },
