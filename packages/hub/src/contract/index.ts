@@ -191,6 +191,8 @@ export interface EdgeIdentityFixture {
   valid?: { request: Request; email: string }
   /** Requests whose assertion must be refused with EdgeIdentityError. */
   invalid?: readonly Request[]
+  /** Requests with a valid assertion that names no User, such as a service token (null). */
+  unnamed?: readonly Request[]
   /** Requests this Adapter must ignore (null), such as another edge's header. */
   ignored?: readonly Request[]
 }
@@ -202,6 +204,12 @@ export const edgeIdentityChecks: readonly Check<EdgeIdentityFixture>[] = [
     async run({ port, absent, ignored = [] }) {
       assert.equal(await port.verify(absent), null)
       for (const request of ignored) assert.equal(await port.verify(request), null)
+    },
+  },
+  {
+    name: 'returns null for a valid assertion that names no User',
+    async run({ port, unnamed = [] }) {
+      for (const request of unnamed) assert.equal(await port.verify(request), null)
     },
   },
   {

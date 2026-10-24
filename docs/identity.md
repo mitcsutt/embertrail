@@ -40,11 +40,21 @@ The core resolves every op's caller before it runs (`identity/resolve.ts`):
 1. A malformed `Authorization` header or Token is 401.
 2. A Token decides the User. An unknown, revoked or expired Token, or a wrong secret, is 401.
 3. If an Edge Identity is also present and names anyone else, or no User yet, it is 403 `identity-conflict`. Nothing is created.
-4. With no Token, a verified Edge Identity email maps to its User. An unknown email becomes a User only when it is in `allowedEmails` or its domain is in `allowedDomains` (exact match, no subdomains); otherwise 403. An invalid assertion is 401.
+4. With no Token, a verified Edge Identity email maps to its User. An unknown email becomes a User only when it is in `allowedEmails` or its domain is in `allowedDomains` (exact match, no subdomains); otherwise 403. An invalid assertion is 401. An assertion that verifies but names no User, such as an Access service token (it carries no email), is the same as no Edge Identity: it proves the request passed Access, and a Token must still decide the User.
 5. Neither present: 401.
 6. `Embertrail-Owner: team:<id>` then makes the caller act for that Team (new rows are stamped with the Team as Owner). Only the Team's editors may send it (403 otherwise), never with a Source-bound Token (403), and any other value is 400.
 
 An Edge-identified User acts as themselves, with every Scope the Hub knows except `admin`, which only an admin gets.
+
+### Browser requests
+
+An Edge Identity is ambient: behind Cloudflare Access the browser's cookie rides along on a request from any site (the cookie's SameSite default is None), and a `text/plain` POST needs no CORS preflight. So when a request resolves by Edge Identity alone, the core also requires it to be same-origin JSON, and answers 403 `forbidden` otherwise:
+
+- `Sec-Fetch-Site`, when present, is `same-origin` or `none`.
+- `Origin`, when present, has the same host as the request URL. `Origin: null` is refused.
+- A request with a body has a JSON `Content-Type`: `application/json`, `application/*+json` or `application/jsonl`, case-insensitive and ignoring parameters.
+
+A Token caller is exempt, even with an Edge Identity beside it, because a browser never sends a Token on its own. The Dashboard's proxy applies the same cross-origin rule (`isCrossOrigin` in `apps/dashboard/scripts/hubProxy.ts`); keep the two the same.
 
 ## Row-level security
 

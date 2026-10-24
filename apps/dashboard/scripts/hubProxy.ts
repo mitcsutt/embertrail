@@ -15,6 +15,8 @@ export interface HubProxy {
 /**
  * Whether a request came from a page on another origin. The proxy adds the Token, so it must refuse
  * these: a simple cross-site request needs no preflight and would otherwise be written as the user.
+ * The Hub applies the same rule to Edge-identified callers (`assertSameOriginEdgeRequest` in
+ * `packages/hub/src/identity/resolve.ts`); keep the two the same.
  */
 export function isCrossOrigin(headers: Record<string, string | string[] | undefined>): boolean {
   const site = headers['sec-fetch-site']
