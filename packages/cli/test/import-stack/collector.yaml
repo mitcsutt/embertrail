@@ -1,0 +1,44 @@
+# The common shape: OTLP in; Metrics to Prometheus with resource attributes as labels; Events
+# to Loki with the event body copied to an `event_name` label and `service.name` as a stream label.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+  transform/event_name:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["event_name"], body)
+  resource/loki:
+    attributes:
+      - action: insert
+        key: loki.resource.labels
+        value: service.name
+  attributes/loki:
+    actions:
+      - action: insert
+        key: loki.attribute.labels
+        value: event_name
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [transform/event_name, resource/loki, attributes/loki, batch]
+      exporters: [loki]

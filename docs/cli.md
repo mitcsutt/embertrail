@@ -43,6 +43,8 @@ embertrail setup claude-code --source laptop
 | `accounts list\|label`                                        | Your Accounts and their labels                                                      |
 | `grants list\|create\|revoke`                                 | Read access to one Account in one Module, for a User or Team                        |
 | `export <module> [--out <file>]`                              | Your rows in one Module as JSON Lines, streamed                                     |
+| `import file <file\|-> --source <name>`                       | Replays an `export otel` file into the Hub as one Source ([`import.md`](import.md)) |
+| `import prometheus-loki --source <name>`                      | Backfills from a Collector's Prometheus and Loki ([`import.md`](import.md))         |
 | `admin users list\|create\|delete`                            | Users (`admin`)                                                                     |
 | `admin teams list\|create\|delete\|set-member\|remove-member` | Teams and their members                                                             |
 | `admin sources list\|delete`                                  | Every User's Sources                                                                |
@@ -97,6 +99,10 @@ Claude Code reads telemetry settings from the `env` of its **user** settings, `~
 Traces are never enabled: no `OTEL_TRACES_EXPORTER` is written, and a value the user set themselves is left alone. Every other key and `env` entry in the file is kept, and the same block applied twice changes nothing (`applyTelemetry` in `src/claude-code.ts`). The file must be a JSON object; one that is not is reported and left untouched, before any Source is created. The file is always mode 600 (it holds a Token): a wider existing file is tightened, even when its content is already right, and a symlinked file is written through, the mode applying to the file it resolves to. Temporality is pinned to `delta` because the Hub refuses cumulative sums with `partialSuccess`; a re-run overwrites a `cumulative` override.
 
 Running it again is idempotent. For a Source that exists, when the settings already point at this Hub with an ingest Token that is still active (not revoked, not expired) for that Source, the command keeps it: the file is left as it was and nothing is revoked, so other machines sharing that Source and Token keep working. When the settings hold no usable Token for the Source (a new machine, a lost file, a revoked or expired Token, another Hub), it issues a new ingest Token with the logged-in Token's `:write` Scopes and writes it. The Hub never shows a Token twice, and there is no rotate option; revoke the old Token with `tokens revoke` once its replacement is in place.
+
+## `import`
+
+Both import commands post through the Hub's normal OTLP ingest as one Source, created if missing, with an ingest Token they issue for the run (expiring in a day) and revoke when they end. They batch under `--batch-bytes`, halve a batch the Hub calls too large, and finish by printing what was read, sent, refused and what the Hub now holds for the Source; running one again adds nothing. [`import.md`](import.md) covers both, what a Prometheus and Loki backfill cannot recover, and retention. The Source and Token logic is `src/ingest.ts`, which `setup claude-code` shares.
 
 ## `migrate`
 

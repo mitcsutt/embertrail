@@ -8,15 +8,8 @@ import {
 import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
 
 import type { Command } from '../command.ts'
-import { CliError } from '../errors.ts'
+import { findSource, issueIngestToken, tokenId } from '../ingest.ts'
 import { printable } from '../output.ts'
-
-/** A Token's id: `et_<id>_<secret>`. */
-function tokenId(token: string): string | undefined {
-  return /^et_([a-z0-9]{16})_/.exec(token)?.[1]
-}
-
-const writeScope = /^[a-z][a-z0-9_]*:write$/
 
 /** The ingest Token the settings already send to `hub`, if they do. */
 function configuredToken(settings: Record<string, unknown>, hub: string): string | undefined {
@@ -52,7 +45,7 @@ export async function connectClaudeCode(options: {
   // Read before creating anything, so a settings file that cannot be changed costs nothing.
   const settings = await readSettings(path)
 
-  const existing = (await client.listSources()).items.find((source) => source.name === name)
+  const existing = await findSource(client, name)
   let source
   let ingestToken: string
   if (existing === undefined) {
@@ -74,18 +67,11 @@ export async function connectClaudeCode(options: {
     if (configured !== undefined && kept !== undefined) {
       ingestToken = configured
     } else {
-      const callerId = tokenId(managementToken)
-      const caller = tokens.find((record) => record.id === callerId)
-      const scopes = (caller?.scopes ?? []).filter((scope) => writeScope.test(scope))
-      if (scopes.length === 0) {
-        throw new CliError(
-          `Source "${name}" exists, and the logged-in Token holds no Module :write Scope to give its new Token`,
-        )
-      }
-      const issued = await client.issueToken({
-        body: { kind: 'ingest', scopes, source_id: existing.id, name: `claude-code on ${name}` },
-      })
-      ingestToken = issued.token
+      ingestToken = (
+        await issueIngestToken(client, managementToken, existing, {
+          name: `claude-code on ${name}`,
+        })
+      ).token
     }
   }
 
