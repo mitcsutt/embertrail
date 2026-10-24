@@ -128,6 +128,11 @@ async function cli(...argv: string[]) {
   return { code: await run(argv, io), out, err }
 }
 
+async function composeServices(): Promise<Record<string, { image?: string; build?: unknown }>> {
+  const text = await readFile(join(local(), 'compose.yaml'), 'utf8')
+  return (parse(text) as { services: Record<string, { image?: string; build?: unknown }> }).services
+}
+
 async function readJson(path: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
 }
@@ -172,9 +177,9 @@ describe('embertrail up', () => {
     expect(env).toMatch(/^POSTGRES_PASSWORD=[0-9a-f]{48}$/m)
     const dashboardToken = /^EMBERTRAIL_DASHBOARD_TOKEN=(et_\S+)$/m.exec(env)?.[1]
     expect(dashboardToken).toBeDefined()
-    const compose = await readFile(join(local(), 'compose.yaml'), 'utf8')
-    expect(compose).not.toContain('build:')
-    expect(compose).toContain('ghcr.io/mitcsutt/embertrail:')
+    const compose = await composeServices()
+    for (const service of Object.values(compose)) expect(service.build).toBeUndefined()
+    expect(compose.hub?.image).toContain('ghcr.io/mitcsutt/embertrail:')
 
     // The Dashboard's Token holds only what the Dashboard uses.
     const manage = createClient({
@@ -250,9 +255,12 @@ describe('embertrail up', () => {
   it('builds from a checkout when asked, and remembers it', async () => {
     const { code } = await cli('up', '--build-from', '/src/embertrail', '--no-claude-code')
     expect(code).toBe(0)
-    const compose = await readFile(join(local(), 'compose.yaml'), 'utf8')
-    expect(compose).toContain('context: /src/embertrail')
-    expect(compose).toContain('dockerfile: apps/dashboard/Dockerfile')
+    const compose = await composeServices()
+    expect(compose.hub?.build).toEqual({ context: '/src/embertrail' })
+    expect(compose.dashboard?.build).toEqual({
+      context: '/src/embertrail',
+      dockerfile: 'apps/dashboard/Dockerfile',
+    })
     expect(docker.composeCalls()[0]).toEqual(['up', '--detach', '--wait', '--build', 'hub'])
   })
 
