@@ -130,7 +130,7 @@ describe('SessionGroupsPage', () => {
     expect(within(tree).queryByRole('link', { name: 'cccccccc' })).not.toBeInTheDocument()
   })
 
-  it('opens and closes a group from anywhere on its row, and by Enter', async () => {
+  it('opens and closes a group from anywhere on its row', async () => {
     const user = userEvent.setup()
     open('/sessions', fakeHub({ sessions }).client)
     const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
@@ -142,12 +142,18 @@ describe('SessionGroupsPage', () => {
 
     await user.click(within(row).getByText('batch'))
     expect(row).toHaveAttribute('aria-expanded', 'false')
+  })
 
-    row.focus()
-    await user.keyboard('{Enter}')
-    expect(row).toHaveAttribute('aria-expanded', 'true')
-    await user.keyboard(' ')
-    expect(row).toHaveAttribute('aria-expanded', 'false')
+  it('follows a Session link by Enter', async () => {
+    const user = userEvent.setup()
+    const { router } = open('/sessions', fakeHub({ sessions, events: events(1) }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    within(tree).getByRole('row', { name: /No group/ }).focus()
+    // Open the group, step into its Session, follow it.
+    await user.keyboard('{ArrowRight}{ArrowRight}{Enter}')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Session dddddddd' })).toBeVisible()
+    expect(router.state.location.pathname).toBe('/sessions/dddddddd-loose')
   })
 
   it('opens a Session from anywhere on its row', async () => {

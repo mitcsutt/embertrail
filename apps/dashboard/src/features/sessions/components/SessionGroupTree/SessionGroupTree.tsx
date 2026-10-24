@@ -2,7 +2,7 @@ import { Link, Tag, Text, Tooltip, TreeTable } from '@mitcsutt/kiln-ui'
 import type { TreeTableColumn } from '@mitcsutt/kiln-ui'
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
 import { useLocale } from '#features/locale/hooks/useLocale'
 import { useMoney } from '#features/locale/hooks/useMoney'
@@ -94,18 +94,6 @@ export function SessionGroupTree({
     const row = rowOf(target)
     if (row !== undefined) act(row)
   }
-  // The tree already follows a Session's link on Enter; a group has none, so Enter and Space open
-  // it, and Space opens a Session.
-  const onKeyDown = (event: KeyboardEvent) => {
-    const target = event.target as Element
-    if (target.tagName !== 'TR' || event.altKey || event.ctrlKey || event.metaKey) return
-    const row = rowOf(target)
-    if (row === undefined) return
-    if (event.key === ' ' || (event.key === 'Enter' && row.kind === 'group')) {
-      event.preventDefault()
-      act(row)
-    }
-  }
 
   const named = (row: TreeNode, content: ReactNode) => (
     <span data-row-id={row.rowId} style={nameStyle}>
@@ -187,7 +175,6 @@ export function SessionGroupTree({
       onExpandedChange={onExpandedChange}
       renderCell={renderCell}
       onClick={onClick}
-      onKeyDown={onKeyDown}
     />
   )
 }
