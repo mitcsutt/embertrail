@@ -130,6 +130,67 @@ describe('SessionGroupsPage', () => {
     expect(within(tree).queryByRole('link', { name: 'cccccccc' })).not.toBeInTheDocument()
   })
 
+  it('opens and closes a group from anywhere on its row', async () => {
+    const user = userEvent.setup()
+    open('/sessions', fakeHub({ sessions }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    const row = within(tree).getByRole('row', { name: /billing/ })
+
+    await user.click(within(row).getAllByRole('cell')[3] as HTMLElement) // the Sessions count
+    expect(row).toHaveAttribute('aria-expanded', 'true')
+    expect(within(tree).getByRole('link', { name: 'aaaaaaaa' })).toBeVisible()
+
+    await user.click(within(row).getByText('batch'))
+    expect(row).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('follows a Session link by Enter', async () => {
+    const user = userEvent.setup()
+    const { router } = open('/sessions', fakeHub({ sessions, events: events(1) }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    within(tree)
+      .getByRole('row', { name: /No group/ })
+      .focus()
+    // Open the group, step into its Session, follow it.
+    await user.keyboard('{ArrowRight}{ArrowRight}{Enter}')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Session dddddddd' })).toBeVisible()
+    expect(router.state.location.pathname).toBe('/sessions/dddddddd-loose')
+  })
+
+  it('opens a Session from anywhere on its row', async () => {
+    const user = userEvent.setup()
+    const { router } = open('/sessions', fakeHub({ sessions, events: events(1) }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    await user.click(within(tree).getByRole('row', { name: /No group/ }))
+    await user.click(within(tree).getByRole('row', { name: /dddddddd/ }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Session dddddddd' })).toBeVisible()
+    expect(router.state.location.pathname).toBe('/sessions/dddddddd-loose')
+  })
+
+  it('keeps the open rows in the URL', async () => {
+    const user = userEvent.setup()
+    const { router } = open('/sessions?range=last-7-days', fakeHub({ sessions }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    await user.click(within(tree).getByRole('row', { name: /billing/ }))
+
+    expect(router.state.location.search).toMatchObject({
+      range: 'last-7-days',
+      open: ['group/billing'],
+    })
+  })
+
+  it('shows the open rows a URL names', async () => {
+    open('/sessions?open=%5B%22group%2Fbilling%22%5D', fakeHub({ sessions }).client)
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+
+    expect(within(tree).getByRole('row', { name: /billing/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
   it('says so when the window holds no Sessions', async () => {
     open('/sessions', fakeHub().client)
 
@@ -190,6 +251,43 @@ describe('SessionPage', () => {
       order: 'asc',
       filter: [{ key: 'session.id', op: 'eq', value: 'aaaaaaaa-root' }],
     })
+  })
+
+  it('goes back to the Session Groups as they were, filters and open rows kept', async () => {
+    const user = userEvent.setup()
+    const { router } = open(
+      '/sessions?range=last-7-days&model=claude-opus-4-7',
+      fakeHub({ sessions, events: events(1) }).client,
+    )
+    const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    await user.click(within(tree).getByRole('row', { name: /billing/ }))
+    await user.click(within(tree).getByRole('link', { name: 'aaaaaaaa' }))
+    await screen.findByRole('heading', { level: 1, name: 'Session aaaaaaaa' })
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    const back = await screen.findByRole('treegrid', { name: 'Session Groups' })
+    expect(router.state.location.pathname).toBe('/sessions')
+    expect(router.state.location.search).toMatchObject({
+      range: 'last-7-days',
+      model: 'claude-opus-4-7',
+      open: ['group/billing'],
+    })
+    expect(within(back).getByRole('row', { name: /billing/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
+  it('links to the Session Groups when it was opened directly', async () => {
+    open('/sessions/aaaaaaaa-root', fakeHub({ sessions, events: events(1) }).client)
+    await screen.findByRole('heading', { level: 1, name: 'Session aaaaaaaa' })
+
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'All Session Groups' })).toHaveAttribute(
+      'href',
+      '/sessions',
+    )
   })
 
   it('says so when the Hub does not know the Session', async () => {

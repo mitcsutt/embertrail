@@ -4,6 +4,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { useBrowserTimeZone } from '#features/filters/hooks/useBrowserTimeZone'
+import { BackControl } from '#features/sessions/components/BackControl'
 import { EventTimeline } from '#features/sessions/components/EventTimeline'
 import { SessionHeader } from '#features/sessions/components/SessionHeader'
 import { sessionSpan, useSession, useSessionEvents } from '#features/sessions/data/session'
@@ -63,6 +64,9 @@ export function SessionPage() {
   return (
     <Container width="full">
       <Stack gap={5}>
+        <div>
+          <BackControl />
+        </div>
         <SessionHeader session={session.data} tz={tz} />
         <Stack gap={3}>
           <Heading level={2} size="lg">
