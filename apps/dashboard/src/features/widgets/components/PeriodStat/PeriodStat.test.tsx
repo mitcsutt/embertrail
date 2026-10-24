@@ -5,7 +5,13 @@ import type { PeriodStatData } from './PeriodStat'
 
 const tz = 'Europe/Berlin'
 /** The last 7 days on 4 November 2026 in Berlin, as `resolveWindow` gives them. */
-const week = { from: '2026-10-29T00:00:00.000+01:00', to: '2026-11-05T00:00:00.000+01:00', tz }
+const ended = new Date('2030-01-01T00:00:00Z')
+const week = {
+  from: '2026-10-29T00:00:00.000+01:00',
+  to: '2026-11-05T00:00:00.000+01:00',
+  tz,
+  now: ended,
+}
 
 /** A day bucket's start as the Hub writes it: local midnight with the zone's offset. */
 const day = (date: string) => `${date}T00:00:00+01:00`
@@ -64,7 +70,12 @@ describe('selectPeriod', () => {
   })
 
   it('reads today by the hour', () => {
-    const today = { from: '2026-11-04T00:00:00.000+01:00', to: '2026-11-05T00:00:00.000+01:00', tz }
+    const today = {
+      from: '2026-11-04T00:00:00.000+01:00',
+      to: '2026-11-05T00:00:00.000+01:00',
+      tz,
+      now: ended,
+    }
     const selected = selectPeriod(
       rows([
         ['2026-11-03T10:00:00+01:00', 1],
@@ -76,6 +87,54 @@ describe('selectPeriod', () => {
     expect(selected.points).toHaveLength(24)
     expect(selected.total).toBe(2)
     expect(selected.previous).toBe(1)
+  })
+})
+
+describe('a window that is still running', () => {
+  it('compares today at 09:00 with yesterday up to 09:00 and stops the sparkline at now', () => {
+    const today = {
+      from: '2026-11-04T00:00:00.000+01:00',
+      to: '2026-11-05T00:00:00.000+01:00',
+      tz,
+      now: new Date('2026-11-04T09:00:00+01:00'),
+    }
+    const selected = selectPeriod(
+      rows([
+        ['2026-11-03T08:00:00+01:00', 3],
+        ['2026-11-03T09:00:00+01:00', 10],
+        ['2026-11-03T15:00:00+01:00', 7],
+        ['2026-11-04T08:00:00+01:00', 4],
+      ]),
+      today,
+    )
+    expect(selected.total).toBe(4)
+    expect(selected.previous).toBe(3)
+    expect(selected.points).toHaveLength(9)
+    expect(Date.parse(selected.points.at(-1)?.at ?? '')).toBeLessThan(today.now.getTime())
+  })
+
+  it('compares the last 7 days on a Monday morning up to the same hour, a day at a time', () => {
+    const monday = {
+      from: '2026-10-27T00:00:00.000+01:00',
+      to: '2026-11-03T00:00:00.000+01:00',
+      tz,
+      now: new Date('2026-11-02T04:00:00+01:00'),
+    }
+    const selected = selectPeriod(
+      rows([
+        ['2026-10-25T10:00:00+01:00', 2],
+        ['2026-10-26T01:00:00+01:00', 1],
+        ['2026-10-26T10:00:00+01:00', 50],
+        ['2026-10-27T12:00:00+01:00', 5],
+        ['2026-11-02T03:00:00+01:00', 2],
+      ]),
+      monday,
+    )
+    expect(selected.bucket).toBe('day')
+    expect(selected.total).toBe(7)
+    expect(selected.previous).toBe(3)
+    expect(selected.points.map(({ value }) => value)).toEqual([5, 0, 0, 0, 0, 0, 2])
+    expect(Date.parse(selected.points.at(-1)?.at ?? '')).toBeLessThan(monday.now.getTime())
   })
 })
 

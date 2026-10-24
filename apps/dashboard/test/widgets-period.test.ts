@@ -49,13 +49,13 @@ describe.each([
   const week = () =>
     testContext(widget, demo().options.now, { time: { kind: 'relative', range: 'last-7-days' } })
 
-  it('totals the last 7 days and the 7 before them', async () => {
+  it('totals the last 7 days and the same time into the 7 before them', async () => {
     const ctx = week()
     const before = previousWindow(ctx)
     const data = await loadWidget(hub.client, widget, ctx)
 
     expect(data.total).toBeCloseTo(sent(metric, ctx.from, ctx.to), 6)
-    expect(data.previous).toBeCloseTo(sent(metric, before.from, before.to), 6)
+    expect(data.previous).toBeCloseTo(sent(metric, before.from, before.previousUntil), 6)
     expect(data.total).toBeGreaterThan(0)
     expect(data.previous).toBeGreaterThan(0)
   })

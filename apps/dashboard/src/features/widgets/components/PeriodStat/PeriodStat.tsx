@@ -1,7 +1,7 @@
 import { TZDate } from '@date-fns/tz'
 import { Sparkline } from '@mitcsutt/kiln-charts'
 import { Stat, type StatDelta } from '@mitcsutt/kiln-ui'
-import { addDays, addHours } from 'date-fns'
+import { addDays, addHours, startOfDay } from 'date-fns'
 
 import type { QueryContext } from '#features/filters/types/filters'
 import type { WidgetDefinition, WidgetGroup } from '#features/widgets/types/widget'
@@ -44,15 +44,19 @@ export interface PeriodStatSpec {
 
 const at = (instant: string, tz: string) => new TZDate(Date.parse(instant), tz)
 
-/** Every bucket of the window, in order, with the buckets the Hub left out (nothing sent) as 0. */
+/**
+ * Every bucket of the window up to `until`, in order, with the buckets the Hub left out (nothing
+ * sent) as 0. A window still running stops at now: the hours to come are not quiet, just not here.
+ */
 function everyBucket(
   rows: readonly PeriodPoint[],
-  ctx: Pick<QueryContext, 'from' | 'to' | 'tz'>,
+  ctx: Pick<QueryContext, 'from' | 'tz'>,
+  until: string,
   bucket: 'hour' | 'day',
 ): PeriodPoint[] {
   const byStart = new Map(rows.map((row) => [Date.parse(row.at), row.value]))
   const step = bucket === 'hour' ? addHours : addDays
-  const end = Date.parse(ctx.to)
+  const end = Date.parse(until)
   const points: PeriodPoint[] = []
   for (let start = at(ctx.from, ctx.tz); start.getTime() < end; start = step(start, 1)) {
     points.push({ at: start.toISOString(), value: byStart.get(start.getTime()) ?? 0 })
@@ -60,30 +64,45 @@ function everyBucket(
   return points
 }
 
+/** The bucket the request asks for: the hour while the window runs, otherwise the chart's. */
+const requestBucket = (ctx: Pick<QueryContext, 'from' | 'to' | 'tz' | 'now'>) =>
+  previousWindow(ctx).until === ctx.to ? chartBucket(ctx) : 'hour'
+
 /**
- * Splits one answer over both windows into the Board's window and the one before it. The request
- * asks for both at once, in the window's own bucket, so a bucket belongs to the window it starts in.
+ * Splits one answer over both windows into the Board's window and the one before it. A bucket
+ * belongs to the window it starts in. While the Board's window is still running, both are cut at
+ * the same time into them, and the hours are folded into days for a window of days.
  */
 export function selectPeriod(
   response: unknown,
-  ctx: Pick<QueryContext, 'from' | 'to' | 'tz'>,
+  ctx: Pick<QueryContext, 'from' | 'to' | 'tz' | 'now'>,
 ): PeriodStatData {
   const bucket = chartBucket(ctx)
-  const { days } = previousWindow(ctx)
+  const { days, until, previousUntil } = previousWindow(ctx)
   const start = Date.parse(ctx.from)
-  const current: PeriodPoint[] = []
+  const previousEnd = Date.parse(previousUntil)
+  const folded = new Map<number, number>()
   let previous: number | null = null
   for (const row of bucketedRows(response)) {
-    if (Date.parse(row.bucket) < start) previous = (previous ?? 0) + row.value
-    else current.push({ at: row.bucket, value: row.value })
+    const time = Date.parse(row.bucket)
+    if (time < start) {
+      if (time < previousEnd) previous = (previous ?? 0) + row.value
+    } else {
+      const key = bucket === 'day' ? startOfDay(at(row.bucket, ctx.tz)).getTime() : time
+      folded.set(key, (folded.get(key) ?? 0) + row.value)
+    }
   }
+  const current = [...folded].map(([time, value]) => ({
+    at: new Date(time).toISOString(),
+    value,
+  }))
   const total =
     current.length > 0
       ? current.reduce((sum, point) => sum + point.value, 0)
       : previous === null
         ? null
         : 0
-  return { total, previous, days, points: everyBucket(current, ctx, bucket), bucket }
+  return { total, previous, days, points: everyBucket(current, ctx, until, bucket), bucket }
 }
 
 /**
@@ -138,9 +157,9 @@ export function periodStat(spec: PeriodStatSpec): WidgetDefinition<PeriodStatDat
         metric: spec.metric,
         aggregation: 'sum',
         from: previousWindow(ctx).from,
-        to: ctx.to,
+        to: previousWindow(ctx).until,
         tz: ctx.tz,
-        bucket: chartBucket(ctx),
+        bucket: requestBucket(ctx),
         ...filterClause(ctx),
       },
     }),
