@@ -280,14 +280,7 @@ const up: Command = {
     const config = keepLogin
       ? configPath(ctx.io)
       : await writeConfig(ctx.io, { hub, token: managementToken })
-    const effective = await resolveTarget(ctx.io)
-    const overridden = keepLogin
-      ? undefined
-      : effective.hub !== undefined && effective.hub !== hub
-        ? `EMBERTRAIL_HUB is set, so this CLI keeps using ${effective.hub} until you unset it${effective.token === undefined ? ', and it has no Token for that Hub (embertrail login --hub <url> --token <token>)' : ''}.`
-        : effective.token !== managementToken
-          ? 'EMBERTRAIL_TOKEN is set, so this CLI uses it instead of the Token up just stored, until you unset it.'
-          : undefined
+    const overridden = keepLogin ? undefined : await overrideNote(ctx.io, hub, managementToken)
 
     const keepTarget = connect && otherTarget && !switching
     let claudeCode = null
@@ -363,6 +356,22 @@ const up: Command = {
       ].join('\n'),
     )
   },
+}
+
+/** What `up` tells the user when the environment keeps this CLI off the login it just stored. */
+async function overrideNote(io: Io, hub: string, token: string): Promise<string | undefined> {
+  let effective
+  try {
+    effective = await resolveTarget(io)
+  } catch (error) {
+    return `EMBERTRAIL_HUB is set but unusable (${error instanceof Error ? error.message : String(error)}), so this CLI will not reach this Hub until you fix or unset it.`
+  }
+  if (effective.hub !== undefined && effective.hub !== hub) {
+    return `EMBERTRAIL_HUB is set, so this CLI keeps using ${effective.hub} until you unset it${effective.token === undefined ? ', and it has no Token for that Hub (embertrail login --hub <url> --token <token>)' : ''}.`
+  }
+  return effective.token === token
+    ? undefined
+    : 'EMBERTRAIL_TOKEN is set, so this CLI uses it instead of the Token up just stored, until you unset it.'
 }
 
 interface ServiceState {

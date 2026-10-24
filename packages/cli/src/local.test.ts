@@ -362,6 +362,14 @@ describe('embertrail up on a machine that uses another Hub', () => {
     expect((await readJson(configFile())).hub).toBe('http://localhost:8787')
   })
 
+  it('reports an unusable EMBERTRAIL_HUB instead of stopping up', async () => {
+    extraEnv = { EMBERTRAIL_HUB: 'localhost:8787' }
+    const { code, out } = await cli('up')
+    expect(code).toBe(0)
+    expect(out).toContain('EMBERTRAIL_HUB is set but unusable')
+    expect(out).toContain('Embertrail is running.')
+  })
+
   it('says there is no Token when only EMBERTRAIL_HUB names another Hub', async () => {
     extraEnv = { EMBERTRAIL_HUB: remote }
     const { code, out } = await cli('up')
