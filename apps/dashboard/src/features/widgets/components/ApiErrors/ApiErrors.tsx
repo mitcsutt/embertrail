@@ -22,8 +22,8 @@ export const apiErrors: WidgetDefinition<ApiErrorsData> = {
   title: 'API errors',
   description: 'Requests the API answered with an error, by status.',
   kind: 'bars',
-  size: { w: 6, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 6, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

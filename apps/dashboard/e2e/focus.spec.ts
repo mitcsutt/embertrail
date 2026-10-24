@@ -50,7 +50,7 @@ async function customiseOverview(page: Page) {
   await page.goto('/boards/overview')
   await page.getByRole('button', { name: 'Customise' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Edit Board' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Move Cost today/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Move Top sessions/ })).toBeVisible()
   await expectWidgetsDrawn(page)
 }
 
@@ -68,7 +68,7 @@ for (const mode of modes) {
     await customiseOverview(page)
     await page.getByRole('textbox', { name: 'Board name' }).focus()
     await expectVisibleFocusWhileTabbing(page, 14, mode)
-    await page.getByRole('button', { name: /Move Cost today/ }).focus()
+    await page.getByRole('button', { name: /Move Top sessions/ }).focus()
     expect((await focusRing(page)).ring, `a drag handle shows no focus in ${mode} mode`).toBe(true)
 
     await page.getByRole('button', { name: 'Add Query Widget' }).click()

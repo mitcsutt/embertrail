@@ -22,8 +22,8 @@ export const tokensByType: WidgetDefinition<TokensByTypeData> = {
   title: 'Tokens by type',
   description: 'Tokens used each day, stacked by type.',
   kind: 'series',
-  size: { w: 12, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 8, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

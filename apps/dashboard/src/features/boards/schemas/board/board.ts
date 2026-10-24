@@ -115,7 +115,7 @@ const layoutItem = z.strictObject({
  * item ids are unique, the Layout has exactly one entry per item, and no entry runs past column 12.
  */
 export const boardStructure = z.strictObject({
-  schema_version: z.literal(1),
+  schema_version: z.literal(2),
   name: z.string().trim().min(1).max(200),
   filters,
   items: z.array(item).max(200),

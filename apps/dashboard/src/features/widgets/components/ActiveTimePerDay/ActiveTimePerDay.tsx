@@ -22,8 +22,8 @@ export const activeTimePerDay: WidgetDefinition<ActiveTimePerDayData> = {
   title: 'Active time per day',
   description: 'Time spent at the keyboard and time Claude spent working, each day.',
   kind: 'bars',
-  size: { w: 7, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 7, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account'],
   request: (ctx) => ({

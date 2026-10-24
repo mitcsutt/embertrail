@@ -106,7 +106,7 @@ describe('getSelf', () => {
 
 describe('BoardDocument in the store', () => {
   const board: BoardDocument = {
-    schema_version: 1,
+    schema_version: 2,
     name: 'Contract',
     filters: { time: { kind: 'relative', range: 'last-7-days' } },
     items: [

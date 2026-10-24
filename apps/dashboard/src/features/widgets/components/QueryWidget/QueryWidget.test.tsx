@@ -119,7 +119,7 @@ describe('QueryWidget', () => {
       cost,
       vi.fn().mockResolvedValue({ rows: [], meta: { tz: 'Europe/Berlin', unit: null } }),
     )
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 
   it('shows the Hub’s detail when it refuses the query (too-many-rows)', async () => {

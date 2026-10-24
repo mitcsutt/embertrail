@@ -18,8 +18,8 @@ const board = (change: (draft: BoardDocument) => void): unknown => {
 }
 
 const widgets: PresetWidget[] = [
-  { id: 'cost-today', group: 'spend', size: { w: 3, h: 2 } },
-  { id: 'top-tools', group: 'tools', size: { w: 6, h: 4 } },
+  { id: 'cost-today', group: 'spend', kind: 'stat', size: { w: 3, h: 2 } },
+  { id: 'top-tools', group: 'tools', kind: 'bar-list', size: { w: 4, h: 6 } },
 ]
 
 describe('the committed JSON Schema', () => {
@@ -83,7 +83,7 @@ describe.each([
   })
 
   it.each([
-    ['another schema_version', board((draft) => void Object.assign(draft, { schema_version: 2 }))],
+    ['another schema_version', board((draft) => void Object.assign(draft, { schema_version: 1 }))],
     ['no name', board((draft) => void Object.assign(draft, { name: '' }))],
     ['an unknown field', board((draft) => void Object.assign(draft, { extra: 1 }))],
     [
@@ -155,7 +155,7 @@ describe('what only the zod schema checks', () => {
           if (first) draft.items.push(first)
         }),
       ),
-    ).toContain(`Duplicate item id section-today-at-a-glance`)
+    ).toContain(`Duplicate item id period-cost`)
   })
 
   it('rejects a Layout that names no item, places one twice, or leaves one out', () => {
@@ -173,7 +173,7 @@ describe('what only the zod schema checks', () => {
           if (cell) draft.layout.push(cell)
         }),
       ),
-    ).toContain('Placed twice: cost-today')
+    ).toContain('Placed twice: period-sessions')
     expect(
       issues(
         board((draft) => {
@@ -188,7 +188,7 @@ describe('what only the zod schema checks', () => {
       issues(
         board((draft) => {
           const cell = draft.layout[1]
-          if (cell) cell.x = 10
+          if (cell) cell.x = 11
         }),
       ),
     ).toContain('Runs past column 12')

@@ -23,8 +23,8 @@ export const requestLatency: WidgetDefinition<RequestLatencyData> = {
   title: 'Request latency',
   description: 'How long the slowest 5% of API requests took, by model.',
   kind: 'series',
-  size: { w: 6, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 6, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

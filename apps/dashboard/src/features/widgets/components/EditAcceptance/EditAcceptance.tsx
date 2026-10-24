@@ -21,8 +21,8 @@ export const editAcceptance: WidgetDefinition<EditAcceptanceData> = {
   title: 'Edit acceptance',
   description: 'How many proposed edits you accepted and rejected.',
   kind: 'share',
-  size: { w: 4, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 4, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account'],
   request: (ctx) => ({
@@ -45,11 +45,13 @@ export const editAcceptance: WidgetDefinition<EditAcceptanceData> = {
   }),
   isEmpty: ({ decisions }) => decisions.length === 0,
   View: ({ data, label }) => (
+    // The ring is as tall as the chart and ignores the width (see Model mix), so a fixed height
+    // leaves room for the legend beside it or under it.
     <Share
       data={data.decisions.map((decision) => ({ ...decision }))}
       pivot={{ by: 'decision', value: 'edits' }}
       label={label}
-      height="fill"
+      height={180}
       format="integer"
       labels={labels}
       totalLabel="edits"

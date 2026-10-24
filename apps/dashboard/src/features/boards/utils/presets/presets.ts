@@ -1,11 +1,14 @@
 import type { BoardDocument, BoardItem, BoardLayoutItem } from '#features/boards/types/board'
 import { presetIds } from '#features/boards/types/board'
-import type { WidgetGroup } from '#features/widgets/types/widget'
+import { layoutColumns } from '#features/boards/schemas/board'
+import { fillRow, intoRows } from '#features/boards/utils/reflow'
+import type { WidgetGroup, WidgetKind } from '#features/widgets/types/widget'
 
 /** What a Preset needs to know about a Widget; `WidgetDefinition` satisfies it. */
 export interface PresetWidget {
   id: string
   group: WidgetGroup
+  kind: WidgetKind
   size: { w: number; h: number }
 }
 
@@ -26,39 +29,40 @@ export const groupTitles: Record<WidgetGroup, string> = {
 }
 
 interface Section {
-  title: string
+  /** The heading; a section without one only starts a new row. */
+  title?: string
   widgets: { id: string; w: number; h: number }[]
 }
 
 const slug = (title: string): string => title.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')
 
+type Placed = Section['widgets'][number]
+
 /**
- * Lays sections out top to bottom: a full-width static heading, then its Widgets left to right,
- * wrapping at column 12, each row as tall as its tallest Widget.
+ * Lays sections out top to bottom: a full-width static heading (when the section has a title), then
+ * its Widgets in rows that wrap at column 12, each row filled to the full width (`fillRow`).
  */
 function arrange(sections: Section[]): Pick<BoardDocument, 'items' | 'layout'> {
   const items: BoardItem[] = []
   const layout: BoardLayoutItem[] = []
   let y = 0
   for (const section of sections) {
-    const i = `section-${slug(section.title)}`
-    items.push({ i, type: 'section', title: section.title })
-    layout.push({ i, x: 0, y, w: 12, h: 1, static: true })
-    y += 1
-    let x = 0
-    let rowHeight = 0
-    for (const { id, w, h } of section.widgets) {
-      if (x + w > 12) {
-        y += rowHeight
-        x = 0
-        rowHeight = 0
-      }
-      items.push({ i: id, type: 'widget', widget: id })
-      layout.push({ i: id, x, y, w, h })
-      x += w
-      rowHeight = Math.max(rowHeight, h)
+    if (section.title !== undefined) {
+      const i = `section-${slug(section.title)}`
+      items.push({ i, type: 'section', title: section.title })
+      layout.push({ i, x: 0, y, w: layoutColumns, h: 1, static: true })
+      y += 1
     }
-    y += rowHeight
+    for (const row of intoRows(section.widgets, layoutColumns)) {
+      let x = 0
+      const filled = fillRow(row)
+      for (const { id, w, h } of filled) {
+        items.push({ i: id, type: 'widget', widget: id })
+        layout.push({ i: id, x, y, w, h })
+        x += w
+      }
+      y += filled[0]?.h ?? 0
+    }
   }
   return { items, layout }
 }
@@ -73,34 +77,44 @@ function deepFreeze<T>(value: T): T {
 
 const filters: BoardDocument['filters'] = { time: { kind: 'relative', range: 'last-7-days' } }
 
-/** The Overview of #16: today first, then the period, then patterns. Frozen: customise a copy. */
+/**
+ * The Overview answers what happened, what it cost and what changed, above the fold: a row of KPIs
+ * over the Board's window, each against the window before it with a sparkline; then the cost by day
+ * beside the model mix; then where it went (the costliest Sessions, the tools) and the rhythm (today
+ * against a typical day, when you work). Card titles name each Widget, so there are no section
+ * headings to scroll past. Frozen: customise a copy.
+ */
 export const overviewPreset: BoardDocument = deepFreeze({
-  schema_version: 1,
+  schema_version: 2,
   name: 'Overview',
   filters,
   ...arrange([
     {
-      title: 'Today at a glance',
       widgets: [
-        { id: 'cost-today', w: 3, h: 2 },
-        { id: 'cost-this-week', w: 3, h: 2 },
-        { id: 'sessions-today', w: 3, h: 2 },
-        { id: 'cache-share', w: 3, h: 2 },
+        { id: 'period-cost', w: 2, h: 3 },
+        { id: 'period-sessions', w: 2, h: 3 },
+        { id: 'period-tokens', w: 2, h: 3 },
+        { id: 'period-active-time', w: 2, h: 3 },
+        { id: 'period-lines-changed', w: 2, h: 3 },
+        { id: 'period-commits', w: 2, h: 3 },
       ],
     },
     {
-      title: 'Today',
       widgets: [
-        { id: 'today-by-hour-vs-typical', w: 8, h: 4 },
-        { id: 'model-mix', w: 4, h: 4 },
+        { id: 'each-day-by-model', w: 8, h: 6 },
+        { id: 'model-mix', w: 4, h: 6 },
       ],
     },
-    { title: 'This period', widgets: [{ id: 'each-day-by-model', w: 12, h: 4 }] },
     {
-      title: 'Patterns',
       widgets: [
-        { id: 'top-sessions', w: 7, h: 5 },
-        { id: 'when-you-work', w: 5, h: 5 },
+        { id: 'top-sessions', w: 7, h: 6 },
+        { id: 'top-tools', w: 5, h: 6 },
+      ],
+    },
+    {
+      widgets: [
+        { id: 'today-by-hour-vs-typical', w: 6, h: 6 },
+        { id: 'when-you-work', w: 6, h: 6 },
       ],
     },
   ]),
@@ -108,7 +122,7 @@ export const overviewPreset: BoardDocument = deepFreeze({
 
 /** An empty Board to build from. Frozen: customise a copy. */
 export const newBoardPreset: BoardDocument = deepFreeze({
-  schema_version: 1,
+  schema_version: 2,
   name: 'New Board',
   filters,
   items: [],
@@ -116,24 +130,32 @@ export const newBoardPreset: BoardDocument = deepFreeze({
 })
 
 /**
- * Every Widget of the Catalogue, one section per group in Catalogue order, each Widget at its
- * default size. Built from the Catalogue so a new Widget joins it without touching this file.
+ * Every Widget of the Catalogue, one section per group in Catalogue order: the group's stats in a
+ * row of their own, then its charts and tables, each row filled to the full width. Built from the
+ * Catalogue so a new Widget joins it without touching this file.
  */
 export function everythingPreset(widgets: readonly PresetWidget[]): BoardDocument {
-  const groups = new Map<WidgetGroup, Section>()
-  for (const { id, group, size } of widgets) {
-    let section = groups.get(group)
-    if (section === undefined) {
-      section = { title: groupTitles[group], widgets: [] }
-      groups.set(group, section)
+  const groups = new Map<WidgetGroup, { stats: Placed[]; rest: Placed[] }>()
+  for (const { id, group, kind, size } of widgets) {
+    let found = groups.get(group)
+    if (found === undefined) {
+      found = { stats: [], rest: [] }
+      groups.set(group, found)
     }
-    section.widgets.push({ id, ...size })
+    ;(kind === 'stat' ? found.stats : found.rest).push({ id, ...size })
   }
+  const sections = [...groups].flatMap(([group, { stats, rest }]): Section[] => {
+    const title = groupTitles[group]
+    if (stats.length === 0) return [{ title, widgets: rest }]
+    return rest.length === 0
+      ? [{ title, widgets: stats }]
+      : [{ title, widgets: stats }, { widgets: rest }]
+  })
   return deepFreeze({
-    schema_version: 1,
+    schema_version: 2,
     name: 'Everything',
     filters,
-    ...arrange([...groups.values()]),
+    ...arrange(sections),
   })
 }
 

@@ -18,8 +18,8 @@ export const topTools: WidgetDefinition<TopToolsData> = {
   title: 'Top tools',
   description: 'The tools Claude called most.',
   kind: 'bar-list',
-  size: { w: 4, h: 4 },
-  minSize: { w: 3, h: 3 },
+  size: { w: 4, h: 6 },
+  minSize: { w: 3, h: 4 },
   window: 'board',
   // `tool_result` Events carry no model.
   filters: ['source', 'account'],

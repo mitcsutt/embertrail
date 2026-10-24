@@ -42,7 +42,7 @@ describe('WidgetFrame', () => {
       </WidgetFrame>,
     )
     expect(screen.queryByText('the widget')).not.toBeInTheDocument()
-    expect(screen.getByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(screen.getByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 
   it("shows the Hub's detail on error, with a Retry that retries", async () => {

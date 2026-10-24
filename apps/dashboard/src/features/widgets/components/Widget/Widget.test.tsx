@@ -100,7 +100,7 @@ describe('Widget', () => {
     const queryMetrics = vi.fn().mockResolvedValue({ rows: [], meta: {} })
     await renderWidget('cost-today', clientWith({ queryMetrics }))
 
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 
   it("shows the problem's detail on error and asks the Hub again on Retry", async () => {
@@ -198,7 +198,7 @@ describe('Widget', () => {
     })
     await renderWidget('cache-share', clientWith({ queryMetrics }))
 
-    expect(await screen.findByText('Nothing to show for this period')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing recorded in this period')).toBeInTheDocument()
   })
 
   it('names Cost by Account by the Inventory label, once it has answered', async () => {

@@ -20,7 +20,7 @@ beforeAll(() => {
 })
 
 const board = (name: string): BoardDocument => ({
-  schema_version: 1,
+  schema_version: 2,
   name,
   filters: { time: { kind: 'relative', range: 'last-7-days' } },
   items: [{ i: 'a', type: 'widget', widget: 'cost-today' }],

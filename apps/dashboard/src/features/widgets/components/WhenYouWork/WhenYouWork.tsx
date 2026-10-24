@@ -29,8 +29,8 @@ export const whenYouWork: WidgetDefinition<WhenYouWorkData> = {
   title: 'When you work',
   description: 'Active time by weekday and hour of the day, over the last 12 weeks.',
   kind: 'heatmap',
-  size: { w: 5, h: 5 },
-  minSize: { w: 4, h: 4 },
+  size: { w: 5, h: 7 },
+  minSize: { w: 4, h: 5 },
   window: 'last-12-weeks',
   filters: ['source', 'account'],
   request: (ctx) => ({

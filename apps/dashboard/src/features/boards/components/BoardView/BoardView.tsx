@@ -1,6 +1,7 @@
 import {
   Alert,
   Button,
+  Code,
   Container,
   EmptyState,
   Heading,
@@ -79,6 +80,39 @@ interface ViewedBoardProps {
   /** Whether the caller may edit this Board, not only create their own. */
   writable: boolean
   onEdit: () => void
+}
+
+/**
+ * Said above the grid when the window holds no Signal at all, so a Board of empty cards says why
+ * and what to do: widen the range in one click, or connect Claude Code.
+ */
+function NoTelemetry({ longest, onWiden }: { longest: boolean; onWiden: () => void }) {
+  return (
+    <EmptyState
+      framed
+      title="No telemetry in this period"
+      description={
+        longest ? (
+          <>
+            Nothing has reached this Hub in the last 90 days. Connect Claude Code with{' '}
+            <Code>embertrail setup claude-code</Code>, then come back.
+          </>
+        ) : (
+          <>
+            Nothing reached this Hub in this period. Look further back, or connect Claude Code with{' '}
+            <Code>embertrail setup claude-code</Code>.
+          </>
+        )
+      }
+      action={
+        longest ? undefined : (
+          <Button variant="outline" onClick={onWiden}>
+            Show the last 90 days
+          </Button>
+        )
+      }
+    />
+  )
 }
 
 /** The Owner choice for a new Board: the caller, or a Team they edit by its id. A Team id has no `:`. */
@@ -171,6 +205,16 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
           tz={tz}
           now={now}
         />
+        {board.items.length > 0 &&
+        inventory.data?.metrics.length === 0 &&
+        inventory.data.events.length === 0 ? (
+          <NoTelemetry
+            longest={filters.time.kind === 'relative' && filters.time.range === 'last-90-days'}
+            onWiden={() => {
+              setFilters({ time: { kind: 'relative', range: 'last-90-days' } })
+            }}
+          />
+        ) : null}
         {board.items.length === 0 ? (
           <EmptyState
             title="No Widgets on this Board yet"

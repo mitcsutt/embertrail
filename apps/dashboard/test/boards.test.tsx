@@ -14,7 +14,7 @@ import { fakeHub } from './fakeHub.ts'
 import { openBoard } from './openBoard.tsx'
 
 const storedBoard: BoardDocument = {
-  schema_version: 1,
+  schema_version: 2,
   name: 'My spend',
   filters: { time: { kind: 'relative', range: 'last-7-days' } },
   items: [
@@ -111,6 +111,23 @@ describe('BoardPage', () => {
     })
   })
 
+  it('says once that the window holds no telemetry, and looks further back in one click', async () => {
+    // The fake Hub's Inventory lists no Metric and no Event.
+    const { router } = openBoard('/boards/overview', fakeHub().client)
+
+    expect(await screen.findByText('No telemetry in this period')).toBeVisible()
+    expect(screen.getAllByText('No telemetry in this period')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Show the last 90 days' }))
+
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ range: 'last-90-days' })
+    })
+    expect(
+      await screen.findByText(/Nothing has reached this Hub in the last 90 days/),
+    ).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Show the last 90 days' })).not.toBeInTheDocument()
+  })
+
   it('says so when the Board does not exist', async () => {
     openBoard('/boards/b-nosuchboard', fakeHub().client)
 
@@ -118,7 +135,7 @@ describe('BoardPage', () => {
   })
 
   it('says why a stored Board cannot be shown', async () => {
-    const hub = fakeHub({ boards: { 'b-broken0001': { schema_version: 1, name: 5 } } })
+    const hub = fakeHub({ boards: { 'b-broken0001': { schema_version: 2, name: 5 } } })
     openBoard('/boards/b-broken0001', hub.client)
 
     expect(await screen.findByText('This Board cannot be shown')).toBeVisible()

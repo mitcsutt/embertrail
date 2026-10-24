@@ -6,12 +6,12 @@ import { buildQueryRequest } from '#features/widgets/utils/queryWidget'
 
 const sizes: Record<WidgetKind, { w: number; h: number }> = {
   stat: { w: 3, h: 2 },
-  series: { w: 6, h: 4 },
-  bars: { w: 6, h: 4 },
-  'bar-list': { w: 4, h: 4 },
-  share: { w: 4, h: 4 },
-  table: { w: 6, h: 4 },
-  heatmap: { w: 5, h: 5 },
+  series: { w: 6, h: 6 },
+  bars: { w: 6, h: 6 },
+  'bar-list': { w: 4, h: 6 },
+  share: { w: 4, h: 6 },
+  table: { w: 6, h: 6 },
+  heatmap: { w: 5, h: 7 },
 }
 
 /** The Layout size a new Query Widget of this chart kind starts at. */

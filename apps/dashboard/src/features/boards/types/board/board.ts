@@ -20,11 +20,11 @@ export interface BoardLayoutItem {
 
 /** A Board as stored in the `store` Module. */
 export interface BoardDocument {
-  schema_version: 1
+  schema_version: 2
   name: string
   filters: BoardFilters
   items: BoardItem[]
-  /** 12 columns. */
+  /** 12 columns of 3rem rows (version 1's rows were 6rem). */
   layout: BoardLayoutItem[]
 }
 

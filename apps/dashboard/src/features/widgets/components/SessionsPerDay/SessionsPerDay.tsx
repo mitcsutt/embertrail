@@ -22,8 +22,8 @@ export const sessionsPerDay: WidgetDefinition<SessionsPerDayData> = {
   title: 'Sessions per day',
   description: 'Sessions started each day, stacked by how they started.',
   kind: 'bars',
-  size: { w: 6, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 5, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account'],
   request: (ctx) => ({

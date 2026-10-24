@@ -189,7 +189,7 @@ describe('Two clients saving the same Board', () => {
     await hub.client.putStoreDocument({
       path: { namespace: boardNamespace, id: created.id },
       header: { 'If-Match': created.etag },
-      body: { data: { ...created.board, schema_version: 2 } },
+      body: { data: { ...created.board, schema_version: 3 } },
     })
     const loss = await saveBoard(hub.client, created.id, named('Late'), created.etag).catch(
       (error: unknown) => error,

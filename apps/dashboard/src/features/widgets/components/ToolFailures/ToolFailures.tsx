@@ -21,8 +21,8 @@ export const toolFailures: WidgetDefinition<ToolFailuresData> = {
   title: 'Tool failures',
   description: 'How often each tool failed.',
   kind: 'table',
-  size: { w: 4, h: 4 },
-  minSize: { w: 3, h: 3 },
+  size: { w: 4, h: 6 },
+  minSize: { w: 3, h: 4 },
   window: 'board',
   filters: ['source', 'account'],
   request: (ctx) => ({

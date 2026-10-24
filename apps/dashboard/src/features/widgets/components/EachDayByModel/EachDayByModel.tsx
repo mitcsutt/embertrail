@@ -23,8 +23,8 @@ export const eachDayByModel: WidgetDefinition<EachDayByModelData> = {
   title: 'Each day by model',
   description: 'Daily cost, stacked by the model that incurred it.',
   kind: 'bars',
-  size: { w: 12, h: 4 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 8, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

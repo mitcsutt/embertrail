@@ -24,8 +24,8 @@ export const topSessions: WidgetDefinition<TopSessionsData> = {
   title: 'Top sessions',
   description: 'The most expensive Sessions in the period.',
   kind: 'table',
-  size: { w: 7, h: 5 },
-  minSize: { w: 4, h: 3 },
+  size: { w: 7, h: 6 },
+  minSize: { w: 4, h: 4 },
   window: 'board',
   filters: ['source', 'account', 'model'],
   request: (ctx) => ({

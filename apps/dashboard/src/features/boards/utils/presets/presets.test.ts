@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { boardSchema } from '#features/boards/schemas/board'
 import type { BoardDocument } from '#features/boards/types/board'
 import { presetIds } from '#features/boards/types/board'
-import type { WidgetGroup } from '#features/widgets/types/widget'
+import type { WidgetGroup, WidgetKind } from '#features/widgets/types/widget'
 
 import {
   customisePreset,
@@ -15,31 +15,44 @@ import {
 } from './presets'
 import type { PresetWidget } from './presets'
 
-/** The 20 curated Widgets of #16, standing in for the Catalogue until its registry lands. */
+/** The Catalogue's Widgets at their default sizes, in its order (the KPIs open their groups). */
 const catalogue: PresetWidget[] = (
   [
-    ['spend', 'cost-today', 3, 2],
-    ['spend', 'cost-this-week', 3, 2],
-    ['spend', 'each-day-by-model', 12, 4],
-    ['spend', 'cost-by-account', 6, 4],
-    ['sessions', 'sessions-today', 3, 2],
-    ['sessions', 'top-sessions', 7, 5],
-    ['sessions', 'sessions-per-day', 6, 4],
-    ['models', 'model-mix', 4, 4],
-    ['models', 'cache-share', 3, 2],
-    ['models', 'tokens-by-type', 6, 4],
-    ['tools', 'top-tools', 6, 4],
-    ['tools', 'tool-failures', 6, 4],
-    ['tools', 'edit-acceptance', 4, 4],
-    ['output', 'lines-changed-per-day', 6, 4],
-    ['output', 'commits-per-day', 6, 4],
-    ['rhythm', 'today-by-hour-vs-typical', 8, 4],
-    ['rhythm', 'when-you-work', 5, 5],
-    ['rhythm', 'active-time-per-day', 6, 4],
-    ['reliability', 'api-errors', 6, 4],
-    ['reliability', 'request-latency', 6, 4],
-  ] as [WidgetGroup, string, number, number][]
-).map(([group, id, w, h]) => ({ id, group, size: { w, h } }))
+    ['spend', 'period-cost', 'stat', 2, 3],
+    ['spend', 'cost-today', 'stat', 3, 2],
+    ['spend', 'cost-this-week', 'stat', 3, 2],
+    ['spend', 'each-day-by-model', 'bars', 8, 6],
+    ['spend', 'cost-by-account', 'bars', 4, 6],
+    ['sessions', 'period-sessions', 'stat', 2, 3],
+    ['sessions', 'sessions-today', 'stat', 3, 2],
+    ['sessions', 'top-sessions', 'table', 7, 6],
+    ['sessions', 'sessions-per-day', 'bars', 5, 6],
+    ['models', 'period-tokens', 'stat', 2, 3],
+    ['models', 'model-mix', 'share', 4, 6],
+    ['models', 'cache-share', 'stat', 3, 2],
+    ['models', 'tokens-by-type', 'series', 8, 6],
+    ['tools', 'top-tools', 'bar-list', 4, 6],
+    ['tools', 'tool-failures', 'table', 4, 6],
+    ['tools', 'edit-acceptance', 'share', 4, 6],
+    ['output', 'period-lines-changed', 'stat', 2, 3],
+    ['output', 'period-commits', 'stat', 2, 3],
+    ['output', 'lines-changed-per-day', 'bars', 6, 6],
+    ['output', 'commits-per-day', 'bars', 6, 6],
+    ['rhythm', 'period-active-time', 'stat', 2, 3],
+    ['rhythm', 'today-by-hour-vs-typical', 'series', 7, 6],
+    ['rhythm', 'when-you-work', 'heatmap', 5, 7],
+    ['rhythm', 'active-time-per-day', 'bars', 7, 6],
+    ['reliability', 'api-errors', 'bars', 6, 6],
+    ['reliability', 'request-latency', 'series', 6, 6],
+  ] as [WidgetGroup, string, WidgetKind, number, number][]
+).map(([group, id, kind, w, h]) => ({ id, group, kind, size: { w, h } }))
+
+/** The columns each row of Widgets fills, by the row it starts on. */
+const rowWidths = (board: BoardDocument): number[] => {
+  const widths = new Map<number, number>()
+  for (const cell of board.layout) widths.set(cell.y, (widths.get(cell.y) ?? 0) + cell.w)
+  return [...widths.values()]
+}
 
 const placement = (board: BoardDocument, id: string): string => {
   const cell = board.layout.find((entry) => entry.i === id)
@@ -84,45 +97,37 @@ describe.each([
 })
 
 describe('Overview', () => {
-  it('follows #16: four sections of nine Widgets at their widths', () => {
-    expect(
-      overviewPreset.items.map((item) => (item.type === 'section' ? `# ${item.title}` : item.i)),
-    ).toEqual([
-      '# Today at a glance',
-      'cost-today',
-      'cost-this-week',
-      'sessions-today',
-      'cache-share',
-      '# Today',
-      'today-by-hour-vs-typical',
-      'model-mix',
-      '# This period',
+  it('opens on six KPIs, then the cost by day, where it went and the rhythm', () => {
+    expect(overviewPreset.items.map((item) => item.i)).toEqual([
+      'period-cost',
+      'period-sessions',
+      'period-tokens',
+      'period-active-time',
+      'period-lines-changed',
+      'period-commits',
       'each-day-by-model',
-      '# Patterns',
+      'model-mix',
       'top-sessions',
+      'top-tools',
+      'today-by-hour-vs-typical',
       'when-you-work',
     ])
-    const widths = Object.fromEntries(overviewPreset.layout.map(({ i, w }) => [i, w]))
-    expect(widths).toMatchObject({
-      'cost-today': 3,
-      'cost-this-week': 3,
-      'sessions-today': 3,
-      'cache-share': 3,
-      'today-by-hour-vs-typical': 8,
-      'model-mix': 4,
-      'each-day-by-model': 12,
-      'top-sessions': 7,
-      'when-you-work': 5,
-    })
+    expect(overviewPreset.items.every((item) => item.type === 'widget')).toBe(true)
   })
 
-  it('sets each row beneath the last and each heading static across the width', () => {
-    expect(placement(overviewPreset, 'section-today-at-a-glance')).toBe('0,0 12x1')
-    expect(placement(overviewPreset, 'cache-share')).toBe('9,1 3x2')
-    expect(placement(overviewPreset, 'section-today')).toBe('0,3 12x1')
-    expect(placement(overviewPreset, 'model-mix')).toBe('8,4 4x4')
-    expect(placement(overviewPreset, 'when-you-work')).toBe('7,14 5x5')
-    expect(overviewPreset.layout.filter((cell) => cell.static)).toHaveLength(4)
+  it('holds only Widgets the Catalogue has', () => {
+    const known = new Set(catalogue.map(({ id }) => id))
+    expect(overviewPreset.items.filter((item) => !known.has(item.i))).toEqual([])
+  })
+
+  it('puts the KPIs and the cost by day in the first nine rows, every row full', () => {
+    expect(placement(overviewPreset, 'period-cost')).toBe('0,0 2x3')
+    expect(placement(overviewPreset, 'period-commits')).toBe('10,0 2x3')
+    expect(placement(overviewPreset, 'each-day-by-model')).toBe('0,3 8x6')
+    expect(placement(overviewPreset, 'model-mix')).toBe('8,3 4x6')
+    expect(placement(overviewPreset, 'top-sessions')).toBe('0,9 7x6')
+    expect(placement(overviewPreset, 'when-you-work')).toBe('6,15 6x6')
+    expect(rowWidths(overviewPreset)).toEqual([12, 12, 12, 12])
   })
 })
 
@@ -143,23 +148,30 @@ describe('Everything', () => {
     const widgets = everything.items.flatMap((item) =>
       item.type === 'widget' ? [item.widget] : [],
     )
-    expect(widgets).toEqual(catalogue.map((widget) => widget.id))
+    expect(widgets.toSorted()).toEqual(catalogue.map((widget) => widget.id).toSorted())
   })
 
-  it('places each Widget at its default size, wrapping at column 12', () => {
-    expect(placement(everything, 'cost-today')).toBe('0,1 3x2')
-    expect(placement(everything, 'cost-this-week')).toBe('3,1 3x2')
-    expect(placement(everything, 'each-day-by-model')).toBe('0,3 12x4')
-    expect(placement(everything, 'cost-by-account')).toBe('0,7 6x4')
+  it('puts a group’s stats in a row of their own, above its charts', () => {
+    const row = (id: string) => everything.layout.find((cell) => cell.i === id)?.y
+    expect(row('period-tokens')).toBe(row('cache-share'))
+    expect(row('model-mix')).toBe(row('tokens-by-type'))
+    expect(row('model-mix')).toBeGreaterThan(row('cache-share') ?? Infinity)
+  })
+
+  it('fills every row to the full width, each Widget as tall as its row', () => {
+    expect(placement(everything, 'period-cost')).toBe('0,1 3x3')
+    expect(placement(everything, 'cost-today')).toBe('3,1 5x3')
+    expect(placement(everything, 'cost-this-week')).toBe('8,1 4x3')
+    expect(placement(everything, 'each-day-by-model')).toBe('0,4 8x6')
+    expect(placement(everything, 'cost-by-account')).toBe('8,4 4x6')
+    expect(rowWidths(everything).every((width) => width === 12)).toBe(true)
   })
 
   it('follows the Catalogue it is given', () => {
-    const [first] = catalogue
     const added = everythingPreset([
       ...catalogue,
-      { id: 'extra', group: 'tools', size: { w: 2, h: 2 } },
+      { id: 'extra', group: 'tools', kind: 'stat', size: { w: 2, h: 2 } },
     ])
-    expect(first).toBeDefined()
     expect(added.items.map((item) => item.i)).toContain('extra')
   })
 })
@@ -184,7 +196,7 @@ describe('customisePreset', () => {
     expect(copy.name).toBe('Overview (copy)')
     expect({ ...copy, name: 'Overview' }).toEqual(before)
     copy.items.push({ i: 'x', type: 'section', title: 'x' })
-    copy.layout[0] = { i: 'section-today-at-a-glance', x: 0, y: 5, w: 12, h: 1 }
+    copy.layout[0] = { i: 'period-cost', x: 0, y: 5, w: 12, h: 1 }
     expect(overviewPreset).toEqual(before)
   })
 
