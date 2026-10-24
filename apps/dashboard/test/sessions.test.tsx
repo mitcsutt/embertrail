@@ -148,7 +148,9 @@ describe('SessionGroupsPage', () => {
     const user = userEvent.setup()
     const { router } = open('/sessions', fakeHub({ sessions, events: events(1) }).client)
     const tree = await screen.findByRole('treegrid', { name: 'Session Groups' })
-    within(tree).getByRole('row', { name: /No group/ }).focus()
+    within(tree)
+      .getByRole('row', { name: /No group/ })
+      .focus()
     // Open the group, step into its Session, follow it.
     await user.keyboard('{ArrowRight}{ArrowRight}{Enter}')
 
