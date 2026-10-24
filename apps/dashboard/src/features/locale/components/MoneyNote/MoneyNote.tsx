@@ -1,4 +1,4 @@
-import { Text } from '@mitcsutt/kiln-ui'
+import { Container, Text } from '@mitcsutt/kiln-ui'
 
 import { useMoney } from '#features/locale/hooks/useMoney'
 import type { MoneyState } from '#features/locale/hooks/useMoney'
@@ -20,22 +20,26 @@ const why: Record<Extract<MoneyState, { kind: 'fallback' }>['reason'], string> =
  * currency the Hub could not convert stays USD. Nothing for USD.
  */
 export function MoneyNote() {
+  const text = useNoteText()
+  if (text === null) return null
+  return (
+    <Container width="full">
+      <div style={{ paddingBlock: '0.5rem' }}>
+        <Text size="sm" tone="muted" role="note" data-testid="money-note">
+          {text}
+        </Text>
+      </div>
+    </Container>
+  )
+}
+
+function useNoteText(): string | null {
   const { state, requested, locale } = useMoney()
   if (state.kind === 'converted') {
-    return (
-      <Text size="sm" tone="muted" role="note" data-testid="money-note">
-        Costs are estimates in {requested}, converted from USD at 1 USD = {state.rate.toFixed(4)}{' '}
-        {requested} (ECB reference rate, {day(state.date, locale)}
-        {state.stale ? ', the latest this Hub could fetch' : ''}).
-      </Text>
-    )
+    return `Costs are estimates in ${requested}, converted from USD at 1 USD = ${state.rate.toFixed(4)} ${requested} (ECB reference rate, ${day(state.date, locale)}${state.stale ? ', the latest this Hub could fetch' : ''}).`
   }
   if (state.kind === 'fallback') {
-    return (
-      <Text size="sm" tone="muted" role="note" data-testid="money-note">
-        Showing USD, as Claude Code reports it: you asked for {requested}, but {why[state.reason]}.
-      </Text>
-    )
+    return `Showing USD, as Claude Code reports it: you asked for ${requested}, but ${why[state.reason]}.`
   }
   return null
 }

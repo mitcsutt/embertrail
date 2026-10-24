@@ -10,6 +10,10 @@ Claude Code reports cost in US dollars. The Dashboard writes numbers, dates and 
 - Charts are drawn from the converted values, so their axes are round numbers in the chosen currency.
 - When the Hub has no rate for the chosen currency (switched off, never fetched, or the currency is not published), the Dashboard shows USD and a line says why. USD is what Claude Code sent, so it is never wrong, only less convenient.
 
+![The Overview Board in AUD](images/dashboard/locale/desktop-light-after-aud.png)
+
+The same Board in [USD](images/dashboard/locale/desktop-light-before-usd.png), and in AUD in [dark](images/dashboard/locale/desktop-dark-after-aud.png) and on a [phone](images/dashboard/locale/mobile-light-after-aud.png) (seeded `embertrail-demo` data, `en-AU`).
+
 ## Where the rates come from
 
 **Decision:** the Hub fetches the European Central Bank's euro foreign exchange reference rates ([`eurofxref-daily.xml`](https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml): keyless, free, about 30 currencies, published each working day around 16:00 CET), converts them to units per 1 USD, caches them in memory for six hours and serves them at `GET /api/v1/rates` (`getRates`, [`spec/query-api.yaml`](../spec/query-api.yaml)).
