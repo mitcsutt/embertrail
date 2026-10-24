@@ -1,0 +1,347 @@
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { createClient } from '@mitcsutt/embertrail-client'
+import { testHub } from '@mitcsutt/embertrail-hub/testing'
+import type { TestHub } from '@mitcsutt/embertrail-hub/testing'
+import { hubModules } from '@mitcsutt/embertrail-modules'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
+import { removeTelemetry, telemetryEnv } from './claude-code.ts'
+import { run } from './cli.ts'
+import type { ExecOptions, ExecResult, Io } from './io.ts'
+import { composeFile, sourceName } from './local/stack.ts'
+
+const ok = (stdout = ''): ExecResult => ({ code: 0, stdout, stderr: '' })
+
+/**
+ * Docker Compose as the local stack sees it: `up` boots a real Hub on PGLite with the
+ * `BOOTSTRAP_TOKEN` the CLI wrote to `.env`, `down` stops it and `down --volumes` deletes it.
+ */
+class FakeDocker {
+  hub: TestHub | undefined
+  running = false
+  readonly calls: string[][] = []
+  installed = true
+
+  constructor(private readonly dir: string) {}
+
+  /** The Compose words after the global options, such as `['up', '--detach', …]`. */
+  composeCalls(): string[][] {
+    return this.calls
+      .filter((args) => args[0] === 'compose' && args[1] === '--project-name')
+      .map((args) => args.slice(args.indexOf('dashboard') + 1))
+  }
+
+  exec = async (
+    program: string,
+    args: readonly string[],
+    options: ExecOptions = {},
+  ): Promise<ExecResult> => {
+    if (!this.installed) throw Object.assign(new Error('spawn docker ENOENT'), { code: 'ENOENT' })
+    expect(program).toBe('docker')
+    this.calls.push([...args])
+    if (args[0] === 'info' || args[1] === 'version') return ok('27.0.0')
+    if (args[0] === 'volume')
+      return ok(this.hub === undefined ? '' : 'embertrail-local_postgres-data\n')
+    const words = args.slice(args.indexOf('dashboard') + 1)
+    switch (words[0]) {
+      case 'up': {
+        if (this.hub === undefined) {
+          const env = await readFile(join(this.dir, '.env'), 'utf8')
+          const bootstrapToken = /^BOOTSTRAP_TOKEN=(.+)$/m.exec(env)?.[1]
+          this.hub = await testHub({
+            modules: hubModules,
+            config: bootstrapToken === undefined ? {} : { bootstrapToken },
+          })
+        }
+        this.running = true
+        return ok()
+      }
+      case 'down':
+        this.running = false
+        if (words.includes('--volumes')) {
+          await this.hub?.close()
+          this.hub = undefined
+        }
+        return ok()
+      case 'ps':
+        return ok(
+          this.running
+            ? ['hub', 'postgres', 'dashboard']
+                .map((service) =>
+                  JSON.stringify({ Service: service, State: 'running', Health: 'healthy' }),
+                )
+                .join('\n')
+            : '',
+        )
+      case 'exec':
+        if (options.stdoutFile !== undefined) await writeFile(options.stdoutFile, '-- dump\n')
+        return ok()
+      default:
+        return ok()
+    }
+  }
+
+  fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const request = new Request(input, init)
+    if (!this.running || this.hub === undefined) throw new TypeError('fetch failed')
+    // The Dashboard's nginx answers config.json; everything else is the Hub.
+    if (new URL(request.url).pathname === '/config.json') return Response.json({ hubUrl: '' })
+    return this.hub.hub.fetch(request)
+  }
+}
+
+let home: string
+let docker: FakeDocker
+let busy: Set<number>
+const local = () => join(home, 'local')
+const settingsPath = () => join(home, 'claude', 'settings.json')
+
+async function cli(...argv: string[]) {
+  let out = ''
+  let err = ''
+  const io: Io = {
+    env: {
+      EMBERTRAIL_CONFIG_DIR: join(home, 'config'),
+      EMBERTRAIL_LOCAL_DIR: local(),
+      CLAUDE_CONFIG_DIR: join(home, 'claude'),
+    },
+    home,
+    hostname: 'Alices-MacBook-Pro.local',
+    fetch: docker.fetch,
+    stdout: (text) => {
+      out += typeof text === 'string' ? text : new TextDecoder().decode(text)
+    },
+    stderr: (text) => {
+      err += text
+    },
+    exec: docker.exec,
+    portFree: (port) => Promise.resolve(!busy.has(port)),
+  }
+  return { code: await run(argv, io), out, err }
+}
+
+async function readJson(path: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
+}
+
+beforeEach(async () => {
+  home = await mkdtemp(join(tmpdir(), 'embertrail-local-'))
+  docker = new FakeDocker(local())
+  busy = new Set()
+})
+
+afterEach(async () => {
+  await docker.hub?.close()
+  await rm(home, { recursive: true, force: true })
+})
+
+describe('embertrail up', () => {
+  it('goes from nothing to a bootstrapped Hub, a Dashboard with its own Token and Claude Code connected', async () => {
+    const { code, out, err } = await cli('up')
+    expect(err).toBe('')
+    expect(code).toBe(0)
+    expect(out).toContain('Embertrail is running.')
+    expect(out).toContain('http://localhost:8080')
+    expect(out).toContain('http://localhost:8787')
+    expect(out).toContain('Source "alices-macbook-pro"')
+
+    // The CLI is logged in as the Hub's one admin, and no Token was printed.
+    const config = await readJson(join(home, 'config', 'config.json'))
+    expect(config.hub).toBe('http://localhost:8787')
+    expect(out).not.toContain(String(config.token))
+    expect(out).not.toMatch(/et_[a-z0-9]{16}_/)
+    const users = await docker.hub?.hub.directory.users()
+    expect(users).toHaveLength(1)
+    expect(users?.[0]?.admin).toBe(true)
+
+    // Every file is private, and the stack pulls its images rather than building them.
+    for (const file of ['state.json', '.env', 'compose.yaml']) {
+      expect((await stat(join(local(), file))).mode & 0o777).toBe(0o600)
+    }
+    const env = await readFile(join(local(), '.env'), 'utf8')
+    expect(env).toMatch(/^BOOTSTRAP_TOKEN=[0-9a-f]{64}$/m)
+    expect(env).toMatch(/^POSTGRES_PASSWORD=[0-9a-f]{48}$/m)
+    const dashboardToken = /^EMBERTRAIL_DASHBOARD_TOKEN=(et_\S+)$/m.exec(env)?.[1]
+    expect(dashboardToken).toBeDefined()
+    const compose = await readFile(join(local(), 'compose.yaml'), 'utf8')
+    expect(compose).not.toContain('build:')
+    expect(compose).toContain('ghcr.io/mitcsutt/embertrail:')
+
+    // The Dashboard's Token holds only what the Dashboard uses.
+    const manage = createClient({
+      baseUrl: 'http://localhost:8787',
+      token: String(config.token),
+      fetch: docker.fetch,
+    })
+    const dashboard = (await manage.listTokens()).items.find((t) => t.name === 'dashboard')
+    expect(dashboard?.scopes.toSorted()).toEqual(['otel:read', 'store:read', 'store:write'])
+    expect(dashboard?.source_id).toBeNull()
+
+    // The Hub started first, then the whole stack, Dashboard included.
+    expect(docker.composeCalls()).toEqual([
+      ['up', '--detach', '--wait', 'hub'],
+      ['up', '--detach', '--wait'],
+    ])
+
+    const settings = await readJson(settingsPath())
+    expect(settings.env).toMatchObject({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:8787' })
+  })
+
+  it('changes nothing the second time', async () => {
+    await cli('up')
+    const before = await readFile(settingsPath(), 'utf8')
+    const env = await readFile(join(local(), '.env'), 'utf8')
+    const { code, out } = await cli('up')
+    expect(code).toBe(0)
+    expect(out).toContain('already pointed here')
+    expect(await readFile(settingsPath(), 'utf8')).toBe(before)
+    expect(await readFile(join(local(), '.env'), 'utf8')).toBe(env)
+    expect(await docker.hub?.hub.directory.users()).toHaveLength(1)
+  })
+
+  it('remembers the Source it was given', async () => {
+    await cli('up', '--source', 'work')
+    const before = await readFile(settingsPath(), 'utf8')
+    const { out } = await cli('up')
+    expect(out).toContain('Source "work"')
+    expect(await readFile(settingsPath(), 'utf8')).toBe(before)
+  })
+
+  it('refuses a port in use before starting anything', async () => {
+    busy.add(8787)
+    const { code, err } = await cli('up')
+    expect(code).toBe(1)
+    expect(err).toContain('Port 8787 is in use')
+    expect(err).toContain('--hub-port')
+    expect(docker.composeCalls()).toEqual([])
+
+    const moved = await cli(
+      'up',
+      '--hub-port',
+      '28787',
+      '--dashboard-port',
+      '28080',
+      '--no-claude-code',
+    )
+    expect(moved.code).toBe(0)
+    expect(moved.out).toContain('http://localhost:28787')
+    expect(moved.out).toContain('left alone')
+    await expect(stat(settingsPath())).rejects.toThrow()
+  })
+
+  it('says what to do when the state is lost but the database is not', async () => {
+    await cli('up')
+    await rm(join(local(), 'state.json'))
+    const { code, err } = await cli('up')
+    expect(code).toBe(1)
+    expect(err).toContain('docker volume rm embertrail-local_postgres-data')
+    expect(docker.composeCalls()).toHaveLength(2)
+  })
+
+  it('builds from a checkout when asked, and remembers it', async () => {
+    const { code } = await cli('up', '--build-from', '/src/embertrail', '--no-claude-code')
+    expect(code).toBe(0)
+    const compose = await readFile(join(local(), 'compose.yaml'), 'utf8')
+    expect(compose).toContain('context: /src/embertrail')
+    expect(compose).toContain('dockerfile: apps/dashboard/Dockerfile')
+    expect(docker.composeCalls()[0]).toEqual(['up', '--detach', '--wait', '--build', 'hub'])
+  })
+
+  it('names Docker when it is missing', async () => {
+    docker.installed = false
+    const { code, err } = await cli('up')
+    expect(code).toBe(1)
+    expect(err).toContain('Install Docker')
+  })
+})
+
+describe('the rest of the lifecycle', () => {
+  it('status shows where to click, and down stops the stack', async () => {
+    expect((await cli('status')).out).toContain('no local stack')
+    await cli('up')
+
+    const running = await cli('status')
+    expect(running.code).toBe(0)
+    expect(running.out).toContain('Embertrail is running.')
+    expect(running.out).toMatch(/Dashboard\s+http:\/\/localhost:8080\s+ok/)
+    expect(running.out).toMatch(/hub\s+running \(healthy\)/)
+    expect(running.out).toContain('Claude Code on this machine sends to this Hub.')
+
+    expect((await cli('down')).out).toContain('Your data stays')
+    const stopped = await cli('status', '--json')
+    expect(JSON.parse(stopped.out)).toMatchObject({ exists: true, running: false, services: [] })
+
+    // The same Hub comes back.
+    await cli('up')
+    expect(await docker.hub?.hub.directory.users()).toHaveLength(1)
+  })
+
+  it('upgrade snapshots the database before moving the images', async () => {
+    await cli('up', '--no-claude-code')
+    const { code, out } = await cli('upgrade', '--version', '0.2.0')
+    expect(code).toBe(0)
+    expect(out).toContain('to 0.2.0')
+    const backups = await readdir(join(local(), 'backups'))
+    expect(backups).toHaveLength(1)
+    expect(await readFile(join(local(), 'backups', backups[0] ?? ''), 'utf8')).toBe('-- dump\n')
+    expect(await readFile(join(local(), '.env'), 'utf8')).toContain('EMBERTRAIL_VERSION=0.2.0')
+    const words = docker.composeCalls().map((call) => call[0])
+    expect(words.slice(words.indexOf('exec'))).toEqual(['exec', 'pull', 'up'])
+  })
+
+  it('reset asks for --yes, then deletes the stack and unhooks Claude Code', async () => {
+    await cli('up')
+    const settings = await readJson(settingsPath())
+    await writeFile(
+      settingsPath(),
+      JSON.stringify({
+        ...settings,
+        theme: 'dark',
+        env: { ...(settings.env as object), MINE: '1' },
+      }),
+    )
+
+    const refused = await cli('reset')
+    expect(refused.code).toBe(1)
+    expect(refused.err).toContain('--yes')
+    expect(docker.hub).toBeDefined()
+
+    const { code, out } = await cli('reset', '--yes')
+    expect(code).toBe(0)
+    expect(out).toContain('Deleted the local stack')
+    expect(docker.hub).toBeUndefined()
+    expect(await readJson(settingsPath())).toEqual({ theme: 'dark', env: { MINE: '1' } })
+    await expect(stat(join(home, 'config', 'config.json'))).rejects.toThrow()
+    expect(await readdir(local())).toEqual([])
+
+    // A new stack starts from nothing.
+    expect((await cli('up')).code).toBe(0)
+  })
+})
+
+describe('the stack files', () => {
+  it('drops the build sections unless building from a checkout', () => {
+    expect(composeFile(null)).not.toContain('build')
+    expect(composeFile('/repo')).toMatch(/build:\s+context: \/repo\n/)
+  })
+
+  it('names the Source after this machine, within the Source name rules', () => {
+    expect(sourceName('Alices-MacBook-Pro.local')).toBe('alices-macbook-pro')
+    expect(sourceName('dev box_2')).toBe('dev-box-2')
+    expect(sourceName('__')).toBe('laptop')
+    expect(sourceName('')).toBe('laptop')
+    expect(sourceName('a'.repeat(80))).toHaveLength(64)
+  })
+
+  it('removes only the telemetry block from Claude Code settings', () => {
+    const env = telemetryEnv('http://localhost:8787', 'et_x')
+    expect(removeTelemetry({ theme: 'dark', env: { ...env, MINE: '1' } })).toEqual({
+      theme: 'dark',
+      env: { MINE: '1' },
+    })
+    expect(removeTelemetry({ env })).toEqual({})
+  })
+})

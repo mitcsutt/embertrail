@@ -2,12 +2,22 @@
 
 How a person connects a machine to a Hub and manages it from a terminal ([#31](https://github.com/mitcsutt/embertrail/issues/31), decided in #13, #14 and #17). The package is [`packages/cli`](../packages/cli/), `@mitcsutt/embertrail-cli`, binary `embertrail`. Every command but `migrate` talks to the Hub through [`@mitcsutt/embertrail-client`](../packages/client/README.md), so it is a client of the [Admin and self-management API](admin-api.md) and nothing else.
 
+## Installing
+
+`npm install -g @mitcsutt/embertrail-cli` (Node 24), or run it once with `npx @mitcsutt/embertrail-cli <command>`. The package is one bundled file plus `pg`. Until the first release is published, build it from a clone (`pnpm --filter @mitcsutt/embertrail-cli build`) and run `node packages/cli/dist/bin.js`.
+
 ## The solo path
 
 One person, one Hub, one laptop:
 
 ```sh
-embertrail bootstrap --hub http://localhost:8787 --bootstrap-token "$BOOTSTRAP_TOKEN"   # or: embertrail login --hub … --token …
+embertrail up
+```
+
+That is the whole path when the Hub runs on this machine ([the local stack](#the-local-stack)). For a Hub elsewhere:
+
+```sh
+embertrail bootstrap --hub https://hub.example --bootstrap-token "$BOOTSTRAP_TOKEN"   # or: embertrail login --hub … --token …
 embertrail setup claude-code --source laptop
 ```
 
@@ -19,6 +29,12 @@ embertrail setup claude-code --source laptop
 
 | Command                                                       | What it does                                                                        |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `up`                                                          | Starts the local stack, creating it the first time, and connects Claude Code        |
+| `status`                                                      | The local stack's services, health and URLs                                         |
+| `down`                                                        | Stops the local stack; its data stays                                               |
+| `upgrade [--version <tag>]`                                   | Snapshots the local database, then runs this CLI's images                           |
+| `reset --yes`                                                 | Deletes the local stack, its data and its Tokens, and unhooks Claude Code           |
+| `logs [service] [--follow]`                                   | The local stack's logs                                                              |
 | `login --hub <url> --token <token>`                           | Checks the Token against the Hub, then stores both                                  |
 | `bootstrap --hub <url> --bootstrap-token <t>`                 | Exchanges `BOOTSTRAP_TOKEN` for the first User (an admin) and logs in as them       |
 | `setup claude-code --source <name>`                           | Creates the Source and its ingest Token and writes Claude Code's telemetry settings |
@@ -33,6 +49,31 @@ embertrail setup claude-code --source laptop
 | `migrate`                                                     | Core migrations, then each Module's, then the policy sync, against `DATABASE_URL`   |
 
 Deletes are hard and confirmed by the Hub's own rules (the Admin API doc has them); the CLI does not ask twice.
+
+## The local stack
+
+`up`, `status`, `down`, `upgrade`, `reset` and `logs` run one Hub, its Postgres and the Dashboard on this machine with Docker Compose, all on `127.0.0.1`. Why it works this way is in [`local-stack.md`](local-stack.md).
+
+`embertrail up` on a machine with no stack:
+
+1. checks that Docker with Compose v2 is installed and running, and that ports 8787 and 8080 are free (`--hub-port`, `--dashboard-port` choose others);
+2. writes the local stack directory (`$EMBERTRAIL_LOCAL_DIR`, else `$XDG_DATA_HOME/embertrail/local`, else `~/.local/share/embertrail/local`): the `compose.yaml` bundled in the CLI, an `.env` with a generated Postgres password and `BOOTSTRAP_TOKEN`, and `state.json`, all mode 600;
+3. starts the Hub, then exchanges the `BOOTSTRAP_TOKEN` for the admin User's management Token, which it keeps in `state.json` and stores as this CLI's login, so it is never printed;
+4. issues the Dashboard its own Token (`otel:read store:read store:write`, named `dashboard`), puts it in `.env` and starts the Dashboard, whose proxy holds it;
+5. runs [`setup claude-code`](#setup-claude-code) as the Source named after this machine (its hostname, lowercased to the Source name rules; `--source` chooses another and is remembered, `--no-claude-code` skips it);
+6. prints the Dashboard's and the Hub's URLs.
+
+On a machine with a stack, `up` starts whatever is stopped and keeps every Token, so running it again changes nothing. New `--hub-port` or `--dashboard-port` values move the stack; Claude Code's settings follow, with a new ingest Token. The images are `ghcr.io/mitcsutt/embertrail` and `ghcr.io/mitcsutt/embertrail-dashboard` at the CLI's own version (`latest` for an unreleased `0.0.0` build); `--build-from <checkout>` builds them from a clone instead and is remembered. The Compose project is `embertrail-local` (`--project`, at the first `up` only), so a stack started by hand with `docker compose up` is separate.
+
+| Command   | Detail                                                                                                                                                                                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`  | Each service's Compose state, whether the Hub (`/api/v1/openapi.json`) and the Dashboard (`/config.json`) answer, whether Claude Code's settings send to this Hub, the image tag and the directory                                                        |
+| `down`    | `docker compose down`: the containers go, the `postgres-data` volume and the directory stay                                                                                                                                                               |
+| `upgrade` | `pg_dump` into `backups/` in the directory, then the new image tag (this CLI's, or `--version`), `pull` (or a rebuild with `--build-from`) and `up`. Migrations only go forward; to go back, restore the snapshot into the older version                  |
+| `reset`   | Without `--yes` it only says what it would delete. With it: `down --volumes`, the directory except `backups/`, the CLI's login when it is to this Hub, and the telemetry block in Claude Code's settings when it sends here (every other setting is kept) |
+| `logs`    | `docker compose logs` for every service, or the one named; `--follow` keeps printing                                                                                                                                                                      |
+
+If `state.json` is lost while the volume survives, `up` cannot bootstrap again (the Hub already has its admin) and says so: `embertrail login` with a Token you kept, or `embertrail reset --yes` to start over.
 
 ## Login and config
 
@@ -76,7 +117,9 @@ A Hub that cannot be reached, a bad config and the like print one `error:` line.
 ## Developing it
 
 - A command is a `Command` (`src/command.ts`): its words, options, positionals and `run(ctx, args)`. Add it to `src/commands/` and the list in `src/commands/index.ts`; `--help` is generated from the definition, and `src/cli.test.ts` fails unless every listed command has working `--help`.
+- `Io` (`src/io.ts`) is everything outside the arguments: env, home, hostname, `fetch`, the streams, `exec` (to run `docker`) and `portFree`. The local stack's tests (`src/local.test.ts`) swap `exec` for a fake Compose whose `up` boots a real Hub on PGLite with the `BOOTSTRAP_TOKEN` the CLI wrote to `.env`; `apps/server/smoke/up.sh` runs the real thing in CI.
+- The local stack's `compose.yaml` is the repository root's, imported with `?raw` (Vitest reads it natively; `scripts/build.ts` has an esbuild plugin for it) and rewritten in `src/local/stack.ts`. A change to `compose.yaml` changes what `embertrail up` runs, so keep its variables (`EMBERTRAIL_PORT`, `DASHBOARD_PORT`, `EMBERTRAIL_VERSION`, `POSTGRES_PASSWORD`, `BOOTSTRAP_TOKEN`, `EMBERTRAIL_DASHBOARD_TOKEN`) and its `dashboard` profile.
 - Tests run the CLI in-process (`run(argv, io)`) against the real Hub on PGLite: `src/testing/harness.ts` injects a `fetch` into `testHub`, a scratch home for the config and Claude settings, and a management Token. The `migrate` command's Postgres test follows [`development.md`](development.md#tests-that-need-postgres).
 - A change to what a command sends or reads follows the spec: change `spec/query-api.yaml`, regenerate the client, then the CLI ([`development.md`](development.md#changing-the-query-api-spec)).
 - Running from source: `node packages/cli/src/bin.ts <command>` works for every command but `migrate`, because the other workspace packages import without file extensions, which Node cannot resolve. Run `pnpm --filter @mitcsutt/embertrail-cli build` and use `node packages/cli/dist/bin.js <command>`, or call `run` from a test.
-- Publishing: the package is self-contained. `pnpm build` ([`scripts/build.ts`](../packages/cli/scripts/build.ts)) bundles the CLI and its private workspace packages (`hub`, `otel`, `store`, `server`, and the `client`) into one `dist/bin.js` with esbuild, so those are `devDependencies`; the only runtime dependency is the Postgres driver, `pg`, which stays external. `pnpm lint:package` (part of `pnpm lint`) proves it: it builds, packs the tarball, installs it into an empty temporary directory outside the repository, and runs the installed `embertrail --help`; with `DATABASE_URL` set it also runs `migrate` twice in a scratch database on that server (the first applies, the second is a no-op) and drops it.
+- Publishing: the package is self-contained. `pnpm build` ([`scripts/build.ts`](../packages/cli/scripts/build.ts)) bundles the CLI and its private workspace packages (`hub`, `otel`, `store`, `server`, and the `client`) into one `dist/bin.js` with esbuild, so those are `devDependencies`; the only runtime dependency is the Postgres driver, `pg`, which stays external. The release workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) publishes it from a `v<version>` tag after the images of the same version. `pnpm lint:package` (part of `pnpm lint`) proves it: it builds, packs the tarball, installs it into an empty temporary directory outside the repository, and runs the installed `embertrail --help`; with `DATABASE_URL` set it also runs `migrate` twice in a scratch database on that server (the first applies, the second is a no-op) and drops it.

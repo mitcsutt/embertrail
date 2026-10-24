@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { claudeCode, fixtureText, pathOf, postOtlp } from '@mitcsutt/embertrail-otel/testing'
 
 import { commands } from './commands/index.ts'
-import { startHarness } from './testing/harness.ts'
+import { noPrograms, startHarness } from './testing/harness.ts'
 import type { Harness } from './testing/harness.ts'
 
 let h: Harness
@@ -304,6 +304,7 @@ async function startAs(token: string) {
     let out = ''
     let err = ''
     const code = await run(argv, {
+      ...noPrograms,
       env: { ...h.env, EMBERTRAIL_HUB: 'http://hub.test', EMBERTRAIL_TOKEN: token },
       home: h.home,
       fetch: (input, init) => h.t.hub.fetch(new Request(input, init)),
