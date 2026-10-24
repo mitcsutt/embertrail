@@ -65,13 +65,13 @@ The Dashboard keeps its security model: nginx holds a Token and adds it to `/api
 
 ### Which Hub, which Token
 
-The local stack adds no credential path of its own; it settles on the rule [#132](https://github.com/mitcsutt/embertrail/issues/132) asks for, so every tool (the CLI, the Dashboard's dev proxy, `seed`) agrees:
+The local stack adds no credential path of its own; it settles on the rule ([#132](https://github.com/mitcsutt/embertrail/issues/132)), so every tool (the CLI, the Dashboard's dev proxy, `seed`) agrees:
 
 1. `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` each override on their own.
 2. Otherwise the stored login (`config.json`) supplies what is missing, but a stored Token is sent only to the Hub it was stored for: with only `EMBERTRAIL_HUB` set to another Hub, there is no Token rather than the stored one.
 3. `up` is just the tool that writes the stored login for the local Hub. `state.json` holds the management Token so the stack can recover its own login, and no other tool reads it.
 
-One CLI module owns the rule, and Hub URL normalising with it, and is a deliberate export for the Dashboard's scripts. This slice keeps today's `readConfig`; [#132](https://github.com/mitcsutt/embertrail/issues/132) implements the rule.
+One CLI module (`resolveTarget` in `packages/cli/src/config.ts`) owns the rule, and Hub URL normalising with it, and is a deliberate export for the Dashboard's scripts.
 
 ### The Dashboard's proxy stays narrow
 

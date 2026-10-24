@@ -15,7 +15,13 @@ import {
 } from '../claude-code.ts'
 import { hubClient } from '../command.ts'
 import type { Command, Context } from '../command.ts'
-import { configPath, readConfig, writePrivateFile, writeConfig } from '../config.ts'
+import {
+  configPath,
+  readStoredConfig,
+  resolveTarget,
+  writePrivateFile,
+  writeConfig,
+} from '../config.ts'
 import { CliError, UsageError } from '../errors.ts'
 import type { Io } from '../io.ts'
 import {
@@ -227,10 +233,7 @@ const up: Command = {
     const connect = !args.flag('no-claude-code')
     const settingsPath = userSettingsPath(ctx.io)
     const settings = connect ? await readSettings(settingsPath) : {}
-    const stored = await readConfig({
-      ...ctx.io,
-      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
-    })
+    const stored = await readStoredConfig(ctx.io)
     // Only what this stack wrote is its own: its management Token, and settings of a connected stack.
     const otherLogin =
       stored !== undefined &&
@@ -277,9 +280,9 @@ const up: Command = {
     const config = keepLogin
       ? configPath(ctx.io)
       : await writeConfig(ctx.io, { hub, token: managementToken })
-    const effective = await readConfig(ctx.io)
+    const effective = await resolveTarget(ctx.io)
     const overridden =
-      effective !== undefined && effective.hub !== hub && !keepLogin ? effective.hub : undefined
+      effective.hub !== undefined && effective.hub !== hub && !keepLogin ? effective.hub : undefined
 
     const keepTarget = connect && otherTarget && !switching
     let claudeCode = null
@@ -570,10 +573,7 @@ const reset: Command = {
       await rm(settingsBackup(settingsPath), { force: true })
     }
 
-    const config = await readConfig({
-      ...ctx.io,
-      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
-    }).catch(() => undefined)
+    const config = await readStoredConfig(ctx.io).catch(() => undefined)
     const loggedOut = config?.token === stack.state.managementToken
     const savedLogin = loggedOut && (await readIfThere(configBackup(ctx.io))) !== undefined
     if (loggedOut) {

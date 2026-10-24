@@ -55,6 +55,8 @@ describe('isCrossOrigin', () => {
   })
 })
 
+// Which Hub and Token the rule picks is tested in packages/cli/src/config.test.ts; this is the
+// proxy's own part: the default Hub and the header.
 describe('resolveHubProxy', () => {
   it('uses the local Hub with no Token when nothing is set or stored', async () => {
     await expect(resolveHubProxy(io(emptyDir))).resolves.toEqual({
@@ -63,29 +65,11 @@ describe('resolveHubProxy', () => {
     })
   })
 
-  it('takes the Hub and Token from the environment first', async () => {
-    await expect(
-      resolveHubProxy(
-        io(dir, { EMBERTRAIL_HUB: 'http://env.test:9/', EMBERTRAIL_TOKEN: 'et_env_token' }),
-      ),
-    ).resolves.toEqual({ target: 'http://env.test:9', headers: bearer('et_env_token') })
-  })
-
-  it('falls back to the Hub and Token `embertrail login` stored', async () => {
+  it('sends the Token as a bearer header to the Hub the rule picks', async () => {
     await expect(resolveHubProxy(io(dir))).resolves.toEqual({
       target: 'http://stored.test:1',
       headers: bearer('et_stored_token'),
     })
-  })
-
-  it('lets EMBERTRAIL_TOKEN replace the stored Token for the stored Hub', async () => {
-    await expect(resolveHubProxy(io(dir, { EMBERTRAIL_TOKEN: 'et_env_token' }))).resolves.toEqual({
-      target: 'http://stored.test:1',
-      headers: bearer('et_env_token'),
-    })
-  })
-
-  it('never sends the stored Token to a different Hub', async () => {
     await expect(
       resolveHubProxy(io(dir, { EMBERTRAIL_HUB: 'http://other.test:2' })),
     ).resolves.toEqual({ target: 'http://other.test:2', headers: {} })
