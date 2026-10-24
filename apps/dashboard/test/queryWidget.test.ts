@@ -132,7 +132,11 @@ describe('rebuilding the curated Widgets as Query Widgets', () => {
       const request = buildQueryRequest(config, ctx)
       assertSpecRequest(request)
       const rebuilt = (await runRequest(hub.client, request)) as { rows: Row[] }
-      const original = (await runRequest(hub.client, curated.request(ctx))) as { rows: Row[] }
+      const answer = await runRequest(hub.client, curated.request(ctx))
+      // A KPI asks twice (the window by bucket, then the window before as one total); the first is the series.
+      const original = (id.startsWith('period-') ? (answer as [{ rows: Row[] }])[0] : answer) as {
+        rows: Row[]
+      }
       const start = Date.parse(ctx.from)
       const inWindow = id.startsWith('period-')
         ? original.rows.filter((row) => Date.parse(row.bucket ?? '') >= start)
