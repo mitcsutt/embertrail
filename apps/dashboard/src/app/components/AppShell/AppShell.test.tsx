@@ -68,7 +68,7 @@ describe('AppShell', () => {
     const user = userEvent.setup()
     renderAt('/')
 
-    const trigger = await screen.findByRole('button', { name: 'Jump to' })
+    const trigger = await screen.findByRole('button', { name: 'Jump to…' })
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Control+K Meta+K')
     expect(within(trigger).getByText('K')).toBeInTheDocument()
     await user.click(trigger)
