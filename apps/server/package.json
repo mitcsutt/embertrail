@@ -1,6 +1,6 @@
 {
   "name": "@mitcsutt/embertrail-server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "The Hub on the Docker Platform: a Node server and its Adapters",
   "license": "Apache-2.0",

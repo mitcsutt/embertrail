@@ -2,8 +2,9 @@ name: Release
 
 # One `v<version>` tag releases the images and the CLI together, because the CLI runs the images
 # of its own version (docs/local-stack.md). The tag must match packages/cli/package.json.
-# Before the first run: the NPM_TOKEN secret (an npm automation Token that may publish
-# @mitcsutt/embertrail-cli), and after it, make both ghcr.io packages public.
+# The CLI publishes through npm trusted publishing (OIDC): no npm token is stored, and the
+# publish stays off until the repository variable NPM_PUBLISH_ENABLED is "true". The images
+# always build. See docs/releasing.md for the one-time setup.
 on:
   push:
     tags: ['v*']
@@ -81,20 +82,31 @@ jobs:
   cli:
     name: Publish the CLI
     needs: images
+    if: vars.NPM_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Add required reviewers to this environment to approve each publish.
+    environment: npm
     permissions:
       contents: read
-      id-token: write
+      id-token: write # npm trusted publishing and provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: ./.github/actions/setup
+        with:
+          persist-credentials: false
+      # No dependency cache in a job that can publish, to rule out cache poisoning.
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm --filter @mitcsutt/embertrail-cli build
       - name: Publish with provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > "$HOME/.npmrc"
-          pnpm --filter @mitcsutt/embertrail-cli publish --access public --no-git-checks
+        run: pnpm --filter @mitcsutt/embertrail-cli publish --access public --no-git-checks

@@ -1,0 +1,15 @@
+# @mitcsutt/embertrail-hub
+
+## 0.1.0
+
+### Minor Changes
+
+- 4d6bd26: Admin and self-management API (#30): Admins manage Users, Teams and every Source under `/api/v1/admin` (`admin` Scope); every User manages their own Sources (created with a bound ingest Token), Tokens, Account labels and Grants, and exports their data per Module as streamed JSON Lines, under `/api/v1/self` (`self:manage` Scope). Deletes are hard and remove the record with every row it owns or sent. The operations, and `/api/v1/bootstrap`, are in `spec/query-api.yaml` and the client. The `otel` export now holds only the Owner's own rows, never rows a Grant or Team lets them read. Ingest Tokens hold only Module `:write` Scopes. A Token issued through `self:manage` never outlives the calling Token. `hub.exportOwner` now returns a `ReadableStream` of JSON Lines instead of a string.
+- 9d1e17f: Core identity: Users, Teams, Sources, Tokens (`et_<id>_<secret>`, SHA-256 hashed, shown once), Accounts recognised from telemetry, and Grants, enforced by row-level security. Callers resolve from the `core` tables in #26's order, `Embertrail-Owner: team:<id>` lets a Team's editor act for it, and `BOOTSTRAP_TOKEN` creates the first User and an admin Token once. `hub.directory` manages the records; `testHub().as()` issues real Tokens.
+- 07ee309: The Hub's core: the Module contract (`defineModule`, `moduleSchema().ownedTable`, `op.*`) with ownership enforced by row-level security, the Db and Edge Identity Ports, `createHub`, and `testHub` on PGLite. The Docker Platform gains its Db Adapter, a `pg` pool.
+- f31af9a: The otel Query API: `POST /api/v1/metrics/query` and `/events/query` (filters and `group_by` on any attribute, zone-aware buckets, `too-many-rows` over 10,000 rows, Event lists with cursors, `count_distinct` and percentiles), `GET /api/v1/sessions` and `/sessions/{id}` with cost, tokens, Event counts and Session links, `PUT /api/v1/sessions/{id}/labels` with reserved `embertrail.*` Labels that override attributes, and `GET /api/v1/inventory`. Labels are exported with the OTLP JSON Lines. The Hub adds `HubError.tooManyRows`. In the spec, an Event's `account_id` may be `null`, and the Labels endpoint names the `otel` Module.
+- ee14ddd: Read-only SQL endpoint: `POST /api/v1/sql` (Scope `sql:read`) runs one `SELECT` as the readonly role in a `READ ONLY` transaction with a 10 s timeout, under the caller's row-level security, and returns at most 10,000 rows with `truncated`. Failures are 422 `sql-error` (with `sqlstate`) or `query-timeout`. `migrate` now revokes `set_config` and session-level advisory locks from `PUBLIC` so the readonly role can't leave its session; the endpoint refuses to run where that revoke couldn't apply.
+
+### Patch Changes
+
+- 59dde9d: The Query API spec now matches what the Hub serves: fields the Hub always returns are required in the generated types (such as `meta.unit` and the Event keys). The Hub serves `/api/v1/docs` and `/llms.txt`, lists `Embertrail-Owner` on writes, and documents the `events/query` request body.
