@@ -2,7 +2,7 @@
 // CI runs it (`pnpm --filter @mitcsutt/embertrail-worker dry-run`) so a config that cannot
 // deploy fails before an Owner finds out.
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -11,7 +11,7 @@ try {
   // The Dashboard's dist/ is not built in this job, so the assets come from a stand-in.
   const assets = join(root, 'assets')
   const out = join(root, 'out')
-  execFileSync('mkdir', ['-p', assets])
+  mkdirSync(assets, { recursive: true })
   writeFileSync(join(assets, 'index.html'), '<!doctype html>')
   execFileSync('wrangler', ['deploy', '--dry-run', '--outdir', out, '--assets', assets], {
     stdio: 'inherit',
