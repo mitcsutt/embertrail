@@ -19,6 +19,7 @@ From the root, with Node from `.nvmrc` and pnpm through Corepack: `pnpm lint` (E
 - `packages/client` is generated from `spec/query-api.yaml`: after changing the spec, run `pnpm --filter @mitcsutt/embertrail-client generate` ([details](docs/development.md#changing-the-query-api-spec)).
 - Adding a package or Module: [`docs/development.md`](docs/development.md#adding-a-package-or-a-module). Writing a Module: [`docs/writing-a-module.md`](docs/writing-a-module.md). The otel Module's ingest, tables, keys and Query API: [`docs/otel.md`](docs/otel.md). Ports, Adapters and `createHub`: [`docs/ports-and-adapters.md`](docs/ports-and-adapters.md). Users, Tokens, Accounts, Grants and bootstrap: [`docs/identity.md`](docs/identity.md). The read-only SQL endpoint and how it stays read-only: [`docs/sql.md`](docs/sql.md). The Admin and self-management API (`/api/v1/admin`, `/api/v1/self`): [`docs/admin-api.md`](docs/admin-api.md).
 - The Dashboard (stack, layout, commands, feature graph, shared contracts): [`docs/dashboard.md`](docs/dashboard.md).
+- The Worker on Cloudflare (bindings, the committed `wrangler.jsonc`): [`docs/cloudflare.md`](docs/cloudflare.md).
 - Running the Hub on Docker (compose, the zero-config start, config, the smoke test): [`docs/self-hosting.md`](docs/self-hosting.md).
 - Decisions: [`docs/adr/README.md`](docs/adr/README.md) indexes the `adr` issues.
 

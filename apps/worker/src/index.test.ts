@@ -2,18 +2,21 @@ import { hubModules } from '@mitcsutt/embertrail-modules'
 import { exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
-import { packageName } from './index'
+import worker from './index'
 
-// Runs inside workerd through @cloudflare/vitest-plugin, proving the pool works before the
-// Cloudflare Adapters need it.
+// Runs inside workerd through @cloudflare/vitest-plugin.
 describe('@mitcsutt/embertrail-worker', () => {
   it('runs in the Workers runtime', () => {
     expect(navigator.userAgent).toBe('Cloudflare-Workers')
-    expect(packageName).toBe('@mitcsutt/embertrail-worker')
   })
 
-  it('answers through its fetch handler', async () => {
-    const response = await exports.default.fetch('https://hub.example/')
+  it('exports the fetch and scheduled handlers', () => {
+    expect(typeof worker.fetch).toBe('function')
+    expect(typeof worker.scheduled).toBe('function')
+  })
+
+  it('answers 501 until the Hub is wired in', async () => {
+    const response = await exports.default.fetch('https://hub.example/api/v1/self')
     expect(response.status).toBe(501)
   })
 

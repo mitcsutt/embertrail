@@ -6,15 +6,24 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "dry-run": "node scripts/dry-run.ts",
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
     "types": "wrangler types"
+  },
+  "dependencies": {
+    "@mitcsutt/embertrail-hub": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
     "@mitcsutt/embertrail-modules": "workspace:*",
     "@mitcsutt/kiln-tsconfig": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

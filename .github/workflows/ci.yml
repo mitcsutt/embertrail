@@ -68,6 +68,8 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Test
         run: pnpm test
+      - name: Bundle the Worker (wrangler deploy --dry-run)
+        run: pnpm --filter @mitcsutt/embertrail-worker dry-run
 
   # Builds the Docker image, boots the compose stack, runs the CLI's setup against it and ingests
   # and queries a fixture through it, then starts the Dashboard profile and reads the seeded demo
