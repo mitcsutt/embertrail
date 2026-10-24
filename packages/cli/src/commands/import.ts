@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { constants, createReadStream } from 'node:fs'
-import { access, readFile } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { readFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 
@@ -199,9 +199,13 @@ const importFile: Command = {
   async run(ctx, args) {
     const path = args.positional(0)
     const dryRun = args.flag('dry-run')
-    await access(path === '-' ? '/dev/stdin' : path, constants.R_OK).catch(() => {
-      throw new CliError(`Could not read ${path}`)
-    })
+    if (path !== '-') {
+      const readable = await stat(path).then(
+        (info) => info.isFile(),
+        () => false,
+      )
+      if (!readable) throw new CliError(`Could not read ${path}`)
+    }
     const target = dryRun ? undefined : await openTarget(ctx, args.string('source') ?? '')
     const read = { logs: 0, metrics: 0, labels: 0, unreadable: 0 }
     const range: { min?: bigint; max?: bigint } = {}
@@ -472,6 +476,7 @@ const importPrometheusLoki: Command = {
 
     const metadata =
       prometheus === undefined ? new Map<string, Metadata>() : await readMetadata(prometheus)
+    if (loki !== undefined) await getJson(loki, '/loki/api/v1/labels', {})
     const target = dryRun ? undefined : await openTarget(ctx, sourceName)
     const read = {
       events: 0,

@@ -190,6 +190,22 @@ describe('import prometheus-loki', () => {
     expect((await h.cli('sources', 'list')).out).not.toContain('never')
   })
 
+  it('creates no Source when Loki does not answer', async () => {
+    h.upstreams.set('http://down.test', () => new Response('unavailable', { status: 503 }))
+    const result = await h.cli(
+      'import',
+      'prometheus-loki',
+      '--source',
+      'unreached',
+      '--loki',
+      'http://down.test',
+      ...window,
+    )
+    expect(result.code).toBe(1)
+    expect(result.err).toContain('503')
+    expect((await h.cli('sources', 'list')).out).not.toContain('unreached')
+  })
+
   it('refuses a command line it cannot use, before reading anything', async () => {
     const base = ['import', 'prometheus-loki', '--source', 'x']
     expect((await h.cli(...base)).err).toContain('Give --prometheus, --loki or both')
@@ -278,6 +294,15 @@ describe('import file', () => {
     expect(again.events).toMatchObject({ stored: 56 })
     expect(again.points).toMatchObject({ stored: 20 })
     expect(await sessions(b)).toEqual(await sessions(a))
+  })
+
+  it('creates no Source when the path is not a readable file', async () => {
+    for (const path of [join(b.home, 'missing.jsonl'), b.home]) {
+      const result = await b.cli('import', 'file', path, '--source', 'nowhere')
+      expect(result.code).toBe(1)
+      expect(result.err).toContain('Could not read')
+    }
+    expect((await b.cli('sources', 'list')).out).not.toContain('nowhere')
   })
 
   it('counts lines it cannot read and fails after importing the rest', async () => {
