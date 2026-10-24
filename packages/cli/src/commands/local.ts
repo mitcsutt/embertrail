@@ -129,14 +129,26 @@ async function readIfThere(path: string): Promise<string | undefined> {
   }
 }
 
-/** Writes `text` to `backup` (private), refusing to overwrite an earlier backup. */
-async function backUp(backup: string, text: string): Promise<void> {
-  if ((await readIfThere(backup)) !== undefined) {
+/** A backup to write: its path and text, or undefined when the same one is already there. */
+interface Backup {
+  path: string
+  text: string
+}
+
+/** Refuses an earlier, different backup, so a refusal costs nothing. */
+async function planBackup(path: string, text: string): Promise<Backup | undefined> {
+  const earlier = await readIfThere(path)
+  if (earlier === text) return undefined
+  if (earlier !== undefined) {
     throw new CliError(
-      `${backup} is an earlier backup; restore it or delete it, then run embertrail up --switch again. Nothing was changed.`,
+      `${path} is an earlier backup; restore it or delete it, then run embertrail up --switch again. Nothing was changed.`,
     )
   }
-  await writePrivateFile(backup, text)
+  return { path, text }
+}
+
+const writeBackup = async (backup: Backup | undefined) => {
+  if (backup !== undefined) await writePrivateFile(backup.path, backup.text)
 }
 
 /** The management Token, from bootstrapping the Hub the first time. */
@@ -209,7 +221,6 @@ const up: Command = {
     const earlier = await readStack(ctx.io)
     const stack = await prepare(ctx, args)
     const hub = hubUrl(stack.state)
-    const local = new Set([hub, ...(earlier === undefined ? [] : [hubUrl(earlier.state)])])
 
     // What belongs to another Hub is decided before anything starts, so a refusal costs nothing.
     const switching = args.flag('switch')
@@ -220,18 +231,27 @@ const up: Command = {
       ...ctx.io,
       env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
     })
-    const otherLogin = stored !== undefined && !local.has(stored.hub)
+    // Only what this stack wrote is its own: its management Token, and settings of a connected stack.
+    const otherLogin =
+      stored !== undefined &&
+      (earlier?.state.managementToken === undefined ||
+        earlier.state.managementToken === null ||
+        stored.token !== earlier.state.managementToken)
     const target = telemetryEndpoint(settings)
-    const otherTarget = target !== undefined && !local.has(target)
-    if (switching && otherLogin) {
-      await backUp(configBackup(ctx.io), `${JSON.stringify(stored, null, 2)}\n`)
-    }
-    if (switching && otherTarget) {
-      await backUp(
-        settingsBackup(settingsPath),
-        `${JSON.stringify(telemetryOf(settings), null, 2)}\n`,
-      )
-    }
+    const otherTarget =
+      target !== undefined &&
+      (earlier?.state.source === undefined || target !== hubUrl(earlier.state))
+    const loginBackup =
+      switching && otherLogin
+        ? await planBackup(configBackup(ctx.io), `${JSON.stringify(stored, null, 2)}\n`)
+        : undefined
+    const targetBackup =
+      switching && otherTarget
+        ? await planBackup(
+            settingsBackup(settingsPath),
+            `${JSON.stringify(telemetryOf(settings), null, 2)}\n`,
+          )
+        : undefined
 
     await writeStack(stack)
     const build = stack.state.buildFrom === null ? [] : ['--build']
@@ -253,6 +273,7 @@ const up: Command = {
     await compose(ctx.io, stack, ['up', '--detach', '--wait', ...build], progress(ctx))
 
     const keepLogin = otherLogin && !switching
+    if (!keepLogin) await writeBackup(loginBackup)
     const config = keepLogin
       ? configPath(ctx.io)
       : await writeConfig(ctx.io, { hub, token: managementToken })
@@ -264,6 +285,7 @@ const up: Command = {
     let claudeCode = null
     if (connect && !keepTarget) {
       const source = args.string('source') ?? stack.state.source ?? sourceName(ctx.io.hostname)
+      await writeBackup(targetBackup)
       claudeCode = await connectClaudeCode({
         hub,
         managementToken,
@@ -476,10 +498,16 @@ const upgrade: Command = {
 
     stack.state.imageTag = args.string('version') ?? imageTag
     await writeStack(stack)
-    try {
-      if (stack.state.buildFrom === null) {
+    if (stack.state.buildFrom === null) {
+      try {
         await compose(ctx.io, stack, ['pull'], progress(ctx))
+      } catch (error) {
+        stack.state.imageTag = from
+        await writeStack(stack)
+        throw error
       }
+    }
+    try {
       await compose(
         ctx.io,
         stack,
@@ -487,9 +515,11 @@ const upgrade: Command = {
         progress(ctx),
       )
     } catch (error) {
-      stack.state.imageTag = from
-      await writeStack(stack)
-      throw error
+      throw new CliError(
+        `${error instanceof Error ? error.message : String(error)}\n` +
+          `The stack stays on ${stack.state.imageTag}, because its Hub may already have migrated the database and migrations only go forward. ` +
+          `The database before the upgrade is in ${snapshot}.`,
+      )
     }
     ctx.print(
       { from, to: stack.state.imageTag, snapshot },
@@ -524,7 +554,10 @@ const reset: Command = {
 
     const settingsPath = userSettingsPath(ctx.io)
     const settings = await readSettings(settingsPath).catch(() => undefined)
-    const unhooked = settings !== undefined && telemetryEndpoint(settings) === hub
+    const unhooked =
+      settings !== undefined &&
+      stack.state.source !== undefined &&
+      telemetryEndpoint(settings) === hub
     const savedTarget = await readIfThere(settingsBackup(settingsPath))
     if (unhooked) {
       const bare = removeTelemetry(settings)
@@ -541,7 +574,7 @@ const reset: Command = {
       ...ctx.io,
       env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
     }).catch(() => undefined)
-    const loggedOut = config?.hub === hub
+    const loggedOut = config !== undefined && config.token === stack.state.managementToken
     const savedLogin = loggedOut && (await readIfThere(configBackup(ctx.io))) !== undefined
     if (loggedOut) {
       if (savedLogin) await rename(configBackup(ctx.io), configPath(ctx.io))

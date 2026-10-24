@@ -25,7 +25,7 @@ class FakeDocker {
   running = false
   readonly calls: string[][] = []
   installed = true
-  failing: string | undefined
+  failing: ((words: string[]) => boolean) | undefined
 
   constructor(private readonly dir: string) {}
 
@@ -48,7 +48,7 @@ class FakeDocker {
     if (args[0] === 'volume')
       return ok(this.hub === undefined ? '' : 'embertrail-local_postgres-data\n')
     const words = args.slice(args.indexOf('dashboard') + 1)
-    if (words[0] === this.failing) throw new Error(`docker compose ${words[0] ?? ''} failed`)
+    if (this.failing?.(words)) throw new Error(`docker compose ${words[0] ?? ''} failed`)
     switch (words[0]) {
       case 'up': {
         if (this.hub === undefined) {
@@ -355,6 +355,48 @@ describe('embertrail up on a machine that uses another Hub', () => {
     expect((await readJson(configFile())).hub).toBe('http://localhost:8787')
   })
 
+  it('keeps a login and target at the same URL that this stack did not write', async () => {
+    const local = 'http://localhost:8787'
+    await mkdir(join(home, 'config'), { recursive: true })
+    await writeFile(configFile(), JSON.stringify({ hub: local, token: 'et_handrun' }))
+    await mkdir(join(home, 'claude'), { recursive: true })
+    await writeFile(settingsPath(), JSON.stringify({ env: telemetryEnv(local, 'et_handrun') }))
+    const login = await readFile(configFile(), 'utf8')
+    const settings = await readFile(settingsPath(), 'utf8')
+
+    const { out } = await cli('up')
+    expect(out).toContain('Kept')
+    expect(await readFile(configFile(), 'utf8')).toBe(login)
+    expect(await readFile(settingsPath(), 'utf8')).toBe(settings)
+
+    await cli('reset', '--yes')
+    expect(await readFile(configFile(), 'utf8')).toBe(login)
+    expect(await readFile(settingsPath(), 'utf8')).toBe(settings)
+  })
+
+  it('--switch writes its backups only once the stack is up, so a rerun after a failure works', async () => {
+    await logInElsewhere()
+    docker.failing = () => true
+    expect((await cli('up', '--switch')).code).toBe(1)
+    await expect(stat(`${configFile()}.backup`)).rejects.toThrow()
+    await expect(stat(`${settingsPath()}.embertrail-backup`)).rejects.toThrow()
+    docker.failing = undefined
+    expect((await cli('up', '--switch')).code).toBe(0)
+    expect(await readJson(`${configFile()}.backup`)).toEqual({ hub: remote, token: 'et_remote' })
+  })
+
+  it('accepts an identical earlier backup', async () => {
+    await logInElsewhere()
+    await cli('up', '--switch')
+    await cli('reset', '--yes')
+    await logInElsewhere()
+    await writeFile(
+      `${configFile()}.backup`,
+      `${JSON.stringify({ hub: remote, token: 'et_remote' }, null, 2)}\n`,
+    )
+    expect((await cli('up', '--switch')).code).toBe(0)
+  })
+
   it('moving the ports is not another Hub', async () => {
     await cli('up')
     const { out } = await cli('up', '--hub-port', '28787')
@@ -399,12 +441,23 @@ describe('the rest of the lifecycle', () => {
 
   it('upgrade puts the previous image tag back when the pull fails', async () => {
     await cli('up', '--no-claude-code')
-    docker.failing = 'pull'
+    docker.failing = (words) => words[0] === 'pull'
     const { code, err } = await cli('upgrade', '--version', '0.2.O')
     expect(code).toBe(1)
     expect(err).toContain('pull failed')
     expect(await readFile(join(local(), '.env'), 'utf8')).not.toContain('EMBERTRAIL_VERSION=0.2.O')
     expect((await readJson(join(local(), 'state.json'))).imageTag).not.toBe('0.2.O')
+  })
+
+  it('upgrade keeps the new tag and names the snapshot when the Hub fails after the pull', async () => {
+    await cli('up', '--no-claude-code')
+    docker.failing = (words) => words[0] === 'up' && !words.includes('postgres')
+    const { code, err } = await cli('upgrade', '--version', '0.2.0')
+    expect(code).toBe(1)
+    expect(err).toContain('up failed')
+    const backups = await readdir(join(local(), 'backups'))
+    expect(err).toContain(join(local(), 'backups', backups[0] ?? ''))
+    expect((await readJson(join(local(), 'state.json'))).imageTag).toBe('0.2.0')
   })
 
   it('reset asks for --yes, then deletes the stack and unhooks Claude Code', async () => {
