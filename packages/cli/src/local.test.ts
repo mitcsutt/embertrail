@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -7,6 +7,7 @@ import { testHub } from '@mitcsutt/embertrail-hub/testing'
 import type { TestHub } from '@mitcsutt/embertrail-hub/testing'
 import { hubModules } from '@mitcsutt/embertrail-modules'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 import { removeTelemetry, telemetryEnv } from './claude-code.ts'
 import { run } from './cli.ts'
@@ -24,6 +25,7 @@ class FakeDocker {
   running = false
   readonly calls: string[][] = []
   installed = true
+  failing: string | undefined
 
   constructor(private readonly dir: string) {}
 
@@ -46,6 +48,7 @@ class FakeDocker {
     if (args[0] === 'volume')
       return ok(this.hub === undefined ? '' : 'embertrail-local_postgres-data\n')
     const words = args.slice(args.indexOf('dashboard') + 1)
+    if (words[0] === this.failing) throw new Error(`docker compose ${words[0] ?? ''} failed`)
     switch (words[0]) {
       case 'up': {
         if (this.hub === undefined) {
@@ -96,6 +99,7 @@ class FakeDocker {
 let home: string
 let docker: FakeDocker
 let busy: Set<number>
+let extraEnv: Record<string, string>
 const local = () => join(home, 'local')
 const settingsPath = () => join(home, 'claude', 'settings.json')
 
@@ -107,6 +111,7 @@ async function cli(...argv: string[]) {
       EMBERTRAIL_CONFIG_DIR: join(home, 'config'),
       EMBERTRAIL_LOCAL_DIR: local(),
       CLAUDE_CONFIG_DIR: join(home, 'claude'),
+      ...extraEnv,
     },
     home,
     hostname: 'Alices-MacBook-Pro.local',
@@ -131,6 +136,7 @@ beforeEach(async () => {
   home = await mkdtemp(join(tmpdir(), 'embertrail-local-'))
   docker = new FakeDocker(local())
   busy = new Set()
+  extraEnv = {}
 })
 
 afterEach(async () => {
@@ -258,6 +264,105 @@ describe('embertrail up', () => {
   })
 })
 
+const remote = 'https://hub.example'
+const remoteEnv = telemetryEnv(remote, 'et_remote')
+const configFile = () => join(home, 'config', 'config.json')
+
+async function logInElsewhere() {
+  await mkdir(join(home, 'config'), { recursive: true })
+  await writeFile(configFile(), JSON.stringify({ hub: remote, token: 'et_remote' }))
+  await mkdir(join(home, 'claude'), { recursive: true })
+  await writeFile(
+    settingsPath(),
+    JSON.stringify({ theme: 'dark', env: { ...remoteEnv, MINE: '1' } }),
+  )
+}
+
+describe('embertrail up on a machine that uses another Hub', () => {
+  it('keeps the login and the Claude Code target, still starts the stack and says how to switch', async () => {
+    await logInElsewhere()
+    const login = await readFile(configFile(), 'utf8')
+    const settings = await readFile(settingsPath(), 'utf8')
+
+    const { code, out } = await cli('up')
+    expect(code).toBe(0)
+    expect(out).toContain('Embertrail is running.')
+    expect(out).toContain(`login to ${remote}`)
+    expect(out).toContain(`target ${remote}`)
+    expect(out).toContain('--switch')
+    expect(await readFile(configFile(), 'utf8')).toBe(login)
+    expect(await readFile(settingsPath(), 'utf8')).toBe(settings)
+    expect(docker.running).toBe(true)
+    await expect(stat(`${configFile()}.backup`)).rejects.toThrow()
+  })
+
+  it('--switch backs both up beside themselves, then writes the local values', async () => {
+    await logInElsewhere()
+    const { code } = await cli('up', '--switch')
+    expect(code).toBe(0)
+    expect(await readJson(`${configFile()}.backup`)).toEqual({ hub: remote, token: 'et_remote' })
+    expect(await readJson(`${settingsPath()}.embertrail-backup`)).toEqual(remoteEnv)
+    expect((await stat(`${configFile()}.backup`)).mode & 0o777).toBe(0o600)
+    expect((await readJson(configFile())).hub).toBe('http://localhost:8787')
+    expect((await readJson(settingsPath())).env).toMatchObject({
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:8787',
+      MINE: '1',
+    })
+  })
+
+  it('--switch refuses to overwrite an earlier backup', async () => {
+    await logInElsewhere()
+    await writeFile(`${configFile()}.backup`, '{}')
+    const { code, err } = await cli('up', '--switch')
+    expect(code).toBe(1)
+    expect(err).toContain('earlier backup')
+    expect(docker.composeCalls()).toEqual([])
+    expect((await readJson(configFile())).hub).toBe(remote)
+  })
+
+  it('reset restores what --switch backed up', async () => {
+    await logInElsewhere()
+    await cli('up', '--switch')
+    const { code, out } = await cli('reset', '--yes')
+    expect(code).toBe(0)
+    expect(out).toContain('Restored')
+    expect(await readJson(configFile())).toEqual({ hub: remote, token: 'et_remote' })
+    expect(await readJson(settingsPath())).toEqual({
+      theme: 'dark',
+      env: { ...remoteEnv, MINE: '1' },
+    })
+    await expect(stat(`${configFile()}.backup`)).rejects.toThrow()
+    await expect(stat(`${settingsPath()}.embertrail-backup`)).rejects.toThrow()
+  })
+
+  it('reset leaves settings and a login that point elsewhere alone', async () => {
+    await cli('up')
+    await logInElsewhere()
+    const login = await readFile(configFile(), 'utf8')
+    const settings = await readFile(settingsPath(), 'utf8')
+    expect((await cli('reset', '--yes')).code).toBe(0)
+    expect(await readFile(configFile(), 'utf8')).toBe(login)
+    expect(await readFile(settingsPath(), 'utf8')).toBe(settings)
+  })
+
+  it('says so when EMBERTRAIL_HUB and EMBERTRAIL_TOKEN keep the CLI on another Hub', async () => {
+    extraEnv = { EMBERTRAIL_HUB: remote, EMBERTRAIL_TOKEN: 'et_remote' }
+    const { code, out } = await cli('up')
+    expect(code).toBe(0)
+    expect(out).toContain(
+      `EMBERTRAIL_HUB and EMBERTRAIL_TOKEN are set, so this CLI keeps using ${remote}`,
+    )
+    expect((await readJson(configFile())).hub).toBe('http://localhost:8787')
+  })
+
+  it('moving the ports is not another Hub', async () => {
+    await cli('up')
+    const { out } = await cli('up', '--hub-port', '28787')
+    expect(out).not.toContain('Kept')
+    expect((await readJson(configFile())).hub).toBe('http://localhost:28787')
+  })
+})
+
 describe('the rest of the lifecycle', () => {
   it('status shows where to click, and down stops the stack', async () => {
     expect((await cli('status')).out).toContain('no local stack')
@@ -292,6 +397,16 @@ describe('the rest of the lifecycle', () => {
     expect(words.slice(words.indexOf('exec'))).toEqual(['exec', 'pull', 'up'])
   })
 
+  it('upgrade puts the previous image tag back when the pull fails', async () => {
+    await cli('up', '--no-claude-code')
+    docker.failing = 'pull'
+    const { code, err } = await cli('upgrade', '--version', '0.2.O')
+    expect(code).toBe(1)
+    expect(err).toContain('pull failed')
+    expect(await readFile(join(local(), '.env'), 'utf8')).not.toContain('EMBERTRAIL_VERSION=0.2.O')
+    expect((await readJson(join(local(), 'state.json'))).imageTag).not.toBe('0.2.O')
+  })
+
   it('reset asks for --yes, then deletes the stack and unhooks Claude Code', async () => {
     await cli('up')
     const settings = await readJson(settingsPath())
@@ -324,8 +439,20 @@ describe('the rest of the lifecycle', () => {
 
 describe('the stack files', () => {
   it('drops the build sections unless building from a checkout', () => {
-    expect(composeFile(null)).not.toContain('build')
-    expect(composeFile('/repo')).toMatch(/build:\s+context: \/repo\n/)
+    const services = (buildFrom: string | null) =>
+      (
+        parse(composeFile(buildFrom)) as {
+          services: Record<string, { build?: unknown }>
+        }
+      ).services
+    for (const service of Object.values(services(null))) expect(service.build).toBeUndefined()
+    const built = services('/repo')
+    expect(built.hub?.build).toEqual({ context: '/repo' })
+    expect(built.dashboard?.build).toEqual({
+      context: '/repo',
+      dockerfile: 'apps/dashboard/Dockerfile',
+    })
+    expect(built.postgres?.build).toBeUndefined()
   })
 
   it('names the Source after this machine, within the Source name rules', () => {

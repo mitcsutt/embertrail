@@ -111,6 +111,18 @@ export function telemetryEndpoint(settings: Record<string, unknown>): string | u
   return typeof endpoint === 'string' ? endpoint : undefined
 }
 
+/** The entries of the settings' `env` that `telemetryEnv` writes. */
+export function telemetryOf(settings: Record<string, unknown>): Record<string, string> {
+  const env = settings.env
+  if (typeof env !== 'object' || env === null || Array.isArray(env)) return {}
+  const ours = new Set(Object.keys(telemetryEnv('', '')))
+  return Object.fromEntries(
+    Object.entries(env).filter(
+      (entry): entry is [string, string] => ours.has(entry[0]) && typeof entry[1] === 'string',
+    ),
+  )
+}
+
 /**
  * `settings` without the telemetry block `telemetryEnv` writes, the reverse of `applyTelemetry`:
  * every other key and `env` entry is kept, and an `env` left empty is removed.

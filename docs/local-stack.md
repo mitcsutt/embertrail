@@ -27,14 +27,14 @@ Start a new Claude Code session; its first Metrics and Events show on the Dashbo
 
 No clone, no build, no Token on screen. The rest of the lifecycle is one command each:
 
-| Command              | What it does                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `embertrail up`      | Creates the stack the first time, starts it every time after; idempotent                    |
-| `embertrail status`  | Each service's state, the Hub's and Dashboard's health, and whether Claude Code points here |
-| `embertrail down`    | Stops the containers; the database volume stays                                             |
-| `embertrail upgrade` | Snapshots the database, moves the images to this CLI's version, restarts                    |
-| `embertrail reset`   | Deletes the stack, its data and its local state, and unhooks Claude Code (asks for `--yes`) |
-| `embertrail logs`    | The containers' logs                                                                        |
+| Command              | What it does                                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `embertrail up`      | Creates the stack the first time, starts it every time after; idempotent                                                    |
+| `embertrail status`  | Each service's state, the Hub's and Dashboard's health, and whether Claude Code points here                                 |
+| `embertrail down`    | Stops the containers; the database volume stays                                                                             |
+| `embertrail upgrade` | Snapshots the database, moves the images to this CLI's version, restarts                                                    |
+| `embertrail reset`   | Deletes the stack, its data and its local state, and unhooks Claude Code and restores `--switch` backups (asks for `--yes`) |
+| `embertrail logs`    | The containers' logs                                                                                                        |
 
 ## Architecture
 
@@ -80,6 +80,8 @@ The browser never holds a Token, and the proxy never holds a full-power one: `up
 ### Claude Code: the same `setup claude-code`
 
 `up` runs the logic of `setup claude-code` with a Source named after this machine (its hostname, lowercased to the Source name rules; `--source` overrides). It is idempotent the same way: a second `up` keeps the Token already in the settings file.
+
+Never silently destroy a credential or another Hub's target: when the stored login or the settings' telemetry endpoint is for a different Hub, `up` keeps both, starts the stack anyway and says how to switch. `up --switch` backs each up beside its file (`config.json.backup`, `settings.json.embertrail-backup`) before writing the local values, and `reset` removes only what points at the local Hub and restores those backups. `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` override the login, so `up` reports that instead of claiming the CLI now uses the local Hub.
 
 ### Published images, pinned to the CLI's version
 

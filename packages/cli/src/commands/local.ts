@@ -1,19 +1,21 @@
-import { mkdir, readdir, rm } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 import { isProblemError } from '@mitcsutt/embertrail-client'
 
 import type { Args } from '../args.ts'
 import {
+  applyTelemetry,
   readSettings,
   removeTelemetry,
   telemetryEndpoint,
+  telemetryOf,
   userSettingsPath,
   writeSettings,
 } from '../claude-code.ts'
 import { hubClient } from '../command.ts'
 import type { Command, Context } from '../command.ts'
-import { configPath, readConfig, writeConfig } from '../config.ts'
+import { configPath, readConfig, writePrivateFile, writeConfig } from '../config.ts'
 import { CliError, UsageError } from '../errors.ts'
 import type { Io } from '../io.ts'
 import {
@@ -115,6 +117,28 @@ async function prepare(ctx: Context, args: Args): Promise<Stack> {
   return { dir: stored?.dir ?? stackDir(ctx.io), state }
 }
 
+const configBackup = (io: Io) => `${configPath(io)}.backup`
+const settingsBackup = (settingsPath: string) => `${settingsPath}.embertrail-backup`
+
+async function readIfThere(path: string): Promise<string | undefined> {
+  try {
+    return await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+/** Writes `text` to `backup` (private), refusing to overwrite an earlier backup. */
+async function backUp(backup: string, text: string): Promise<void> {
+  if ((await readIfThere(backup)) !== undefined) {
+    throw new CliError(
+      `${backup} is an earlier backup; restore it or delete it, then run embertrail up --switch again. Nothing was changed.`,
+    )
+  }
+  await writePrivateFile(backup, text)
+}
+
 /** The management Token, from bootstrapping the Hub the first time. */
 async function bootstrap(ctx: Context, stack: Stack): Promise<string> {
   if (stack.state.managementToken !== null) return stack.state.managementToken
@@ -142,8 +166,14 @@ const up: Command = {
     'The first run creates the local stack (Docker Compose: the Hub, Postgres and the Dashboard, on 127.0.0.1), ' +
     "bootstraps the Hub, logs this CLI in, gives the Dashboard its own Token and points this machine's Claude Code at the Hub. " +
     'Later runs start what is stopped and change nothing else. Everything it creates is in the local stack directory ' +
-    '($EMBERTRAIL_LOCAL_DIR, else ~/.local/share/embertrail/local).',
+    '($EMBERTRAIL_LOCAL_DIR, else ~/.local/share/embertrail/local). ' +
+    'A login or Claude Code target for another Hub is kept as it is; --switch backs it up and replaces it, and reset restores it.',
   options: {
+    switch: {
+      type: 'boolean',
+      description:
+        "Replace this CLI's login and Claude Code's telemetry target when they are for another Hub, backing them up first",
+    },
     source: {
       type: 'string',
       value: 'name',
@@ -176,10 +206,35 @@ const up: Command = {
   },
   async run(ctx, args) {
     await requireDocker(ctx.io)
+    const earlier = await readStack(ctx.io)
     const stack = await prepare(ctx, args)
+    const hub = hubUrl(stack.state)
+    const local = new Set([hub, ...(earlier === undefined ? [] : [hubUrl(earlier.state)])])
+
+    // What belongs to another Hub is decided before anything starts, so a refusal costs nothing.
+    const switching = args.flag('switch')
+    const connect = !args.flag('no-claude-code')
+    const settingsPath = userSettingsPath(ctx.io)
+    const settings = connect ? await readSettings(settingsPath) : {}
+    const stored = await readConfig({
+      ...ctx.io,
+      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
+    })
+    const otherLogin = stored !== undefined && !local.has(stored.hub)
+    const target = telemetryEndpoint(settings)
+    const otherTarget = target !== undefined && !local.has(target)
+    if (switching && otherLogin) {
+      await backUp(configBackup(ctx.io), `${JSON.stringify(stored, null, 2)}\n`)
+    }
+    if (switching && otherTarget) {
+      await backUp(
+        settingsBackup(settingsPath),
+        `${JSON.stringify(telemetryOf(settings), null, 2)}\n`,
+      )
+    }
+
     await writeStack(stack)
     const build = stack.state.buildFrom === null ? [] : ['--build']
-    const hub = hubUrl(stack.state)
 
     // The Hub first: the Dashboard's Token comes from it.
     await compose(ctx.io, stack, ['up', '--detach', '--wait', ...build, 'hub'], progress(ctx))
@@ -197,25 +252,33 @@ const up: Command = {
     }
     await compose(ctx.io, stack, ['up', '--detach', '--wait', ...build], progress(ctx))
 
-    const previous = await readConfig(ctx.io)
-    const config = await writeConfig(ctx.io, { hub, token: managementToken })
-    if (previous !== undefined && previous.hub !== hub) {
-      ctx.io.stderr(`note: this CLI was logged in to ${previous.hub}; it now uses ${hub}\n`)
-    }
+    const keepLogin = otherLogin && !switching
+    const config = keepLogin
+      ? configPath(ctx.io)
+      : await writeConfig(ctx.io, { hub, token: managementToken })
+    const effective = await readConfig(ctx.io)
+    const overridden =
+      effective !== undefined && effective.hub !== hub && !keepLogin ? effective.hub : undefined
 
+    const keepTarget = connect && otherTarget && !switching
     let claudeCode = null
-    if (!args.flag('no-claude-code')) {
+    if (connect && !keepTarget) {
       const source = args.string('source') ?? stack.state.source ?? sourceName(ctx.io.hostname)
       claudeCode = await connectClaudeCode({
         hub,
         managementToken,
         client,
         name: source,
-        path: userSettingsPath(ctx.io),
+        path: settingsPath,
       })
       stack.state.source = source
       await writeStack(stack)
     }
+
+    const kept = [
+      ...(keepLogin && stored !== undefined ? [`this CLI's login to ${stored.hub}`] : []),
+      ...(keepTarget && target !== undefined ? [`Claude Code's target ${target}`] : []),
+    ]
 
     const dashboard = dashboardUrl(stack.state)
     ctx.print(
@@ -225,6 +288,8 @@ const up: Command = {
         hub,
         config,
         dir: stack.dir,
+        kept_login: keepLogin,
+        kept_claude_code: keepTarget,
         claude_code:
           claudeCode === null
             ? null
@@ -243,12 +308,24 @@ const up: Command = {
         ]),
         '',
         ...(claudeCode === null
-          ? ["Claude Code's settings were left alone (--no-claude-code)."]
+          ? connect
+            ? []
+            : ["Claude Code's settings were left alone (--no-claude-code)."]
           : [
               `Claude Code on this machine sends to the Hub as Source "${claudeCode.source.name}" (${claudeCode.settings}).`,
               claudeCode.changed
                 ? 'Start a new Claude Code session; its first Metrics and Events show on the Dashboard.'
                 : 'Its settings already pointed here, so they were kept.',
+            ]),
+        ...(kept.length === 0
+          ? []
+          : [
+              `Kept ${kept.join(' and ')}, which ${kept.length === 1 ? 'is' : 'are'} for another Hub. embertrail up --switch points ${kept.length === 1 ? 'it' : 'them'} here, backing up the old ${kept.length === 1 ? 'one' : 'ones'} beside ${kept.length === 1 ? 'it' : 'them'}.`,
+            ]),
+        ...(overridden === undefined
+          ? []
+          : [
+              `EMBERTRAIL_HUB and EMBERTRAIL_TOKEN are set, so this CLI keeps using ${overridden} until you unset them.`,
             ]),
         '',
         columns([
@@ -399,15 +476,21 @@ const upgrade: Command = {
 
     stack.state.imageTag = args.string('version') ?? imageTag
     await writeStack(stack)
-    if (stack.state.buildFrom === null) {
-      await compose(ctx.io, stack, ['pull'], progress(ctx))
+    try {
+      if (stack.state.buildFrom === null) {
+        await compose(ctx.io, stack, ['pull'], progress(ctx))
+      }
+      await compose(
+        ctx.io,
+        stack,
+        ['up', '--detach', '--wait', ...(stack.state.buildFrom === null ? [] : ['--build'])],
+        progress(ctx),
+      )
+    } catch (error) {
+      stack.state.imageTag = from
+      await writeStack(stack)
+      throw error
     }
-    await compose(
-      ctx.io,
-      stack,
-      ['up', '--detach', '--wait', ...(stack.state.buildFrom === null ? [] : ['--build'])],
-      progress(ctx),
-    )
     ctx.print(
       { from, to: stack.state.imageTag, snapshot },
       [
@@ -442,22 +525,57 @@ const reset: Command = {
     const settingsPath = userSettingsPath(ctx.io)
     const settings = await readSettings(settingsPath).catch(() => undefined)
     const unhooked = settings !== undefined && telemetryEndpoint(settings) === hub
-    if (unhooked) await writeSettings(settingsPath, removeTelemetry(settings))
+    const savedTarget = await readIfThere(settingsBackup(settingsPath))
+    if (unhooked) {
+      const bare = removeTelemetry(settings)
+      await writeSettings(
+        settingsPath,
+        savedTarget === undefined
+          ? bare
+          : applyTelemetry(bare, JSON.parse(savedTarget) as Record<string, string>),
+      )
+      await rm(settingsBackup(settingsPath), { force: true })
+    }
 
-    const config = await readConfig(ctx.io).catch(() => undefined)
+    const config = await readConfig({
+      ...ctx.io,
+      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
+    }).catch(() => undefined)
     const loggedOut = config?.hub === hub
-    if (loggedOut) await rm(configPath(ctx.io), { force: true })
+    const savedLogin = loggedOut && (await readIfThere(configBackup(ctx.io))) !== undefined
+    if (loggedOut) {
+      if (savedLogin) await rename(configBackup(ctx.io), configPath(ctx.io))
+      else await rm(configPath(ctx.io), { force: true })
+    }
 
     for (const entry of await readdir(stack.dir)) {
       if (entry !== 'backups') await rm(join(stack.dir, entry), { recursive: true, force: true })
     }
 
     ctx.print(
-      { deleted: true, claude_code_unhooked: unhooked, logged_out: loggedOut },
+      {
+        deleted: true,
+        claude_code_unhooked: unhooked,
+        logged_out: loggedOut,
+        restored_login: savedLogin,
+        restored_claude_code: unhooked && savedTarget !== undefined,
+      },
       [
         'Deleted the local stack and its data.',
-        ...(unhooked ? [`Removed the telemetry settings from ${settingsPath}.`] : []),
-        ...(loggedOut ? [`Removed this CLI's login to ${hub}.`] : []),
+        ...(unhooked
+          ? [
+              savedTarget === undefined
+                ? `Removed the telemetry settings from ${settingsPath}.`
+                : `Restored the earlier telemetry settings in ${settingsPath}.`,
+            ]
+          : []),
+        ...(loggedOut
+          ? [
+              savedLogin
+                ? `Restored this CLI's earlier login in place of the one to ${hub}.`
+                : `Removed this CLI's login to ${hub}.`,
+            ]
+          : []),
         'embertrail up starts a new one.',
       ].join('\n'),
     )
