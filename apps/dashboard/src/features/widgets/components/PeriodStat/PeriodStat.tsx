@@ -8,6 +8,7 @@ import type { WidgetDefinition, WidgetGroup } from '#features/widgets/types/widg
 import { bucketedRows, valuedRows } from '#features/widgets/utils/aggregateRows'
 import { chartBucket } from '#features/widgets/utils/chartBucket'
 import { filterClause } from '#features/widgets/utils/filterClause'
+import { useMoney, type Money } from '#features/locale/hooks/useMoney'
 import { formatPercent } from '#features/widgets/utils/formats'
 import { previousWindow } from '#features/widgets/utils/previousWindow'
 
@@ -40,8 +41,8 @@ export interface PeriodStatSpec {
   metric: string
   /** The Board filters the Metric carries. */
   filters: WidgetDefinition['filters']
-  /** Writes a total, such as `formatUsd`. A Metric in seconds converts here. */
-  format: (value: number) => string
+  /** Writes a total. A Metric in seconds converts here; a cost goes through `money`. */
+  format: (value: number, money: Money) => string
 }
 
 const at = (instant: string, tz: string) => new TZDate(Date.parse(instant), tz)
@@ -166,27 +167,31 @@ export function periodStat(spec: PeriodStatSpec): WidgetDefinition<PeriodStatDat
     },
     select: (response, ctx) => selectPeriod(response, ctx),
     isEmpty: ({ total }) => total === null,
-    View: ({ data, ctx, label }) => (
-      <div style={{ display: 'grid', alignContent: 'space-between', gap: 'var(--space-2)' }}>
-        <Stat
-          title={periodComparison(data, spec.format)}
-          label={label}
-          value={spec.format(data.total ?? 0)}
-          delta={periodDelta(data)}
-          hint={periodHint(data, spec.format)}
-        />
-        <Sparkline
-          data={data.points.map((point) => ({ ...point }))}
-          x="at"
-          dataKey="value"
-          label={`${label} by ${data.bucket}`}
-          variant="area"
-          height={28}
-          format={spec.format}
-          xFormat={data.bucket === 'hour' ? 'time' : 'date'}
-          timeZone={ctx.tz}
-        />
-      </div>
-    ),
+    View: ({ data, ctx, label }) => {
+      const money = useMoney()
+      const format = (value: number) => spec.format(value, money)
+      return (
+        <div style={{ display: 'grid', alignContent: 'space-between', gap: 'var(--space-2)' }}>
+          <Stat
+            title={periodComparison(data, format)}
+            label={label}
+            value={format(data.total ?? 0)}
+            delta={periodDelta(data)}
+            hint={periodHint(data, format)}
+          />
+          <Sparkline
+            data={data.points.map((point) => ({ ...point }))}
+            x="at"
+            dataKey="value"
+            label={`${label} by ${data.bucket}`}
+            variant="area"
+            height={28}
+            format={format}
+            xFormat={data.bucket === 'hour' ? 'time' : 'date'}
+            timeZone={ctx.tz}
+          />
+        </div>
+      )
+    },
   }
 }
