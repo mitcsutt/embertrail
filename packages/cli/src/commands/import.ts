@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 
@@ -11,7 +11,7 @@ import type { Command, Context } from '../command.ts'
 import { configPath, writePrivateFile } from '../config.ts'
 import { CliError, UsageError } from '../errors.ts'
 import { sourceWithToken } from '../ingest.ts'
-import { endpoint } from '../import/http.ts'
+import { endpoint, getJson } from '../import/http.ts'
 import {
   convertEntry,
   defaultLokiLimit,
@@ -199,6 +199,13 @@ const importFile: Command = {
   async run(ctx, args) {
     const path = args.positional(0)
     const dryRun = args.flag('dry-run')
+    if (path !== '-') {
+      const readable = await stat(path).then(
+        (info) => info.isFile(),
+        () => false,
+      )
+      if (!readable) throw new CliError(`Could not read ${path}`)
+    }
     const target = dryRun ? undefined : await openTarget(ctx, args.string('source') ?? '')
     const read = { logs: 0, metrics: 0, labels: 0, unreadable: 0 }
     const range: { min?: bigint; max?: bigint } = {}
@@ -469,6 +476,7 @@ const importPrometheusLoki: Command = {
 
     const metadata =
       prometheus === undefined ? new Map<string, Metadata>() : await readMetadata(prometheus)
+    if (loki !== undefined) await getJson(loki, '/loki/api/v1/labels', {})
     const target = dryRun ? undefined : await openTarget(ctx, sourceName)
     const read = {
       events: 0,
@@ -485,9 +493,15 @@ const importPrometheusLoki: Command = {
     let stored: Stored | undefined
     try {
       const replay = replayFor(ctx, target, args)
-      const finished = async (signal: Signal, start: number, end: number) => {
+      const finished = async (
+        signal: Signal,
+        start: number,
+        end: number,
+        refusedBefore: number,
+        unreadable = 0,
+      ) => {
         await replay.flush(signal)
-        if (dryRun) return
+        if (dryRun || unreadable > 0 || replay.totals[signal].refused > refusedBefore) return
         state.done[signal] = merged([...state.done[signal], [start, end]])
         await writePrivateFile(statePath, `${JSON.stringify(state)}\n`)
       }
@@ -497,6 +511,7 @@ const importPrometheusLoki: Command = {
             chunks.skipped += 1
           } else {
             chunks.read += 1
+            const refusedBefore = replay.totals.metrics.refused
             for (const series of await readSeries(prometheus, promSelector, start, end, gap)) {
               const name = series.labels.__name__ ?? ''
               const type = metricType(name, metadata)
@@ -511,7 +526,7 @@ const importPrometheusLoki: Command = {
               read.points += converted.points
               for (const entry of converted.entries) await replay.add('metrics', entry)
             }
-            await finished('metrics', start, end)
+            await finished('metrics', start, end, refusedBefore)
           }
         }
         if (loki !== undefined) {
@@ -519,6 +534,8 @@ const importPrometheusLoki: Command = {
             chunks.skipped += 1
           } else {
             chunks.read += 1
+            const refusedBefore = replay.totals.logs.refused
+            const unreadableBefore = read.unreadable
             const converted: Converted[] = []
             for await (const entry of readEntries(loki, lokiSelector, start, end, lokiLimit)) {
               read.lines += 1
@@ -528,7 +545,7 @@ const importPrometheusLoki: Command = {
             }
             read.events += converted.length
             for (const entry of logEntries(converted)) await replay.add('logs', entry)
-            await finished('logs', start, end)
+            await finished('logs', start, end, refusedBefore, read.unreadable - unreadableBefore)
           }
         }
       }

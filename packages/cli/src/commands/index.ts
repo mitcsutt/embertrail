@@ -1,7 +1,6 @@
 import type { Command } from '../command.ts'
 
 import { adminCommands } from './admin.ts'
-import { localCommands } from './local.ts'
 import { importCommands } from './import.ts'
 import { localCommands } from './local.ts'
 import { bootstrap, login } from './login.ts'
