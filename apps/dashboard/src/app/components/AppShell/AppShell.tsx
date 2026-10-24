@@ -1,49 +1,65 @@
 import {
-  AppShell as KilnAppShell,
+  Box,
   Container,
+  IconButton,
   Inline,
+  AppShell as KilnAppShell,
+  MenuIcon,
   ModeToggle,
-  NavLinks,
+  Sheet,
   Text,
 } from '@mitcsutt/kiln-ui'
-import { Link, useRouterState } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
+import { JumpPalette } from '#app/components/JumpPalette'
+import { SideNav } from '#app/components/SideNav'
 import { LocaleSettings } from '#features/locale/components/LocaleSettings'
 import { MoneyNote } from '#features/locale/components/MoneyNote'
-import { BoardNav } from '#app/components/BoardNav'
-import { JumpPalette } from '#app/components/JumpPalette'
-import { useSelf } from '#lib/hub'
 
+import styles from './AppShell.module.css'
+
+/**
+ * One navigation model: the sidebar (`SideNav`) from `md` up, and the same list in a Sheet behind
+ * the header's menu button below it. The header holds only the name, the jump palette, the locale
+ * settings and the colour mode. Main pads every page the same, so pages set no outer space of their own.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const onSessions = pathname.startsWith('/sessions')
-  const { self } = useSelf()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <KilnAppShell>
+    <KilnAppShell navBreakpoint="md" className={styles.shell}>
       <KilnAppShell.Header>
         <Container width="full">
-          <Inline justify="between">
-            <Inline gap={5}>
+          <Inline justify="between" gap={3} wrap={false}>
+            <Inline gap={2} wrap={false}>
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <Sheet.Trigger asChild>
+                  <IconButton
+                    label="Menu"
+                    icon={<MenuIcon />}
+                    variant="ghost"
+                    tone="neutral"
+                    size="sm"
+                    hideAbove="md"
+                  />
+                </Sheet.Trigger>
+                <Sheet.Content
+                  side="left"
+                  size="sm"
+                  title="Embertrail"
+                  onClick={(event) => {
+                    // Following a link closes the menu, even one to the page already open.
+                    if (event.target instanceof Element && event.target.closest('a') !== null) {
+                      setMenuOpen(false)
+                    }
+                  }}
+                >
+                  <SideNav />
+                </Sheet.Content>
+              </Sheet>
               <Text weight="strong">Embertrail</Text>
-              <NavLinks label="Main" size="sm">
-                <NavLinks.Item asChild active={!onSessions}>
-                  <Link to="/boards/$boardId" params={{ boardId: 'overview' }}>
-                    Boards
-                  </Link>
-                </NavLinks.Item>
-                <NavLinks.Item asChild active={onSessions}>
-                  <Link to="/sessions">Session Groups</Link>
-                </NavLinks.Item>
-              </NavLinks>
             </Inline>
-            <Inline gap={3}>
-              {self === undefined ? null : (
-                <Text size="sm" tone="muted">
-                  Signed in as {self.user.name}
-                </Text>
-              )}
+            <Inline gap={2} wrap={false}>
               <JumpPalette />
               <LocaleSettings />
               <ModeToggle />
@@ -52,11 +68,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Container>
       </KilnAppShell.Header>
       <KilnAppShell.Sidebar>
-        <BoardNav />
+        <SideNav />
       </KilnAppShell.Sidebar>
       <KilnAppShell.Main>
         <MoneyNote />
-        {children}
+        <Box paddingY={{ base: 4, md: 5 }}>{children}</Box>
       </KilnAppShell.Main>
     </KilnAppShell>
   )

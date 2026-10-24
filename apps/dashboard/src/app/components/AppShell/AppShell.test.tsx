@@ -1,5 +1,6 @@
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers } from '#app/components/Providers'
@@ -52,8 +53,26 @@ describe('AppShell', () => {
     renderAt('/')
 
     expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Boards' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Board list' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Session Groups' })).toBeInTheDocument()
+  })
+
+  it('has one navigation: no links in the header', async () => {
+    renderAt('/')
+
+    await screen.findByRole('heading', { name: 'Overview', level: 1 })
+    expect(within(screen.getByRole('banner')).queryAllByRole('link')).toHaveLength(0)
+  })
+
+  it('opens the jump palette from its search-style trigger, which shows the shortcut', async () => {
+    const user = userEvent.setup()
+    renderAt('/')
+
+    const trigger = await screen.findByRole('button', { name: 'Jump to' })
+    expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Control+K Meta+K')
+    expect(within(trigger).getByText('K')).toBeInTheDocument()
+    await user.click(trigger)
+    expect(await screen.findByRole('dialog', { name: 'Jump to' })).toBeInTheDocument()
   })
 
   it('renders the Session Groups page', async () => {

@@ -1,0 +1,4 @@
+/* Sized to the nav's items (Board names truncate past it), not Kiln's 16rem default. */
+.shell {
+  --app-shell-sidebar-width: 12rem;
+}

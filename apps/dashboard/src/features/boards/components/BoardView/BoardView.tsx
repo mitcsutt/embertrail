@@ -3,7 +3,6 @@ import {
   Button,
   Container,
   EmptyState,
-  Heading,
   Inline,
   Select,
   Stack,
@@ -13,6 +12,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { PageHeader } from '#components/PageHeader'
 import { BoardEditor } from '#features/boards/components/BoardEditor'
 import { BoardGrid } from '#features/boards/components/BoardGrid'
 import { boardQueryOptions, createBoard, teamOf } from '#features/boards/data/boards'
@@ -119,39 +119,42 @@ function ViewedBoard({ board, preset, stored, canCreate, writable, onEdit }: Vie
   return (
     <Container width="full">
       <Stack gap={4}>
-        <Inline justify="between" align="center">
-          <Heading level={1} size="2xl">
-            {board.name}
-          </Heading>
-          {canCreate ? (
-            <Inline gap={2} align="center">
-              {preset && editorTeams.length > 0 ? (
-                <Select
-                  aria-label="Owner"
-                  options={[
-                    { value: mine, label: 'Yours' },
-                    ...editorTeams.map(({ id, name }) => ({ value: id, label: `${name} (Team)` })),
-                  ]}
-                  value={owner}
-                  onValueChange={setOwner}
-                />
-              ) : null}
-              <Button
-                variant="outline"
-                loading={customise.isPending}
-                onClick={
-                  writable
-                    ? onEdit
-                    : () => {
-                        customise.mutate()
-                      }
-                }
-              >
-                {writable ? 'Edit' : 'Customise'}
-              </Button>
-            </Inline>
-          ) : null}
-        </Inline>
+        <PageHeader
+          title={board.name}
+          actions={
+            canCreate ? (
+              <Inline gap={2} align="center">
+                {preset && editorTeams.length > 0 ? (
+                  <Select
+                    aria-label="Owner"
+                    options={[
+                      { value: mine, label: 'Yours' },
+                      ...editorTeams.map(({ id, name }) => ({
+                        value: id,
+                        label: `${name} (Team)`,
+                      })),
+                    ]}
+                    value={owner}
+                    onValueChange={setOwner}
+                  />
+                ) : null}
+                <Button
+                  variant="outline"
+                  loading={customise.isPending}
+                  onClick={
+                    writable
+                      ? onEdit
+                      : () => {
+                          customise.mutate()
+                        }
+                  }
+                >
+                  {writable ? 'Edit' : 'Customise'}
+                </Button>
+              </Inline>
+            ) : undefined
+          }
+        />
         {owning !== undefined && canCreate && !writable ? (
           <Text size="sm" tone="muted">
             {owning.name} owns this Board and you cannot edit it. Customise copies it into your own

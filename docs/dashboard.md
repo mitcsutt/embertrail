@@ -8,7 +8,7 @@ The Overview, the Everything Board, a Board in edit mode and the Session Groups 
 
 ## Stack
 
-- Vite 8 and React 19, with [Kiln](https://kiln.mitchellsutton.com): `kiln-ui` for the shell, `kiln-charts` for charts and `kiln-dnd` for the Board grid. The Paper theme is set before first paint by a script that the Vite config writes into `index.html`; the colour mode is stored under `embertrail-dashboard-mode`.
+- Vite 8 and React 19, with [Kiln](https://kiln.mitchellsutton.com): `kiln-ui` for the shell, `kiln-charts` for charts and `kiln-dnd` for the Board grid. The Paper theme at compact density (see [The app shell](#the-app-shell)) is set before first paint by a script that the Vite config writes into `index.html`; the colour mode is stored under `embertrail-dashboard-mode`.
 - TanStack Router (file routes in `src/routes/`, the generated `src/routeTree.gen.ts` is committed) and TanStack Query.
 - The Dashboard reaches the Hub only through `@mitcsutt/embertrail-client`. ESLint bans every other workspace package and `fetch`, `XMLHttpRequest`, `EventSource` and `WebSocket` in `src/`; test files are exempt.
 
@@ -46,7 +46,7 @@ The Hub allows no cross-origin requests, so the Dashboard is served from the sam
 - **The Docker image** (`apps/dashboard/Dockerfile`, compose profile `dashboard`, [`self-hosting.md`](self-hosting.md#the-dashboard)) does the same job with nginx: `docker/default.conf.template` serves `dist/` with a fallback to `index.html`, proxies `/api/` to `EMBERTRAIL_HUB_UPSTREAM` (default `http://hub:8787`), adds `Authorization: Bearer $EMBERTRAIL_DASHBOARD_TOKEN` (no header when it is empty), refuses cross-origin `/api` requests with the same rule as `isCrossOrigin`, and answers 421 to `/api` requests whose `Host` is not `localhost`, `127.0.0.1`, `[::1]` or listed in `EMBERTRAIL_DASHBOARD_HOSTS` (comma-separated names without a port, empty by default; `docker/15-dashboard-hosts.envsh` turns it into the pattern the template matches), so a DNS-rebinding page can't use the Token. Vite's own host check does this for `pnpm dev` and `pnpm preview`. `config.json` and `index.html` are `no-cache`, files under `/assets` are `immutable` for a year, and the image ships `{ "hubUrl": "" }`, so switching Hubs on Docker means changing `EMBERTRAIL_HUB_UPSTREAM` and the Token and recreating the container, with no rebuild; a bind-mounted `config.json` `hubUrl` only works for a same-origin Hub, and a Token never goes in its `headers`. The build runs `vite build` from the repository root, so a new file the build needs must not be in `.dockerignore`; CI's Docker smoke job starts the profile, seeds the demo dataset and reads it back through the proxy.
 - **The Hub client** is one `createClient` built from the config in `src/lib/hub` (`createHub`, `useHub()`, `useSelf()`), provided by `HubProvider` in `app/components`. Only data modules call it.
 - **`HubStatus`** (`app/components/HubStatus`) wraps the router: it loads the config, builds the client and calls `getInventory` once before rendering the app. A bad file, an unreachable Hub (a network error, a proxy's 502/503/504, or Vite's bare 500 when the Hub is down), a 401 and a 403 each show a message that names the address in use (this page's origin when `hubUrl` is empty), with a "Try again" button. The copy is in `app/utils/hubProblem`.
-- **`useSelf()`** returns the Hub's `getSelf` answer (the header shows "Signed in as …") and `canEdit` (the Token holds `store:write`). A Hub without `getSelf`, or a failed call, leaves `self` undefined and `canEdit` true, so editing is not hidden by a missing endpoint; a write reports its own 403.
+- **`useSelf()`** returns the Hub's `getSelf` answer (the sidebar shows "Signed in as …") and `canEdit` (the Token holds `store:write`). A Hub without `getSelf`, or a failed call, leaves `self` undefined and `canEdit` true, so editing is not hidden by a missing endpoint; a write reports its own 403.
 
 ## Layout
 
@@ -61,7 +61,8 @@ apps/dashboard/
   src/
     main.tsx               # entry: styles, router, providers
     routes/                # thin file routes
-    app/components/        # AppShell, BoardNav, JumpPalette, Providers, HubProvider, HubStatus
+    app/components/        # AppShell, SideNav, BoardNav, JumpPalette, Providers, HubProvider, HubStatus
+    components/            # shared by every feature: PageHeader, SectionTitle
     app/utils/             # hubProblem: the copy for a Hub that can't be used
     config/runtimeConfig/  # config.json: load and validate
     lib/                   # configured clients, one module each (hub, queryClient)
@@ -77,6 +78,7 @@ Routes: `/` redirects to `/boards/overview`; `/boards/$boardId` is the [Board vi
 
 What the structure rule allows, so a new folder does not fail lint after the code is written:
 
+- `src/components/` is shared code: any feature may import it, and it imports no feature, `app/` or route.
 - Inside a feature (`src/features/<name>/`), a module folder sits inside one of `components`, `hooks`, `stores`, `utils`, `constants`, `types`, `schemas`, `pages` or `data`. Nothing else is a folder name there, and a module folder cannot hold another module folder. (`src/app`, `src/config`, `src/lib` and `src/routes` are the top-level folders.) A `lib/` module is one file named after it plus `index.ts`, so a component goes in `app/components`. A Catalogue of 20 Widgets is therefore flat module folders (one per Widget) in `features/widgets/utils/` or `components/`, not a `catalogue/` folder.
 - `test/`, `scripts/` and `e2e/` sit outside `src/`, so the structure rule and the client-only rule do not apply to them; the React and base lint rules do. `tsconfig.json` includes all three (the type-aware lint needs a file in a tsconfig), so a new top-level folder of code needs adding there too.
 
@@ -135,7 +137,7 @@ A Board is one JSON document in the `store` namespace `embertrail-dashboard`, re
   - Each item wears `ItemChrome`: a `DragHandle` (Space or Enter picks up, arrows move, Shift and arrows resize, Escape cancels; kiln announces each step), Remove, and for a Widget **Pin filters** (`PinFilters`, a popover over `OverrideFields` from `features/filters`: a time range, Source, Account and model; an empty field follows the Board; there is no way to pin "all" over a Board that picks one). A pinned Widget's frame carries a "Pinned: time, model" badge in view mode too. **Add Widget** opens `CataloguePicker`, a Sheet of the Catalogue grouped as Everything groups it and searchable; adding closes it and moves focus to the new Widget's handle. **Add Query Widget** opens the [Query Widget editor](#query-widgets) and adds its result like a Widget. **Add section** asks for a title. **Use these filters as the default** writes the filters in force into the draft's saved ones.
   - **Conflicts:** a save or delete that loses (`BoardConflict`) opens `ConflictDialog`, "This Board changed elsewhere". Reload discards the draft and shows the Hub's copy (or goes to the Overview if the Board was deleted); Keep editing leaves the draft, and saving again asks again, so nothing is overwritten silently. Leaving the page with unsaved changes (a link, the palette, closing the tab) asks first (`useBlocker`).
   - Layout editing needs the grid at the widest breakpoint; on a narrower grid kiln makes it read-only and announces so.
-- **Navigation** (`app/components`): `BoardNav` is the sidebar list (Presets, then stored Boards, then "New Board", which is the empty Preset), and `JumpPalette` is the `CommandPalette` on ⌘K or Ctrl+K (and a "Jump to…" button) over the same Boards and the Session Groups page. A Hub that refuses the Board list leaves the Presets. Both list `presetIds` in order, named by each Preset's own `name`. For a member of a Team both group the stored Boards through `useBoardSections` (see [Team Boards](#team-boards)).
+- **Navigation** (`app/components`, see [The app shell](#the-app-shell)): `BoardNav` is the sidebar's Board list (Presets, then stored Boards, then "New Board", which is the empty Preset), and `JumpPalette` is the `CommandPalette` on ⌘K or Ctrl+K (and the header's search-style "Jump to" trigger) over the same Boards and the Session Groups page. A Hub that refuses the Board list leaves the Presets. Both list `presetIds` in order, named by each Preset's own `name`. For a member of a Team both group the stored Boards through `useBoardSections` (see [Team Boards](#team-boards)).
 - **Focus.** A Sheet or Dialog here is opened by state, not a Radix `Trigger`, and Radix returns focus only to a `Trigger`, so on close focus would fall to `body`. Each one spreads `useReturnFocus()` (`features/widgets/hooks`, which `boards` may import) onto its content: it remembers what had focus as the overlay opens and restores it on close. Adding a Widget, a Query Widget or a section is the exception and moves focus to the new item's handle (the hook's `override`). Save and Delete disable themselves while they work, so the conflict dialog names whichever button started the request as the `fallback`, used when the opener has left the page or is disabled. A new overlay must do the same; `e2e/focus.spec.ts` lists the existing ones. Focus rings come from kiln-ui (the Dashboard styles none), and the same spec tabs through a Board, edit mode, the Query Widget editor and the Session Groups tree in light and dark and fails on a stop that draws no outline or shadow.
 - Features import each other's public kinds only, so `app` and `boards` reach `filters` and `widgets` through hooks and components (`useQueryContext`, `useResolvedWindow`, `usePresetList`, `WidgetColorScope`), not their `utils`.
 
@@ -152,6 +154,37 @@ A Board belongs to its `StoreDocument.owner`: the User, or a Team. Team Boards f
 ## Locale and currency
 
 Numbers, dates and costs are written in the viewer's locale, and costs, which Claude Code reports in USD, are shown in their currency at the Hub's daily rate, marked `≈` and noted as an estimate. `features/locale` owns the preference (header control, saved in the browser) and `useMoney()`, which every cost goes through. The decision, the Hub's `GET /api/v1/rates` and the offline fallback are in [`locale.md`](locale.md).
+
+## The app shell
+
+`AppShell` (`app/components`) is the frame every route renders in. Keep to these rules when adding a page, so the Dashboard stays one consistent app:
+
+- **One navigation model: the sidebar.** `SideNav` lists the Boards (`BoardNav`), then the Session Groups page, then who is signed in. The list of Boards grows with every Board a User stores and every Team, which a top bar cannot hold, so the sidebar is the one place to navigate; the header has no links. The sidebar is 12rem (`--app-shell-sidebar-width` in `AppShell.module.css`), sized to its items rather than Kiln's 16rem default. Below `md` (`navBreakpoint="md"`) the sidebar is hidden and the header's Menu button opens the same `SideNav` in a Sheet, which closes on navigation. A new top-level page is a new group or link in `SideNav`, and an entry in `JumpPalette`.
+- **The header** holds only the name, the `JumpPalette` trigger, the locale control and the `ModeToggle`. The trigger is drawn as a search field (Kiln's field tokens, in `JumpPalette.module.css`) with the shortcut as `Kbd` keys (⌘ K on Apple platforms, Ctrl K elsewhere); below `sm` it shrinks to its icon.
+- **Theme: Paper, at compact density.** Paper is Kiln's neutral, legibility-first theme, which suits a page of charts, tables and prose; Ledger, the one built for figures, would trade that for green rules and condensed type across every Widget. What made the Dashboard feel loose was density, not the theme, so `index.html` sets `data-density="compact"` on `<html>`: every space step and control height is 0.85 of Paper's (the density Ledger uses), in portals too.
+- **Spacing.** `AppShell.Main` pads every page (space 4 on a phone, 5 from `md`), so a page sets no outer space: it is a `Container width="full"` with a `Stack gap={4}` between its header, filter bar and content, and `gap={3}` inside a section. Use the space scale through props, never a pixel value.
+- **Headers.** A page starts with `PageHeader` (`#components/PageHeader`: the `h1`, a description, and the page's actions on the same row) and a section inside it with `SectionTitle` (`#components/SectionTitle`, an `h2` one step down). Both wrap Kiln's `SectionHeader`, so the sizes are the same on every page; do not use a bare `Heading` for either.
+
+### Why the shell looks like this
+
+A review of the running Dashboard on the seeded demo data, as a developer checking their AI agents' spend and usage, found:
+
+- **Two navigations.** A header nav (Boards, Session Groups) and a sidebar (the Boards) overlapped: "Boards" in the header was a link to the Overview, and the sidebar kept listing Boards on the Session Groups page. On a phone the sidebar disappeared below `lg` with nothing in its place, so the Boards were reachable only through the palette.
+- **A nav wider than its items.** Kiln's default 16rem sidebar held three short names and a lot of empty column.
+- **No page rhythm.** `Main` had no padding, so each page's `h1` sat against the header, and pages sized their own headings (`2xl` titles, `xl` and `lg` section headings), with the Board's Customise button floating on a different line from its title.
+- **A loose theme.** Paper at its default density spends a lot of space on control heights and gaps in a page made of filters and figures.
+- **"Jump to…" read as a link.** A small ghost button with no sign it was a search, or of its ⌘K shortcut.
+
+The rules above are the fix. Before and after on the Overview (light and dark, desktop and phone):
+
+| Before                                                                              | After                                                                             |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ![Before, desktop, light](images/dashboard/shell/before-overview-desktop-light.png) | ![After, desktop, light](images/dashboard/shell/after-overview-desktop-light.png) |
+| ![Before, desktop, dark](images/dashboard/shell/before-overview-desktop-dark.png)   | ![After, desktop, dark](images/dashboard/shell/after-overview-desktop-dark.png)   |
+| ![Before, phone, light](images/dashboard/shell/before-overview-mobile-light.png)    | ![After, phone, light](images/dashboard/shell/after-overview-mobile-light.png)    |
+| ![Before, phone, dark](images/dashboard/shell/before-overview-mobile-dark.png)      | ![After, phone, dark](images/dashboard/shell/after-overview-mobile-dark.png)      |
+
+On a phone the menu opens the same navigation in a Sheet ([screenshot](images/dashboard/shell/after-menu-mobile-light.png)). The empty rows above each Board section and the tall stat cards are the Board grid's layout, not the shell's.
 
 ## Session Groups
 

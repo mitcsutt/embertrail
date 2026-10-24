@@ -1,5 +1,7 @@
 import { GridLayout } from '@mitcsutt/kiln-dnd'
-import { Card, Heading, Text } from '@mitcsutt/kiln-ui'
+import { Card, Text } from '@mitcsutt/kiln-ui'
+
+import { SectionTitle } from '#components/SectionTitle'
 
 import type { Inventory } from '#features/filters/data/inventory'
 import type { BoardFilters, FilterOverride } from '#features/filters/types/filters'
@@ -94,11 +96,7 @@ function BoardItemView({
 }: { item: BoardItem } & Pick<BoardGridProps, 'filters' | 'now' | 'tz'>) {
   switch (item.type) {
     case 'section':
-      return (
-        <Heading level={2} size="xl">
-          {item.title}
-        </Heading>
-      )
+      return <SectionTitle title={item.title} />
     case 'widget':
       return (
         <CatalogueWidget
