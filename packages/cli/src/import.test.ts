@@ -190,6 +190,74 @@ describe('import prometheus-loki', () => {
     expect((await h.cli('sources', 'list')).out).not.toContain('never')
   })
 
+  it('reads again only the window that could not be read or was refused', async () => {
+    const unreadable = {
+      labels: { service_name: 'claude-code' },
+      ts: `${String(t0)}000005`,
+      line: 'not json',
+    }
+    h.upstreams.set('http://partial-loki.test', fakeLoki([...lokiData(), unreadable]).handler)
+    const fromLoki = [
+      'import',
+      'prometheus-loki',
+      '--source',
+      'partial',
+      '--loki',
+      'http://partial-loki.test',
+      ...window,
+      '--json',
+    ]
+    expect((await h.cli(...fromLoki)).code).toBe(1)
+    const retried = await h.cli(...fromLoki)
+    expect(retried.code).toBe(1)
+    expect((JSON.parse(retried.out) as Report).chunks).toEqual({ read: 1, already_imported: 3 })
+
+    // The Hub stores the batch but reports one point refused.
+    const hub = new URL(hubUrl).origin
+    h.upstreams.set(hub, async (request) => {
+      const answer = await h.t.hub.fetch(request)
+      if (new URL(request.url).pathname !== '/v1/metrics') return answer
+      return Response.json({
+        partialSuccess: { rejectedDataPoints: '1', errorMessage: 'refused for the test' },
+      })
+    })
+    try {
+      const fromProm = [
+        'import',
+        'prometheus-loki',
+        '--source',
+        'refused',
+        '--prometheus',
+        'http://prometheus.test',
+        ...window,
+        '--json',
+      ]
+      const first = await h.cli(...fromProm)
+      expect(first.code).toBe(1)
+      expect((JSON.parse(first.out) as Report).points?.refused).toBeGreaterThan(0)
+      const again = JSON.parse((await h.cli(...fromProm)).out) as Report
+      expect(again.chunks).toEqual({ read: 1, already_imported: 3 })
+    } finally {
+      h.upstreams.delete(hub)
+    }
+  })
+
+  it('creates no Source when Loki does not answer', async () => {
+    h.upstreams.set('http://down.test', () => new Response('unavailable', { status: 503 }))
+    const result = await h.cli(
+      'import',
+      'prometheus-loki',
+      '--source',
+      'unreached',
+      '--loki',
+      'http://down.test',
+      ...window,
+    )
+    expect(result.code).toBe(1)
+    expect(result.err).toContain('503')
+    expect((await h.cli('sources', 'list')).out).not.toContain('unreached')
+  })
+
   it('refuses a command line it cannot use, before reading anything', async () => {
     const base = ['import', 'prometheus-loki', '--source', 'x']
     expect((await h.cli(...base)).err).toContain('Give --prometheus, --loki or both')
@@ -278,6 +346,15 @@ describe('import file', () => {
     expect(again.events).toMatchObject({ stored: 56 })
     expect(again.points).toMatchObject({ stored: 20 })
     expect(await sessions(b)).toEqual(await sessions(a))
+  })
+
+  it('creates no Source when the path is not a readable file', async () => {
+    for (const path of [join(b.home, 'missing.jsonl'), b.home]) {
+      const result = await b.cli('import', 'file', path, '--source', 'nowhere')
+      expect(result.code).toBe(1)
+      expect(result.err).toContain('Could not read')
+    }
+    expect((await b.cli('sources', 'list')).out).not.toContain('nowhere')
   })
 
   it('counts lines it cannot read and fails after importing the rest', async () => {
