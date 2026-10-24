@@ -2,7 +2,17 @@
 
 Run your own Hub on one machine with Docker Compose ([#37](https://github.com/mitcsutt/embertrail/issues/37), ADR-0004). One person, one Hub: no Team, Grant or allowlist step.
 
-## Quick start
+## On your own machine: `embertrail up`
+
+For a Hub on the machine you run Claude Code on, let the CLI run the stack:
+
+```sh
+npx @mitcsutt/embertrail-cli up
+```
+
+It writes this repository's `compose.yaml` into a private directory, starts the Hub, Postgres and the Dashboard with generated secrets, bootstraps the Hub and logs the CLI in without printing a Token, gives the Dashboard its own narrower Token, connects Claude Code, and prints the Dashboard's URL. `embertrail status`, `down`, `upgrade` and `reset` cover the rest of its life. The commands are in [`cli.md`](cli.md#the-local-stack) and the design in [`local-stack.md`](local-stack.md). Everything below is the same stack run by hand, which a server needs.
+
+## Quick start by hand
 
 You need Docker with Compose. From a clone of this repository:
 
@@ -24,7 +34,7 @@ Without the CLI installed, the image carries one: `docker compose exec hub ember
 
 ## The Dashboard
 
-The [Dashboard](dashboard.md) is a second, optional service. It needs a Token to read the Hub with. Prefer a narrow one (`embertrail tokens issue` with Scopes `otel:read store:read store:write`; a Token bound to one Source is refused), because the proxy hands the Token's full power to anything that gets through it; the management Token the first start printed also works, holds every Scope including `admin`, and is the one-step solo path. Put it in a `.env` file next to `compose.yaml`, then start the profile:
+The [Dashboard](dashboard.md) is a second, optional service (`embertrail up` starts it with its own Token; this section is for a stack run by hand). It needs a Token to read the Hub with. Prefer a narrow one (`embertrail tokens issue` with Scopes `otel:read store:read store:write`; a Token bound to one Source is refused), because the proxy hands the Token's full power to anything that gets through it; the management Token the first start printed also works, holds every Scope including `admin`, and is the one-step solo path. Put it in a `.env` file next to `compose.yaml`, then start the profile:
 
 ```sh
 echo 'EMBERTRAIL_DASHBOARD_TOKEN=<the printed Token>' >> .env
@@ -55,7 +65,7 @@ Mount the file itself and edit it in place; an editor that replaces the file lea
 | `postgres`  | `postgres:17`, volume `postgres-data`   | The Hub's database; not published to the host                                               |
 | `dashboard` | `ghcr.io/mitcsutt/embertrail-dashboard` | Only with `--profile dashboard`: nginx serving the [Dashboard](#the-dashboard) on port 8080 |
 
-The Hub listens on `127.0.0.1:8787` only. Put a reverse proxy with TLS in front of it before exposing it, and set `PUBLIC_URL` so the printed login line names that address. The image isn't published to a registry yet, so `docker compose up` builds it from the repository's [`Dockerfile`](../Dockerfile) (add `--build` after pulling new code).
+The Hub listens on `127.0.0.1:8787` only. Put a reverse proxy with TLS in front of it before exposing it, and set `PUBLIC_URL` so the printed login line names that address. Until the first release publishes the images, `docker compose up` builds them from the repository's [`Dockerfile`](../Dockerfile) (add `--build` after pulling new code).
 
 ## The zero-config start
 
@@ -88,7 +98,7 @@ The Edge Identity Adapter is `noEdgeIdentity()`: Tokens are the only way in.
 
 ## Upgrading
 
-Migrations only go forward, and `embertrail migrate` runs at every container start, so upgrading is: snapshot, pull, restart.
+Migrations only go forward, and `embertrail migrate` runs at every container start, so upgrading is: snapshot, pull, restart. For the stack `embertrail up` runs, `embertrail upgrade` does all three. By hand:
 
 ```sh
 docker compose exec postgres pg_dump -U embertrail embertrail > embertrail-backup.sql
@@ -103,5 +113,6 @@ A database migrated by a newer version stops an older image at start with `migra
 - The [`Dockerfile`](../Dockerfile) bundles the server and the CLI with esbuild and installs only `pg`; [`docker-entrypoint.sh`](../docker-entrypoint.sh) migrates, then starts the server.
 - `src/server.test.ts` boots the server on Postgres 17 (the zero-config Token, the restart, `BOOTSTRAP_TOKEN`, an unmigrated database); the Docker Db Adapter passes the shared contract suites in `db.test.ts` ([`ports-and-adapters.md`](ports-and-adapters.md#contract-suites)).
 - `apps/server/smoke/smoke.sh` is CI's **Docker smoke** job and runs anywhere with Docker, `curl`, `jq` and a built CLI (`pnpm --filter @mitcsutt/embertrail-cli build`): it builds the image, boots the stack on a random port in its own Compose project, checks the printed Token, runs `embertrail setup claude-code` against the Hub into a temporary `HOME` (your own `~/.claude` is untouched) and checks the `env` block it wrote, starts the Dashboard profile with the Token, seeds the demo dataset with `pnpm seed` and checks the Dashboard serves the app and `config.json` and reads the Sessions through its proxy without the browser sending a Token (and refuses a cross-origin request), ingests the Claude Code fixtures with the `env` block's endpoint and Token, queries Sessions and Events back, restarts the Hub and checks for no second Token or User, then removes the stack and its volume. It also needs `pnpm`.
+- `apps/server/smoke/up.sh` is the second step of the same job: the built CLI's `embertrail up --build-from` from nothing with temporary config, stack and Claude Code directories, then `status`, a Dashboard read through its own Token, an ingest with the Token written to Claude Code's settings, a second `up` that changes nothing, `down` and `up` keeping the data, and `reset --yes` removing the volume and the settings block.
 - The Dashboard image is [`apps/dashboard/Dockerfile`](../apps/dashboard/Dockerfile) (build from the repository root): Vite builds the app, then `nginxinc/nginx-unprivileged` serves `dist/` and renders [`docker/default.conf.template`](../apps/dashboard/docker/default.conf.template) from the environment at start. It runs as a non-root user, which is why it listens on 8080.
-- Publishing the images to `ghcr.io/mitcsutt/embertrail` and `ghcr.io/mitcsutt/embertrail-dashboard` is not wired yet: the `Dockerfile` builds a self-contained image, so a release workflow only needs to build, tag with the app version and push.
+- [`.github/workflows/release.yml`](../.github/workflows/release.yml) publishes the images to `ghcr.io/mitcsutt/embertrail` and `ghcr.io/mitcsutt/embertrail-dashboard` for `linux/amd64` and `linux/arm64`, tagged with the version and `latest`, from a `v<version>` tag that matches `packages/cli/package.json`, then publishes the CLI to npm. `embertrail up` runs the images of the CLI's own version, so the two are always released together.

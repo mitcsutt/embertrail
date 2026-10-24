@@ -26,6 +26,43 @@ function toCaller(principal: Principal): Caller {
   }
 }
 
+/**
+ * Whether a request came from a page on another origin. Mirrors `isCrossOrigin` in
+ * `apps/dashboard/scripts/hubProxy.ts`; keep the two rules the same.
+ */
+function isCrossOrigin(request: Request): boolean {
+  const site = request.headers.get('sec-fetch-site')
+  if (site !== null && site !== 'same-origin' && site !== 'none') return true
+  const origin = request.headers.get('origin')
+  if (origin === null) return false
+  try {
+    return new URL(origin).host !== new URL(request.url).host
+  } catch {
+    // Including `Origin: null`.
+    return true
+  }
+}
+
+const jsonMediaType = /^application\/(?:json|jsonl|[^/;\s]+\+json)$/
+
+function hasJsonBody(request: Request): boolean {
+  const type = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+  return type !== undefined && jsonMediaType.test(type)
+}
+
+/**
+ * The Edge Identity is ambient: a browser attaches the Access cookie to a cross-site request,
+ * and a simple `text/plain` POST needs no preflight. So an edge-identified caller must be
+ * same-origin, and must send JSON when it sends a body. A Token is never ambient, so Token
+ * callers skip this.
+ */
+export function assertSameOriginEdgeRequest(request: Request): void {
+  if (isCrossOrigin(request)) throw HubError.forbidden('Cross-site request refused')
+  if (request.body !== null && !hasJsonBody(request)) {
+    throw HubError.forbidden('Edge-identified requests must send a JSON Content-Type')
+  }
+}
+
 /** The User behind the request: its Token, else its Edge Identity. */
 async function resolveUser(
   request: Request,
@@ -47,6 +84,7 @@ async function resolveUser(
     return principal
   }
   if (edge !== null) {
+    assertSameOriginEdgeRequest(request)
     const principal = await resolver.edgeUser(edge.email, { provision: true })
     if (principal === null) throw HubError.forbidden('Edge Identity is not an allowed User')
     return principal
@@ -57,7 +95,8 @@ async function resolveUser(
 /**
  * The core's resolution order (#26, #29): a Token decides the User, and an Edge Identity
  * naming a different User is refused (403). With no Token, a verified email maps to a User,
- * created only when allowlisted (403 otherwise). Neither present: 401. Then
+ * created only when allowlisted (403 otherwise), and only for a same-origin JSON request (403).
+ * Neither present: 401. Then
  * `Embertrail-Owner: team:<id>` makes a Team's editor act for the Team.
  */
 export async function resolveCaller(

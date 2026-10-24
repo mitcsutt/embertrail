@@ -1,13 +1,16 @@
 import { sql } from 'drizzle-orm'
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { fakeEdgeIdentity, pgliteDb } from '../testing/pglite'
 import { probe } from '../testing/probe'
 import { testHub } from '../testing/test-hub'
 import type { TestHub } from '../testing/test-hub'
+import { cloudflareAccess } from './edge'
 
 const alpha = probe('alpha')
 const read = ['alpha:read'] as const
+const manage = ['self:manage', 'alpha:write'] as const
 
 // Edge assertions as Cloudflare Access would make them; only example.com may sign up.
 const edge = fakeEdgeIdentity({
@@ -189,5 +192,164 @@ describe('caller resolution order', () => {
       type: 'urn:embertrail:problem:unauthenticated',
       status: 401,
     })
+  })
+})
+
+describe('browser requests by Edge Identity', () => {
+  let t: TestHub
+
+  beforeEach(async () => {
+    t = await testHub({ modules: [alpha], edgeIdentity: edge })
+    await t.user('alice', { email: 'alice@example.com' })
+  })
+
+  afterEach(async () => {
+    await t.close()
+  })
+
+  let created = 0
+  const json = { 'content-type': 'application/json' }
+  const asAlice = { 'x-test-edge-identity': 'alice' }
+  const createSource = (headers: Record<string, string>, client = t.anonymous) =>
+    client.fetch('/api/v1/self/sources', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name: `laptop-${(created += 1)}` }),
+    })
+  const sources = () => t.sql<{ id: string }>(sql`select id from core.sources`)
+
+  it('a same-origin JSON POST succeeds', async () => {
+    const response = await createSource({
+      ...asAlice,
+      ...json,
+      origin: 'http://hub.test',
+      'sec-fetch-site': 'same-origin',
+    })
+    expect(response.status).toBe(201)
+    expect(await sources()).toHaveLength(1)
+  })
+
+  it('a cross-site text/plain POST is 403 and writes nothing', async () => {
+    const response = await createSource({
+      ...asAlice,
+      'content-type': 'text/plain',
+      origin: 'https://evil.test',
+      'sec-fetch-site': 'cross-site',
+    })
+    expect(response.status).toBe(403)
+    expect(await sources()).toEqual([])
+  })
+
+  it('a cross-site request is refused whatever its Content-Type', async () => {
+    const response = await createSource({ ...asAlice, ...json, 'sec-fetch-site': 'same-site' })
+    expect(response.status).toBe(403)
+    expect(await sources()).toEqual([])
+  })
+
+  it('a cross-site GET is 403', async () => {
+    const response = await t.anonymous.fetch('/api/v1/alpha/whoami', {
+      headers: { ...asAlice, 'sec-fetch-site': 'cross-site' },
+    })
+    expect(response.status).toBe(403)
+  })
+
+  it('an Origin on another host is refused, and so is Origin: null', async () => {
+    for (const origin of ['https://evil.test', 'http://hub.test:81', 'null']) {
+      const response = await t.anonymous.fetch('/api/v1/alpha/whoami', {
+        headers: { ...asAlice, origin },
+      })
+      expect(response.status, origin).toBe(403)
+    }
+  })
+
+  it('a navigation (Sec-Fetch-Site: none) and a request without Fetch Metadata are allowed', async () => {
+    for (const headers of [{ ...asAlice, 'sec-fetch-site': 'none' }, asAlice]) {
+      expect((await t.anonymous.fetch('/api/v1/alpha/whoami', { headers })).status).toBe(200)
+    }
+  })
+
+  it('a body needs a JSON Content-Type, matched case-insensitively and ignoring parameters', async () => {
+    for (const type of [undefined, 'text/plain', 'application/x-www-form-urlencoded']) {
+      const headers: Record<string, string> =
+        type === undefined ? asAlice : { ...asAlice, 'content-type': type }
+      expect((await createSource(headers)).status, String(type)).toBe(403)
+    }
+    expect(await sources()).toEqual([])
+    const accepted = ['Application/JSON; charset=utf-8', 'application/problem+json']
+    for (const type of accepted) {
+      const response = await createSource({ ...asAlice, 'content-type': type })
+      expect(response.status, type).toBe(201)
+    }
+  })
+
+  it('a request without a body needs no Content-Type', async () => {
+    const response = await t.anonymous.fetch('/api/v1/self/sources', { headers: asAlice })
+    expect(response.status).toBe(200)
+  })
+
+  it('a Token caller is unaffected by the same cross-site headers', async () => {
+    const response = await createSource(
+      {
+        'content-type': 'text/plain',
+        origin: 'https://evil.test',
+        'sec-fetch-site': 'cross-site',
+      },
+      t.as('alice', manage),
+    )
+    expect(response.status).toBe(201)
+  })
+
+  it('a Token beside an Edge Identity is a Token caller, so the guard does not apply', async () => {
+    const response = await createSource(
+      { ...asAlice, 'content-type': 'text/plain', 'sec-fetch-site': 'cross-site' },
+      t.as('alice', manage),
+    )
+    expect(response.status).toBe(201)
+  })
+})
+
+describe('an Access service token', () => {
+  const teamDomain = 'team.cloudflareaccess.com'
+  const audience = 'aud-tag'
+  let t: TestHub
+  let serviceToken: string
+
+  beforeEach(async () => {
+    const { privateKey, publicKey } = await generateKeyPair('RS256')
+    const jwk = { ...(await exportJWK(publicKey)), kid: 'k1', alg: 'RS256' }
+    serviceToken = await new SignJWT({ common_name: 'ci-bot' })
+      .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
+      .setIssuer(`https://${teamDomain}`)
+      .setAudience(audience)
+      .setExpirationTime('5m')
+      .sign(privateKey)
+    t = await testHub({
+      modules: [alpha],
+      edgeIdentity: cloudflareAccess({
+        teamDomain,
+        audience,
+        keys: createLocalJWKSet({ keys: [jwk] }),
+      }),
+    })
+    await t.user('alice', { email: 'alice@example.com' })
+  })
+
+  afterEach(async () => {
+    await t.close()
+  })
+
+  const whoami = (client: TestHub['anonymous']) =>
+    client.fetch('/api/v1/alpha/whoami', { headers: { 'cf-access-jwt-assertion': serviceToken } })
+
+  it('with a valid Token: the Token’s User', async () => {
+    const response = await whoami(t.as('alice', read))
+    expect(response.status).toBe(200)
+    expect(await body(response)).toMatchObject({ userId: 'alice', scopes: ['alpha:read'] })
+  })
+
+  it('alone: 401, since it names no User', async () => {
+    const response = await whoami(t.anonymous)
+    expect(response.status).toBe(401)
+    expect(await body(response)).toMatchObject({ type: 'urn:embertrail:problem:unauthenticated' })
   })
 })

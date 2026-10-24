@@ -73,12 +73,13 @@ jobs:
 
   # Builds the Docker image, boots the compose stack, runs the CLI's setup against it and ingests
   # and queries a fixture through it, then starts the Dashboard profile and reads the seeded demo
-  # dataset through its proxy (apps/server/smoke/smoke.sh, #37). The only job that needs Docker
-  # to run the Hub itself.
+  # dataset through its proxy (apps/server/smoke/smoke.sh, #37). Then `embertrail up` builds the
+  # same images again from the layer cache and runs the local stack's lifecycle
+  # (apps/server/smoke/up.sh). The only job that needs Docker to run the Hub itself.
   smoke:
     name: Docker smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
@@ -86,6 +87,8 @@ jobs:
         run: pnpm --filter @mitcsutt/embertrail-cli build
       - name: Boot the stack and the Dashboard, set up Claude Code, ingest a fixture, query it back
         run: apps/server/smoke/smoke.sh
+      - name: embertrail up from nothing, then status, down and reset
+        run: apps/server/smoke/up.sh
 
   # The Dashboard in a real browser (Chromium only): the built app behind `vite preview`, in front
   # of an in-process Hub on PGLite seeded with the demo dataset (apps/dashboard/e2e). No Docker.

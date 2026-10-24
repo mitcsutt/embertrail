@@ -29,13 +29,13 @@ pnpm --filter @mitcsutt/embertrail-dashboard e2e        # Playwright on Chromium
 ### The development loop
 
 ```sh
-docker compose up -d                                              # the Hub, on 127.0.0.1:8787
-embertrail login --hub http://localhost:8787 --token <the Token the first start printed>
+pnpm --filter @mitcsutt/embertrail-cli build
+node packages/cli/dist/bin.js up --build-from . --no-claude-code  # the Hub on 127.0.0.1:8787, the CLI logged in
 pnpm --filter @mitcsutt/embertrail-dashboard seed                 # the demo dataset, see below
 pnpm --filter @mitcsutt/embertrail-dashboard dev                  # the Dashboard on Vite
 ```
 
-The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. `dev` (and `preview`) proxy `/api` to the Hub and add the Token, so after `embertrail login` the loop needs no further setup. See [Reaching the Hub](#reaching-the-hub).
+`up` is [the local stack](cli.md#the-local-stack); it also starts the Docker Dashboard on 8080, which the Vite one does not need. The first three steps are [Seeding a Hub](#seeding-a-hub); a Hub that already holds your own data works too, since `seed` only touches its own Source. `dev` (and `preview`) proxy `/api` to the Hub and add the Token, so after `embertrail login` the loop needs no further setup. See [Reaching the Hub](#reaching-the-hub).
 
 ## Reaching the Hub
 
@@ -159,7 +159,10 @@ Numbers, dates and costs are written in the viewer's locale, and costs, which Cl
 
 - **Totals come from `listSessions`, not `queryMetrics`.** `fetchSessions` (`data/sessionGroups`) lists every Session of the window (all pages, `limit` 1,000, through the client's `items()`), with the filter bar's `source_id`, `account_id` and `model`, and `groupSessions` (`utils/groupSessions`) groups them by `group.id`. A group's Session count, cost and tokens are the sums of its members' own `cost_usd` and `tokens`, so they equal the rows listed under it exactly (#44 AC1). Two queries (a `cost.usage` sum per `embertrail.group.id`, and a count) would disagree at the window's edge: the Metric sums the data points inside the window, while a Session's `cost_usd` is the whole Session's. The cost of this choice is that a Session which touches the window counts whole, which the page says; it also holds the Sessions in memory, which is fine at the Hub's scale of one person's Sessions.
 - **The tree.** Rows are groups, ordered by cost, then a "No group" row for Sessions with no `embertrail.group.id`. A Session sits under its `parent_session_id` when the parent is in the same group, and is a root of the group otherwise (its parent may be in another group, or outside the window). Parents that point at each other are shown as roots rather than lost. A reserved Label wins over the attribute (the Hub resolves that), so labelling a Session moves it to another group on the next fetch (#44 AC2).
-- **Rendering** is kiln-ui's `TreeTable` (a WAI-ARIA `treegrid`), one tab stop with the arrow keys: Right opens a row and steps into its first child, Left closes it and steps out, Enter follows the row's link. A Session's first cell links to `/sessions/$sessionId`.
+- **Rendering** is kiln-ui's `TreeTable` (a WAI-ARIA `treegrid`) at Kiln's regular density, one tab stop with the arrow keys: Right opens a row and steps into its first child, Left closes it and steps out, Enter follows the row's link. A Session's first cell links to `/sessions/$sessionId`.
+- **The whole row is the target.** `TreeTable` toggles only from its chevron, so `SessionGroupTree` adds the rest on the table: a click anywhere on a group's row opens or closes it, and on a Session's row opens the Session (a link, the chevron, a modified click and a text selection keep their own behaviour). The keyboard is the tree's own (arrows open and close, Enter follows a link). The cell finds its row through a `data-row-id` on the name; a new first-column cell must keep that. The open rows are controlled by the page and kept in the URL as `open` (a JSON array of `rowId`s, replacing the history entry), so a shared link or Back shows the tree as it was.
+- **Columns** are sized to content (`width: 'min'`, with the name taking the spare width); Started and Models hide below `md` and Sessions and Tokens below `sm`, so a phone shows the name and Cost, and a long group id or model list clips to one line with the whole text in a `Tooltip` (kiln-ui), the full text staying in the DOM for assistive technology.
+- **Back.** A Session page starts with `BackControl`: when the router has a previous entry (`useCanGoBack`), a **Back** button calls `history.back()`, so the Session Groups return with the filters and open rows of their URL, or the previous Session when it was opened from another one. A Session opened directly has no previous entry, so it shows an **All Session Groups** link to `/sessions` instead.
 - **`/sessions/$sessionId` runs `SessionPage`**: `getSession` for the header (its group and kind, its parent and children as links, cost, tokens, first and last Signal, models), and the Event timeline from `queryEvents` with `mode: 'list'`, `order: 'asc'` and a `session.id` filter over the Session's own span (first Signal to just past the last). It loads 100 Events at a time; "Load more" passes the cursor of the last page (`useInfiniteQuery`). A Session known only from its Labels has no span and so no Events to ask for. An unknown Session shows "No such Session".
 - Sessions import the Hub through `useHub` in their pages, with the data modules (`data/sessionGroups`, `data/session`) owning the keys, paging and retries (a 4xx is not retried).
 
@@ -295,8 +298,7 @@ For the default options (`--now 2026-11-04T13:00:00Z --tz Europe/Berlin`): 157 S
 With a Hub running ([`self-hosting.md`](self-hosting.md)) and the `embertrail` CLI logged in to it:
 
 ```sh
-docker compose up -d
-embertrail login --hub http://localhost:8787 --token <the Token the first start printed>
+embertrail up            # or a Hub run by hand, and embertrail login with its Token
 pnpm --filter @mitcsutt/embertrail-dashboard seed
 ```
 

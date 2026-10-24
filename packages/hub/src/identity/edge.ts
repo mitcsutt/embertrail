@@ -12,8 +12,8 @@ export interface EdgeIdentity {
  */
 export interface EdgeIdentityPort {
   /**
-   * Returns the identity the edge asserts, or null if none is present. Throws
-   * `EdgeIdentityError` when an assertion is present but invalid.
+   * Returns the identity the edge asserts, or null if none is present or the assertion is valid
+   * but names no User. Throws `EdgeIdentityError` when an assertion is present but invalid.
    */
   verify(request: Request): Promise<EdgeIdentity | null>
 }
@@ -39,7 +39,9 @@ export interface CloudflareAccessOptions {
 
 /**
  * Verifies `Cf-Access-Jwt-Assertion` against the team's JWKS, which is cached and refreshed
- * when a token names an unknown `kid`.
+ * when a token names an unknown `kid`. A verified assertion with no email is an Access service
+ * token: it proves the request passed Access but names no User, so it yields null and the
+ * caller must still present a Token.
  */
 export function cloudflareAccess(options: CloudflareAccessOptions): EdgeIdentityPort {
   const issuer = `https://${options.teamDomain}`
@@ -62,9 +64,7 @@ export function cloudflareAccess(options: CloudflareAccessOptions): EdgeIdentity
         throw error
       }
       // Service tokens carry no email; they don't name a User.
-      if (typeof email !== 'string' || email === '') {
-        throw new EdgeIdentityError('Cloudflare Access assertion has no email')
-      }
+      if (typeof email !== 'string' || email === '') return null
       return { email }
     },
   }

@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { run } from './cli.ts'
+import { noPrograms } from './testing/harness.ts'
 import { databaseUrl, skipWithoutPostgres, tempDatabase } from './testing/postgres.ts'
 
 describe('migrateDatabase', () => {
@@ -45,6 +46,7 @@ async function migrateCommand(url: string | undefined, ...argv: string[]) {
   let out = ''
   let err = ''
   const code = await run(['migrate', ...argv], {
+    ...noPrograms,
     env: url === undefined ? {} : { DATABASE_URL: url },
     home: '/nowhere',
     fetch: () => Promise.reject(new Error('migrate never calls a Hub')),
