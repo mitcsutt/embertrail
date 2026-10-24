@@ -2,6 +2,7 @@ import type { Command } from '../command.ts'
 
 import { adminCommands } from './admin.ts'
 import { localCommands } from './local.ts'
+import { importCommands } from './import.ts'
 import { bootstrap, login } from './login.ts'
 import { migrate } from './migrate.ts'
 import { selfCommands } from './self.ts'
@@ -14,6 +15,7 @@ export const commands: readonly Command[] = [
   bootstrap,
   setupClaudeCode,
   ...selfCommands,
+  ...importCommands,
   ...adminCommands,
   migrate,
 ]

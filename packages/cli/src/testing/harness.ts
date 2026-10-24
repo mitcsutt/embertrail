@@ -31,6 +31,8 @@ export interface Harness {
   env: Record<string, string>
   /** The management Token of the admin User `alice`, as `embertrail login` would store it. */
   token: string
+  /** Answers requests to URLs under each origin, such as a fake Prometheus, instead of the Hub. */
+  upstreams: Map<string, (request: Request) => Response | Promise<Response>>
   /** Runs the CLI with `argv` against the test Hub. */
   cli(...argv: string[]): Promise<Result>
   close(): Promise<void>
@@ -49,11 +51,13 @@ export async function startHarness(): Promise<Harness> {
     EMBERTRAIL_CONFIG_DIR: join(home, 'config'),
     CLAUDE_CONFIG_DIR: join(home, 'claude'),
   }
+  const upstreams = new Map<string, (request: Request) => Response | Promise<Response>>()
   return {
     t,
     home,
     env,
     token,
+    upstreams,
     async cli(...argv) {
       let out = ''
       let err = ''
@@ -61,7 +65,11 @@ export async function startHarness(): Promise<Harness> {
         ...noPrograms,
         env,
         home,
-        fetch: (input, init) => t.hub.fetch(new Request(input, init)),
+        fetch: async (input, init) => {
+          const request = new Request(input, init)
+          const upstream = upstreams.get(new URL(request.url).origin)
+          return upstream === undefined ? t.hub.fetch(request) : upstream(request)
+        },
         stdout: (text) => {
           out += typeof text === 'string' ? text : new TextDecoder().decode(text)
         },

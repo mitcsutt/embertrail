@@ -1,0 +1,31 @@
+# A throwaway Claude Code telemetry stack for trying `embertrail import prometheus-loki`
+# (docs/import.md): Claude Code -> OpenTelemetry Collector -> Prometheus (Metrics) and Loki (Events).
+# Every port is local only. Pick a unique project name and free ports:
+#
+#   COMPOSE_PROJECT_NAME=et-import-try OTLP_PORT=34318 PROMETHEUS_PORT=39090 LOKI_PORT=33100 \
+#     docker compose -f packages/cli/test/import-stack/compose.yaml up -d
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes:
+      - ./collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - '127.0.0.1:${OTLP_PORT:-4318}:4318'
+    depends_on: [loki]
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+
+  loki:
+    image: grafana/loki:2.9.8
+    command: ['-config.file=/etc/loki/local-config.yaml']
+    ports:
+      - '127.0.0.1:${LOKI_PORT:-3100}:3100'

@@ -72,7 +72,7 @@ Tests: `src/query/query.test.ts` validates every response against the spec docum
 ## Retention and export
 
 - `retention: { column: 'time' }`: rows are kept forever unless the Hub sets `RETENTION_DAYS`; no rollups. Labels have no `time` column, so they are kept until their Owner is deleted.
-- The export is **OTLP JSON Lines**: one complete `ExportLogsServiceRequest` or `ExportMetricsServiceRequest` per stored row, Events first, then one `{"sessionLabels": {"session_id", "labels"}}` line per labelled Session. Posting each OTLP line back to `/v1/logs` or `/v1/metrics` (by its top-level key) and each Labels line to `PUT /api/v1/sessions/{id}/labels` restores the same rows, and into the same Hub stores nothing twice.
+- The export is **OTLP JSON Lines**: one complete `ExportLogsServiceRequest` or `ExportMetricsServiceRequest` per stored row, Events first, then one `{"sessionLabels": {"session_id", "labels"}}` line per labelled Session. Posting each OTLP line back to `/v1/logs` or `/v1/metrics` (by its top-level key) and each Labels line to `PUT /api/v1/sessions/{id}/labels` restores the same rows, and into the same Hub stores nothing twice. `embertrail import file` does exactly that, batched ([`import.md`](import.md)).
 - Known limitation (a follow-up): the export carries no `source_id`. A replay goes through one Source-bound Token, so an Owner's Signals from several Sources all land under that one Source, and rows that differed only by Source collapse under the de-duplication keys.
 
 ## Tests and the benchmark

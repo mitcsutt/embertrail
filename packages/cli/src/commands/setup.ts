@@ -8,15 +8,8 @@ import {
 import type { EmbertrailClient, Schemas } from '@mitcsutt/embertrail-client'
 
 import type { Command } from '../command.ts'
-import { CliError } from '../errors.ts'
+import { findSource, issueIngestToken, tokenId } from '../ingest.ts'
 import { printable } from '../output.ts'
-
-/** A Token's id: `et_<id>_<secret>`. */
-function tokenId(token: string): string | undefined {
-  return /^et_([a-z0-9]{16})_/.exec(token)?.[1]
-}
-
-const writeScope = /^[a-z][a-z0-9_]*:write$/
 
 /** The ingest Token the settings already send to `hub`, if they do. */
 function configuredToken(settings: Record<string, unknown>, hub: string): string | undefined {
