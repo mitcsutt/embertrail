@@ -58,7 +58,11 @@ export function makeContext(io: Io, json: boolean): Context {
   const login = () =>
     (config ??= readConfig(io).then((found) => {
       if (found === undefined) {
-        throw new CliError('Not logged in; run embertrail login --hub <url> --token <token>')
+        throw new CliError(
+          io.env.EMBERTRAIL_HUB
+            ? 'No Token for the Hub in EMBERTRAIL_HUB (a stored login is used only for its own Hub); set EMBERTRAIL_TOKEN or run embertrail login --hub <url> --token <token>'
+            : 'Not logged in; run embertrail login --hub <url> --token <token>',
+        )
       }
       return found
     }))
