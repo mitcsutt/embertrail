@@ -281,8 +281,13 @@ const up: Command = {
       ? configPath(ctx.io)
       : await writeConfig(ctx.io, { hub, token: managementToken })
     const effective = await resolveTarget(ctx.io)
-    const overridden =
-      effective.hub !== undefined && effective.hub !== hub && !keepLogin ? effective.hub : undefined
+    const overridden = keepLogin
+      ? undefined
+      : effective.hub !== undefined && effective.hub !== hub
+        ? `EMBERTRAIL_HUB is set, so this CLI keeps using ${effective.hub} until you unset it${effective.token === undefined ? ', and it has no Token for that Hub (embertrail login --hub <url> --token <token>)' : ''}.`
+        : effective.token !== managementToken
+          ? 'EMBERTRAIL_TOKEN is set, so this CLI uses it instead of the Token up just stored, until you unset it.'
+          : undefined
 
     const keepTarget = connect && otherTarget && !switching
     let claudeCode = null
@@ -349,9 +354,7 @@ const up: Command = {
             ]),
         ...(overridden === undefined
           ? []
-          : [
-              `EMBERTRAIL_HUB and EMBERTRAIL_TOKEN are set, so this CLI keeps using ${overridden} until you unset them.`,
-            ]),
+          : [overridden]),
         '',
         columns([
           ['  embertrail status', 'what is running, and where'],

@@ -357,10 +357,17 @@ describe('embertrail up on a machine that uses another Hub', () => {
     extraEnv = { EMBERTRAIL_HUB: remote, EMBERTRAIL_TOKEN: 'et_remote' }
     const { code, out } = await cli('up')
     expect(code).toBe(0)
-    expect(out).toContain(
-      `EMBERTRAIL_HUB and EMBERTRAIL_TOKEN are set, so this CLI keeps using ${remote}`,
-    )
+    expect(out).toContain(`EMBERTRAIL_HUB is set, so this CLI keeps using ${remote}`)
+    expect(out).not.toContain('has no Token')
     expect((await readJson(configFile())).hub).toBe('http://localhost:8787')
+  })
+
+  it('says there is no Token when only EMBERTRAIL_HUB names another Hub', async () => {
+    extraEnv = { EMBERTRAIL_HUB: remote }
+    const { code, out } = await cli('up')
+    expect(code).toBe(0)
+    expect(out).toContain(`EMBERTRAIL_HUB is set, so this CLI keeps using ${remote}`)
+    expect(out).toContain('has no Token for that Hub')
   })
 
   it('keeps a login and target at the same URL that this stack did not write', async () => {
