@@ -8,7 +8,8 @@ import {
   Stack,
   Text,
 } from '@mitcsutt/kiln-ui'
-import { useMemo, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useCallback, useMemo, useState } from 'react'
 
 import { FilterBar } from '#features/filters/components/FilterBar'
 import { useInventory } from '#features/filters/data/inventory'
@@ -25,6 +26,30 @@ import { useHub } from '#lib/hub'
 const defaultFilters: BoardFilters = { time: { kind: 'relative', range: 'last-30-days' } }
 const allFilters = { window: 'board', filters: ['source', 'account', 'model'] } as const
 
+/** The open rows are `open` in the URL, so Back from a Session returns to the tree as it was. */
+function useOpenRows(): [readonly string[], (open: string[]) => void] {
+  const search: { open?: unknown } = useSearch({ strict: false })
+  const navigate = useNavigate()
+  const open = useMemo(
+    () => (Array.isArray(search.open) ? search.open.filter((id) => typeof id === 'string') : []),
+    [search.open],
+  )
+  const setOpen = useCallback(
+    (next: string[]) => {
+      void navigate({
+        to: '.',
+        replace: true,
+        search: (previous: Record<string, unknown>) => ({
+          ...previous,
+          open: next.length === 0 ? undefined : next,
+        }),
+      })
+    },
+    [navigate],
+  )
+  return [open, setOpen]
+}
+
 /**
  * The Session Group view: the Sessions in the filter bar's window, one row per group with its
  * totals, the group's Sessions as a tree below it.
@@ -37,6 +62,7 @@ export function SessionGroupsPage() {
   const inventory = useInventory(client, window)
   const ctx = useQueryContext(filters, undefined, allFilters, now, tz)
   const sessions = useSessionGroups(client, { from: ctx.from, to: ctx.to, sessions: ctx.sessions })
+  const [open, setOpen] = useOpenRows()
   const groups = useMemo(() => groupSessions(sessions.data ?? []), [sessions.data])
 
   return (
@@ -76,9 +102,9 @@ export function SessionGroupsPage() {
           <>
             <Text tone="muted">
               A group&apos;s cost and tokens are the sums of its Sessions&apos;, each counted whole
-              if it touches the window. Open a row to see its Sessions.
+              if it touches the window. Click a group to see its Sessions.
             </Text>
-            <SessionGroupTree groups={groups} tz={tz} />
+            <SessionGroupTree groups={groups} tz={tz} expanded={open} onExpandedChange={setOpen} />
           </>
         )}
       </Stack>
