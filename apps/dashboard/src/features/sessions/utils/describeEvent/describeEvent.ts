@@ -12,7 +12,11 @@ const text = (value: unknown): string | undefined =>
  * tool and whether it worked, the API status, how long it took, what it cost. An Event from
  * another sender shows its body, or nothing.
  */
-export function describeEvent(event: HubEvent): string {
+export function describeEvent(
+  event: HubEvent,
+  /** Writes a cost in USD; default `$0.0123`. */
+  money: (usd: number) => string = (usd) => `$${usd.toFixed(4)}`,
+): string {
   const { attributes } = event
   const parts: string[] = []
   const tool = text(attributes.tool_name)
@@ -23,6 +27,6 @@ export function describeEvent(event: HubEvent): string {
   const duration = text(attributes.duration_ms)
   if (duration !== undefined) parts.push(`${duration} ms`)
   const cost = Number(attributes.cost_usd)
-  if (Number.isFinite(cost) && attributes.cost_usd !== undefined) parts.push(`$${cost.toFixed(4)}`)
+  if (Number.isFinite(cost) && attributes.cost_usd !== undefined) parts.push(money(cost))
   return parts.length > 0 ? parts.join(' · ') : (event.body ?? '')
 }

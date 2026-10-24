@@ -66,6 +66,7 @@ apps/dashboard/
     config/runtimeConfig/  # config.json: load and validate
     lib/                   # configured clients, one module each (hub, queryClient)
     features/
+      locale/              # the locale and currency preference, useMoney, rates from the Hub, see Locale and currency
       filters/             # types, utils (resolveWindow, toQueryContext), hooks (useBoardFilters, useQueryContext, useBrowserTimeZone), data, components
       widgets/             # the Widget framework, the Catalogue and the Query Widget, see Widgets
       boards/{types,schemas,utils,constants,data,hooks,components,pages}  # BoardDocument and its schema, Presets, the store, BoardView and BoardGrid, BoardPage
@@ -86,9 +87,10 @@ A feature imports another only along a declared edge (the `features` option in `
 | Feature    | May import           |
 | ---------- | -------------------- |
 | `boards`   | `widgets`, `filters` |
-| `widgets`  | `filters`            |
-| `sessions` | `filters`            |
+| `widgets`  | `filters`, `locale`  |
+| `sessions` | `filters`, `locale`  |
 | `filters`  | none                 |
+| `locale`   | none                 |
 
 ## Shared contracts
 
@@ -146,6 +148,10 @@ A Board belongs to its `StoreDocument.owner`: the User, or a Team. Team Boards f
 - **Creating.** **Customise** on a Preset (New Board included) shows an **Owner** select, "Yours" or a Team the caller edits (`useBoardAccess().editorTeams`), only when there is at least one editor Team. The copy is owned by the choice.
 - **Not an editor.** A Board of a Team the caller only belongs to is read-only: no Edit, `?edit=true` ignored, a note says who owns it, and **Customise** copies it into the caller's own Boards (never into the Team's). Without `store:write` nothing is offered at all.
 - While `getSelf` is pending a Team's Board is read-only; a Hub that errors leaves `self` undefined and Team Boards are then offered as editable, the write reporting its own 403, as for `canEdit`.
+
+## Locale and currency
+
+Numbers, dates and costs are written in the viewer's locale, and costs, which Claude Code reports in USD, are shown in their currency at the Hub's daily rate, marked `≈` and noted as an estimate. `features/locale` owns the preference (header control, saved in the browser) and `useMoney()`, which every cost goes through. The decision, the Hub's `GET /api/v1/rates` and the offline fallback are in [`locale.md`](locale.md).
 
 ## Session Groups
 

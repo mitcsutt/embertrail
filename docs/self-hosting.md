@@ -67,21 +67,22 @@ Setting `BOOTSTRAP_TOKEN` (32+ characters, such as `openssl rand -hex 32`) turns
 
 The Hub reads its environment at start (`apps/server/src/config.ts`); an empty variable counts as unset. `compose.yaml` passes the ones in bold; set them in your shell or in a `.env` file next to it.
 
-| Variable                            | Default                   | Meaning                                                                                                                                 |
-| ----------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                      | set by `compose.yaml`     | The Postgres connection string. Required                                                                                                |
-| `DATABASE_POOL_SIZE`                | `10`                      | Connections in the Hub's pool                                                                                                           |
-| `PORT`, `HOST`                      | `8787`, `0.0.0.0`         | Where the server listens inside the container                                                                                           |
-| **`BOOTSTRAP_TOKEN`**               | unset                     | Turns the zero-config start off; see above                                                                                              |
-| **`RETENTION_DAYS`**                | unset (keep forever)      | Rows older than this are deleted, checked every hour                                                                                    |
-| **`PUBLIC_URL`**                    | `http://localhost:<port>` | The address the printed `embertrail login` line uses                                                                                    |
-| `ALLOWED_EMAILS`, `ALLOWED_DOMAINS` | empty                     | Comma-separated Edge Identity allowlists ([`identity.md`](identity.md#config)); Docker has no Edge Identity yet, so they have no effect |
-| **`EMBERTRAIL_PORT`**               | `8787`                    | The host port Compose publishes (on `127.0.0.1`)                                                                                        |
-| **`POSTGRES_PASSWORD`**             | `embertrail`              | The database password; the database is reachable only inside the Compose network                                                        |
-| **`EMBERTRAIL_VERSION`**            | `latest`                  | The image tag to run (both images)                                                                                                      |
-| **`EMBERTRAIL_DASHBOARD_TOKEN`**    | unset                     | The Token the Dashboard's proxy sends to the Hub; see [the Dashboard](#the-dashboard)                                                   |
-| **`EMBERTRAIL_HUB_UPSTREAM`**       | `http://hub:8787`         | The Hub the Dashboard's proxy talks to                                                                                                  |
-| **`DASHBOARD_PORT`**                | `8080`                    | The host port Compose publishes the Dashboard on (on `127.0.0.1`)                                                                       |
+| Variable                            | Default                   | Meaning                                                                                                                                         |
+| ----------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                      | set by `compose.yaml`     | The Postgres connection string. Required                                                                                                        |
+| `DATABASE_POOL_SIZE`                | `10`                      | Connections in the Hub's pool                                                                                                                   |
+| `PORT`, `HOST`                      | `8787`, `0.0.0.0`         | Where the server listens inside the container                                                                                                   |
+| **`BOOTSTRAP_TOKEN`**               | unset                     | Turns the zero-config start off; see above                                                                                                      |
+| **`RETENTION_DAYS`**                | unset (keep forever)      | Rows older than this are deleted, checked every hour                                                                                            |
+| **`EXCHANGE_RATES`**                | `ecb`                     | `off` stops the Hub fetching the ECB's daily exchange rates, its only outbound request; the Dashboard then shows USD ([`locale.md`](locale.md)) |
+| **`PUBLIC_URL`**                    | `http://localhost:<port>` | The address the printed `embertrail login` line uses                                                                                            |
+| `ALLOWED_EMAILS`, `ALLOWED_DOMAINS` | empty                     | Comma-separated Edge Identity allowlists ([`identity.md`](identity.md#config)); Docker has no Edge Identity yet, so they have no effect         |
+| **`EMBERTRAIL_PORT`**               | `8787`                    | The host port Compose publishes (on `127.0.0.1`)                                                                                                |
+| **`POSTGRES_PASSWORD`**             | `embertrail`              | The database password; the database is reachable only inside the Compose network                                                                |
+| **`EMBERTRAIL_VERSION`**            | `latest`                  | The image tag to run (both images)                                                                                                              |
+| **`EMBERTRAIL_DASHBOARD_TOKEN`**    | unset                     | The Token the Dashboard's proxy sends to the Hub; see [the Dashboard](#the-dashboard)                                                           |
+| **`EMBERTRAIL_HUB_UPSTREAM`**       | `http://hub:8787`         | The Hub the Dashboard's proxy talks to                                                                                                          |
+| **`DASHBOARD_PORT`**                | `8080`                    | The host port Compose publishes the Dashboard on (on `127.0.0.1`)                                                                               |
 
 The Edge Identity Adapter is `noEdgeIdentity()`: Tokens are the only way in.
 

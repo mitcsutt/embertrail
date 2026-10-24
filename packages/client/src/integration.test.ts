@@ -286,6 +286,18 @@ describe('the Admin and self-management API', () => {
     expect(me.teams).toEqual([{ id: 'crew', name: 'crew', editor: true }])
   })
 
+  it('getRates answers with no rates when the Hub fetches none', async () => {
+    const solo = recordCalls(await clientFor(t, 'solo', ['otel:read']), called).client
+    await expect(solo.getRates()).resolves.toEqual({
+      status: 'off',
+      base: 'USD',
+      source: null,
+      date: null,
+      fetched_at: null,
+      rates: null,
+    })
+  })
+
   it('manages your own Sources, Tokens, Accounts and Grants', async () => {
     const { source, token } = await root.createSource({ body: { name: 'laptop' } })
     expect(token.record).toMatchObject({ kind: 'ingest', source_id: source.id })

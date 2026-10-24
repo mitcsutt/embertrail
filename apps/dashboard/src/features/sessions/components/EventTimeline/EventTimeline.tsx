@@ -1,5 +1,7 @@
 import { Alert, Button, EmptyState, Skeleton, Stack, Table } from '@mitcsutt/kiln-ui'
 
+import { useLocale } from '#features/locale/hooks/useLocale'
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { HubEvent } from '#features/sessions/data/session'
 import { describeEvent } from '#features/sessions/utils/describeEvent'
 import { formatTime } from '#features/sessions/utils/formats'
@@ -26,6 +28,8 @@ export function EventTimeline({
   onRetry,
   tz,
 }: EventTimelineProps) {
+  const money = useMoney()
+  const { locale } = useLocale()
   if (status === 'pending') return <Skeleton aria-label="Loading the Events" height="block" />
   if (status === 'error') {
     return (
@@ -64,10 +68,10 @@ export function EventTimeline({
         <Table.Body>
           {events.map((event, index) => (
             <Table.Row key={`${event.time}/${String(event.sequence)}/${String(index)}`}>
-              <Table.Cell>{formatTime(event.time, tz, { seconds: true })}</Table.Cell>
+              <Table.Cell>{formatTime(event.time, tz, { seconds: true }, locale)}</Table.Cell>
               <Table.Cell rowHeader>{event.event_name}</Table.Cell>
               <Table.Cell>{event.model ?? '–'}</Table.Cell>
-              <Table.Cell>{describeEvent(event)}</Table.Cell>
+              <Table.Cell>{describeEvent(event, (usd) => money.format(usd, 4))}</Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

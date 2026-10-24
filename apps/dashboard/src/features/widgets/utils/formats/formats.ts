@@ -1,9 +1,5 @@
 // How Widgets write numbers. All take an optional locale and default to the browser's.
 
-export function formatUsd(value: number, locale?: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(value)
-}
-
 /** A token count in short form: `12K`, `3.4M`. */
 export function formatTokens(value: number, locale?: string): string {
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(

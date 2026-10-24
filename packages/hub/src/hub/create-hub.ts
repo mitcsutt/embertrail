@@ -5,6 +5,8 @@ import { coreDirectory } from '../identity/directory'
 import type { Directory } from '../identity/directory'
 import type { EdgeIdentityPort } from '../identity/edge'
 import { lifecycle } from '../lifecycle/lifecycle'
+import { noRates } from '../rates/rates'
+import type { RatesPort } from '../rates/rates'
 import { coreScopes } from '../module/define'
 import type { Module, Scope } from '../module/define'
 import { HubError } from '../module/errors'
@@ -22,6 +24,8 @@ import { Router } from './router'
 export interface Ports {
   db: DbPort
   edgeIdentity: EdgeIdentityPort
+  /** Foreign-exchange rates for `getRates`. Default `noRates()`: the Hub makes no outbound request. */
+  rates?: RatesPort
 }
 
 export interface HubOptions {
@@ -121,6 +125,7 @@ export function assembleHub(options: HubOptions, extra: readonly HubOp[] = []): 
     scopes,
     modules: modules.map((m) => m.name),
     openapi,
+    rates: options.ports.rates ?? noRates(),
     remove: data.remove,
     exportOwner: data.exportOwner,
   }

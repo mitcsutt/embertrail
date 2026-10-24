@@ -2,7 +2,7 @@ import type { Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
 import { serve } from '@hono/node-server'
-import { createHub, noEdgeIdentity } from '@mitcsutt/embertrail-hub'
+import { createHub, ecbRates, noEdgeIdentity, noRates } from '@mitcsutt/embertrail-hub'
 import type { Hub } from '@mitcsutt/embertrail-hub'
 
 import { readConfig } from './config'
@@ -54,7 +54,11 @@ export async function startServer({
   try {
     const hub = createHub({
       config: config.hub,
-      ports: { db, edgeIdentity: noEdgeIdentity() },
+      ports: {
+        db,
+        edgeIdentity: noEdgeIdentity(),
+        rates: config.exchangeRates ? ecbRates() : noRates(),
+      },
       modules: hubModules,
     })
     await hub.boot()

@@ -9,6 +9,8 @@ import {
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { LocaleSettings } from '#features/locale/components/LocaleSettings'
+import { MoneyNote } from '#features/locale/components/MoneyNote'
 import { BoardNav } from '#app/components/BoardNav'
 import { JumpPalette } from '#app/components/JumpPalette'
 import { useSelf } from '#lib/hub'
@@ -43,6 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Text>
               )}
               <JumpPalette />
+              <LocaleSettings />
               <ModeToggle />
             </Inline>
           </Inline>
@@ -51,7 +54,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <KilnAppShell.Sidebar>
         <BoardNav />
       </KilnAppShell.Sidebar>
-      <KilnAppShell.Main>{children}</KilnAppShell.Main>
+      <KilnAppShell.Main>
+        <MoneyNote />
+        {children}
+      </KilnAppShell.Main>
     </KilnAppShell>
   )
 }

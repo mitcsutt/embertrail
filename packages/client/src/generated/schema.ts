@@ -415,6 +415,34 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/rates': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Daily exchange rates
+     * @description Units of each currency per 1 USD, from the European Central Bank's
+     *     daily reference rates, which the Hub fetches and keeps. Claude Code
+     *     reports cost in USD, so a Dashboard multiplies by `rates[code]` to
+     *     show another currency, and labels the figure an estimate at `date`.
+     *     `status` is `ok` when the copy is fresh, `stale` when it is the last
+     *     good copy after a refresh failed, `off` when this Hub makes no
+     *     outbound request, and `unavailable` when it has no copy yet; the last
+     *     two carry no `rates`. Any authenticated caller may ask, whatever
+     *     Scopes the Token holds. A Token bound to a Source is refused.
+     */
+    get: operations['getRates']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/self/sources': {
     parameters: {
       query?: never
@@ -1078,6 +1106,28 @@ export interface components {
         /** @description Whether the caller may write documents the Team owns. */
         editor: boolean
       })[]
+    }
+    Rates: {
+      /** @enum {string} */
+      status: 'ok' | 'stale' | 'off' | 'unavailable'
+      /**
+       * @description What every rate is per one unit of.
+       * @enum {string}
+       */
+      base: 'USD'
+      /** @description Who published the rates; `ecb` is the European Central Bank. */
+      source: string | null
+      /** @description The day the rates were published for, `YYYY-MM-DD`. */
+      date: string | null
+      /**
+       * Format: date-time
+       * @description When the Hub fetched them.
+       */
+      fetched_at: string | null
+      /** @description Currency code (ISO 4217) to units per 1 USD, including `USD` (1). */
+      rates: {
+        [key: string]: number
+      } | null
     }
     Team: {
       id: components['schemas']['Id']
@@ -2199,6 +2249,29 @@ export interface operations {
       }
       401: components['responses']['Unauthorized']
       403: components['responses']['ForbiddenSourceBound']
+      500: components['responses']['Internal']
+    }
+  }
+  getRates: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The rates, or why there are none. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Rates']
+        }
+      }
+      401: components['responses']['Unauthorized']
+      403: components['responses']['Forbidden']
       500: components['responses']['Internal']
     }
   }

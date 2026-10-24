@@ -1,1 +1,1 @@
-export { formatDuration, formatPercent, formatTokens, formatUsd } from './formats'
+export { formatDuration, formatPercent, formatTokens } from './formats'

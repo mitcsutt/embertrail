@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDuration, formatPercent, formatTokens, formatUsd } from './formats'
+import { formatDuration, formatPercent, formatTokens } from './formats'
 
 describe('formats', () => {
-  it('writes dollars in the given locale', () => {
-    expect(formatUsd(1234.5, 'en-US')).toBe('$1,234.50')
-    expect(formatUsd(1234.5, 'de-DE')).toBe('1.234,50 $')
-  })
-
   it('writes token counts short', () => {
     expect(formatTokens(950, 'en-US')).toBe('950')
     expect(formatTokens(12_400, 'en-US')).toBe('12.4K')

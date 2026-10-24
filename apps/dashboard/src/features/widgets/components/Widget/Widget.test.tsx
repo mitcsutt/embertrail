@@ -13,17 +13,17 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { QueryContext } from '#features/filters/types/filters'
-import {
-  formatPercent as formatPercentRaw,
-  formatUsd as formatUsdRaw,
-} from '#features/widgets/utils/formats'
+import { formatPercent as formatPercentRaw } from '#features/widgets/utils/formats'
 import { catalogue, getWidget } from '#features/widgets/constants/catalogue'
 import { HubContext } from '#lib/hub'
 
 import { Widget } from './Widget'
 
 /** Dollars as the page's text reads them: Testing Library folds non-breaking spaces. */
-const formatUsd = (value: number) => formatUsdRaw(value).replaceAll(/\s+/g, ' ')
+const formatUsd = (value: number) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' })
+    .format(value)
+    .replaceAll(/\s+/g, ' ')
 const formatPercent = (value: number) => formatPercentRaw(value).replaceAll(/\s+/g, ' ')
 
 const ctx: QueryContext = {

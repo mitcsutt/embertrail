@@ -46,7 +46,7 @@ describe('the Admin and self-management API’s OpenAPI', () => {
     },
   )
 
-  it('lists every core admin and self operation the spec has, and bootstrap and getSelf', () => {
+  it('lists every core admin and self operation the spec has, and bootstrap, getSelf and getRates', () => {
     const specified = Object.entries(spec.paths).flatMap(([path, item]) =>
       Object.entries(item ?? {})
         .filter(([, operation]) => {
@@ -59,6 +59,7 @@ describe('the Admin and self-management API’s OpenAPI', () => {
       [
         ...coreOps.map((op) => `${op.method} ${op.path}`),
         'GET /api/v1/self',
+        'GET /api/v1/rates',
         'POST /api/v1/bootstrap',
       ].sort(),
     )

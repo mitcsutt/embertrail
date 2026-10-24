@@ -2,8 +2,10 @@ import { Link, Tag, Text, TreeTable } from '@mitcsutt/kiln-ui'
 import type { TreeTableColumn } from '@mitcsutt/kiln-ui'
 import { Link as RouterLink } from '@tanstack/react-router'
 
+import { useLocale } from '#features/locale/hooks/useLocale'
+import { useMoney } from '#features/locale/hooks/useMoney'
 import type { GroupNode, TreeNode } from '#features/sessions/types/sessionTree'
-import { formatCost, formatCount, formatTime, shortId } from '#features/sessions/utils/formats'
+import { formatCount, formatTime, shortId } from '#features/sessions/utils/formats'
 
 export interface SessionGroupTreeProps {
   groups: readonly GroupNode[]
@@ -25,6 +27,8 @@ const columns: TreeTableColumn[] = [
  * and each Session's children under that. The Session's name is its link to the Event timeline.
  */
 export function SessionGroupTree({ groups, tz }: SessionGroupTreeProps) {
+  const money = useMoney()
+  const { locale } = useLocale()
   const renderCell = (row: TreeNode, column: TreeTableColumn) => {
     if (row.kind === 'group') {
       switch (column.id) {
@@ -40,9 +44,9 @@ export function SessionGroupTree({ groups, tz }: SessionGroupTreeProps) {
         case 'sessions':
           return String(row.sessionCount)
         case 'cost':
-          return formatCost(row.cost)
+          return money.format(row.cost)
         case 'tokens':
-          return formatCount(row.tokens)
+          return formatCount(row.tokens, locale)
         default:
           return null
       }
@@ -61,13 +65,16 @@ export function SessionGroupTree({ groups, tz }: SessionGroupTreeProps) {
           </>
         )
       case 'started':
-        return formatTime(session.started_at, tz)
+        return formatTime(session.started_at, tz, {}, locale)
       case 'models':
         return session.models.join(', ')
       case 'cost':
-        return session.cost_usd === null ? '–' : formatCost(session.cost_usd)
+        return session.cost_usd === null ? '–' : money.format(session.cost_usd)
       case 'tokens':
-        return formatCount(Object.values(session.tokens).reduce((a, b) => a + b, 0))
+        return formatCount(
+          Object.values(session.tokens).reduce((a, b) => a + b, 0),
+          locale,
+        )
       default:
         return null
     }

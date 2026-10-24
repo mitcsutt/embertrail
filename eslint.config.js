@@ -111,9 +111,10 @@ export default defineConfig(
   ...kilnStructure({
     features: {
       boards: ['widgets', 'filters'],
-      widgets: ['filters'],
-      sessions: ['filters'],
+      widgets: ['filters', 'locale'],
+      sessions: ['filters', 'locale'],
       filters: [],
+      locale: [],
     },
     router: 'tanstack',
     srcDir: 'apps/dashboard/src',
