@@ -46,6 +46,15 @@ The Hub's own tests (`packages/hub`) need no server: they run on PGLite, in-proc
 
 `apps/worker` runs its tests inside the Workers runtime through [`@cloudflare/vitest-plugin`](https://developers.cloudflare.com/workers/testing/vitest-integration/) (the successor to `@cloudflare/vitest-pool-workers`), configured in `apps/worker/vitest.config.ts`. Its runtime types come from `wrangler types`, which the `types` task runs before lint, typecheck and test; the generated `worker-configuration.d.ts` is not committed.
 
+The Worker's Db Adapter tests need Postgres like the server's, and are skipped locally without `DATABASE_URL` (in CI they always run). `test/global-setup.ts` creates a scratch database on that server and drops it when the run ends, and `vitest.config.ts` points the `HYPERDRIVE` binding's local connection string at it, so the tests use `env.HYPERDRIVE.connectionString` as the deployed Worker does:
+
+```sh
+pnpm db:up
+DATABASE_URL=postgres://postgres:postgres@localhost:54317/embertrail pnpm --filter @mitcsutt/embertrail-worker test
+```
+
+`vitest.config.ts` also aliases `pg-protocol` and `pg-cloudflare` to their CommonJS builds, because the test pool resolves them with the wrong export conditions; a real build (wrangler) is unaffected.
+
 ## Enforced rules
 
 The rules are mechanical, so they hold for every contributor, human or agent:

@@ -36,7 +36,9 @@ The role is set last, since `migrate` revokes `set_config` from the readonly rol
 | ---------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
 | Test       | [`packages/hub/src/testing/pglite.ts`](../packages/hub/src/testing/pglite.ts) | PGLite in-process: a fresh database per call   |
 | Docker     | [`apps/server/src/db.ts`](../apps/server/src/db.ts)                           | `pg` pool from `DATABASE_URL`, default size 10 |
-| Cloudflare | `apps/worker` (not built yet, #38)                                            | `pg` client per request over Hyperdrive        |
+| Cloudflare | [`apps/worker/src/db.ts`](../apps/worker/src/db.ts)                           | `pg` client per call over Hyperdrive           |
+
+`cloudflareDb({ connectionString })` takes the Hyperdrive binding's `connectionString`. Each `transaction` and `privileged` call opens a `pg.Client`, runs `drizzleDbPort` on it and ends the client in `finally`. There is no pool and no client at module scope, since a Worker must not keep an I/O object across requests; ESLint refuses a `new pg.Client` or `new pg.Pool` at module scope in `apps/worker/src`. The session logic is the core's `applySession`, not a copy.
 
 ### Row-level security
 
@@ -125,6 +127,6 @@ it.each(dbPortChecks)('$name', async (check) => {
 - `dbPortChecks` (`/contract`): settings applied before the first statement, the readonly role, `READ ONLY` and its timeout, nothing left behind for the next transaction, rollback with the same error, connections released.
 - `edgeIdentityChecks` (`/contract`): valid, absent and invalid assertions, given a fixture of requests.
 - `sqlEndpointChecks` and `sqlTimeoutChecks` (`/testing`): the SQL endpoint's refusals and isolation ([`sql.md`](sql.md#testing)), given the same function. PGLite runs the first; Postgres 17 runs both.
-- `hubInvariantChecks` (`/testing`): the Module contract's invariants (forged ownership refused, cross-Owner reads hidden, rollback, foreign keys outside `core.*` refused, and the Module contract suite), given a function that opens a fresh database. The Hub's tests run them on PGLite; [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) runs them on Postgres 17.
+- `hubInvariantChecks` (`/testing`): the Module contract's invariants (forged ownership refused, cross-Owner reads hidden, rollback, foreign keys outside `core.*` refused, and the Module contract suite), given a function that opens a fresh database. The Hub's tests run them on PGLite; [`apps/server/src/db.test.ts`](../apps/server/src/db.test.ts) runs them on Postgres 17, and [`apps/worker/src/db.test.ts`](../apps/worker/src/db.test.ts) runs them on the Cloudflare Adapter in `workerd`.
 
-A new Adapter passes its Port's suite, and a new Db Adapter also passes `hubInvariantChecks`. Today the suites run against the Test and Docker Db Adapters on Node; the Cloudflare Db Adapter and its `workerd` run in CI come with #38.
+A new Adapter passes its Port's suite, and a new Db Adapter also passes `hubInvariantChecks`. The suites run against the Test and Docker Db Adapters on Node, and against the Cloudflare Db Adapter in `workerd`, all in CI. The Cloudflare Edge Identity Adapter's suite comes with the rest of #38.
