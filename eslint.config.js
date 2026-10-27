@@ -191,4 +191,21 @@ export default defineConfig(
       ],
     },
   },
+  {
+    // A Worker keeps no I/O object across requests: a connection made at module scope would be
+    // reused by a later request and fail, so the Db Adapter opens a client per call (#26).
+    name: 'embertrail/worker/no-module-scope-connection',
+    files: ['apps/worker/src/**'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            ':matches(Program, ExportNamedDeclaration) > :matches(VariableDeclaration, ExpressionStatement) NewExpression:matches([callee.name=/^(Client|Pool)$/], [callee.property.name=/^(Client|Pool)$/])',
+          message: 'Open a pg.Client inside the call that uses it, never at module scope.',
+        },
+      ],
+    },
+  },
 )
