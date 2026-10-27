@@ -20,5 +20,6 @@ COPY --from=build /repo/apps/dashboard/dist /usr/share/nginx/html
 COPY apps/dashboard/docker/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --chmod=755 apps/dashboard/docker/15-dashboard-hosts.envsh /docker-entrypoint.d/15-dashboard-hosts.envsh
 EXPOSE 8080
-HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=10 \
+# Probes every 2 s while nginx starts (start-interval), then every 30 s.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --start-interval=2s --retries=3 \
   CMD ["wget", "--quiet", "--spider", "http://127.0.0.1:8080/config.json"]

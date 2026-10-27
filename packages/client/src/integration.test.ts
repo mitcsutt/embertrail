@@ -102,6 +102,10 @@ describe('the Query API', () => {
     expect(Object.keys(document.paths)).toContain('/api/v1/store/{namespace}/{id}')
   })
 
+  it('getHealth answers while the Hub is serving', async () => {
+    expect(await alice.getHealth()).toEqual({ status: 'ok' })
+  })
+
   it('pages walks a cursor through every Session', async () => {
     const session = new Date('2026-10-13T09:00:00Z')
     for (const [index, id] of ['a', 'b'].entries()) {

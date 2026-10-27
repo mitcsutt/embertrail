@@ -740,6 +740,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/health': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Whether the Hub is serving
+     * @description Does no work beyond answering, with no authentication and no database query. The Docker image probes it.
+     */
+    get: operations['getHealth']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/docs': {
     parameters: {
       query?: never
@@ -2795,6 +2815,26 @@ export interface operations {
     requestBody?: never
     responses: {
       /** @description OpenAPI 3.1 document. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, unknown>
+        }
+      }
+    }
+  }
+  getHealth: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The Hub is serving. */
       200: {
         headers: {
           [name: string]: unknown

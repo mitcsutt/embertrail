@@ -72,6 +72,13 @@ describe('createHub', () => {
     expect(text).toContain('`GET /api/v1/ledger/entries/{id}`')
   })
 
+  it('answers the health probe without auth', async () => {
+    const { anonymous } = await start()
+    const health = await anonymous.get('/api/v1/health')
+    expect(health.status).toBe(200)
+    expect(await health.json()).toEqual({ status: 'ok' })
+  })
+
   it('answers an unknown route with a 404 problem', async () => {
     const { anonymous } = await start()
     const response = await anonymous.get('/api/v1/nowhere')

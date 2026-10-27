@@ -126,6 +126,24 @@ const ownOps: readonly HubOp[] = [
   {
     ...meta,
     kind: 'raw',
+    key: 'health',
+    path: '/api/v1/health',
+    summary: 'Whether the Hub is serving',
+    description:
+      'Does no work beyond answering, with no authentication and no database query. The Docker image probes it.',
+    openapi: {
+      responses: {
+        '200': {
+          description: 'The Hub is serving.',
+          content: { 'application/json': { schema: { type: 'object' } } },
+        },
+      },
+    },
+    run: () => Promise.resolve(Response.json({ status: 'ok' })),
+  },
+  {
+    ...meta,
+    kind: 'raw',
     key: 'llmsTxt',
     path: '/llms.txt',
     summary: 'Plain-text pointer to the API for AI agents',
