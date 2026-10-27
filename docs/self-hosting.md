@@ -65,6 +65,8 @@ Mount the file itself and edit it in place; an editor that replaces the file lea
 | `postgres`  | `postgres:17`, volume `postgres-data`   | The Hub's database; not published to the host                                               |
 | `dashboard` | `ghcr.io/mitcsutt/embertrail-dashboard` | Only with `--profile dashboard`: nginx serving the [Dashboard](#the-dashboard) on port 8080 |
 
+Each service has a health check that Compose's `depends_on: service_healthy` waits on: every 1 to 2 s while it starts (`start_interval`), then every 30 s. The Hub's probes `GET /api/v1/health`, which answers without authentication or a database query, from the `bash` already in the image; the Dashboard's fetches `/config.json` and Postgres's runs `pg_isready`. A probe that boots Node or builds a document every few seconds was most of an idle stack's CPU, so keep them cheap if you change them.
+
 The Hub listens on `127.0.0.1:8787` only. Put a reverse proxy with TLS in front of it before exposing it, and set `PUBLIC_URL` so the printed login line names that address. Until the first release publishes the images, `docker compose up` builds them from the repository's [`Dockerfile`](../Dockerfile) (add `--build` after pulling new code).
 
 ## The zero-config start

@@ -92,6 +92,7 @@ export const operationTable = {
   createGrant: { method: 'POST', path: '/api/v1/self/grants', responseHeaders: [] },
   revokeGrant: { method: 'DELETE', path: '/api/v1/self/grants/{grant_id}', responseHeaders: [] },
   getOpenApi: { method: 'GET', path: '/api/v1/openapi.json', responseHeaders: [] },
+  getHealth: { method: 'GET', path: '/api/v1/health', responseHeaders: [] },
 } as const
 
 /** Each operation's input (path, query, header, body) and resolved output. */
@@ -479,5 +480,14 @@ export interface Operations {
   getOpenApi: {
     input?: Record<never, never>
     output: operations['getOpenApi']['responses'][200]['content']['application/json']
+  }
+  /**
+   * Whether the Hub is serving
+   *
+   * `GET /api/v1/health`
+   */
+  getHealth: {
+    input?: Record<never, never>
+    output: operations['getHealth']['responses'][200]['content']['application/json']
   }
 }

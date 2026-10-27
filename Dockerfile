@@ -26,6 +26,8 @@ RUN npm install --omit=dev --no-audit --no-fund \
  && ln -s /app/embertrail.js /usr/local/bin/embertrail
 USER node
 EXPOSE 8787
-HEALTHCHECK --interval=5s --timeout=3s --start-period=20s --retries=10 \
-  CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || 8787) + '/api/v1/openapi.json').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+# bash is in the image and curl isn't: a /dev/tcp GET costs a shell, where `node -e` cost a Node boot.
+# Probes every 2 s while the Hub starts (start-interval), then every 30 s.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --start-interval=2s --retries=3 \
+  CMD ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/${PORT:-8787} && printf 'GET /api/v1/health HTTP/1.0\\r\\n\\r\\n' >&3 && read -r status <&3 && [[ $status == *' 200 '* ]]"]
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

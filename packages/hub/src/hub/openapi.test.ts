@@ -73,7 +73,7 @@ describe('buildOpenApi', () => {
   })
 
   it('describes the public routes the core serves', () => {
-    for (const path of ['/api/v1/openapi.json', '/api/v1/docs', '/llms.txt']) {
+    for (const path of ['/api/v1/openapi.json', '/api/v1/health', '/api/v1/docs', '/llms.txt']) {
       expect(operation(document, path, 'get')).toMatchObject({
         security: [],
         'x-embertrail-module': 'core',

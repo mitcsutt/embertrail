@@ -1378,6 +1378,21 @@ paths:
             application/json:
               schema: { type: object }
 
+  /api/v1/health:
+    get:
+      tags: [meta]
+      operationId: getHealth
+      summary: Whether the Hub is serving
+      description: Does no work beyond answering, with no authentication and no database query. The Docker image probes it.
+      x-embertrail-module: core
+      security: []
+      responses:
+        '200':
+          description: The Hub is serving.
+          content:
+            application/json:
+              schema: { type: object }
+
   /api/v1/docs:
     get:
       tags: [meta]
