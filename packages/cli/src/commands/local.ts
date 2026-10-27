@@ -15,7 +15,13 @@ import {
 } from '../claude-code.ts'
 import { hubClient } from '../command.ts'
 import type { Command, Context } from '../command.ts'
-import { configPath, readConfig, writePrivateFile, writeConfig } from '../config.ts'
+import {
+  configPath,
+  readStoredConfig,
+  resolveTarget,
+  writePrivateFile,
+  writeConfig,
+} from '../config.ts'
 import { CliError, UsageError } from '../errors.ts'
 import type { Io } from '../io.ts'
 import {
@@ -227,10 +233,7 @@ const up: Command = {
     const connect = !args.flag('no-claude-code')
     const settingsPath = userSettingsPath(ctx.io)
     const settings = connect ? await readSettings(settingsPath) : {}
-    const stored = await readConfig({
-      ...ctx.io,
-      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
-    })
+    const stored = await readStoredConfig(ctx.io)
     // Only what this stack wrote is its own: its management Token, and settings of a connected stack.
     const otherLogin =
       stored !== undefined &&
@@ -277,9 +280,7 @@ const up: Command = {
     const config = keepLogin
       ? configPath(ctx.io)
       : await writeConfig(ctx.io, { hub, token: managementToken })
-    const effective = await readConfig(ctx.io)
-    const overridden =
-      effective !== undefined && effective.hub !== hub && !keepLogin ? effective.hub : undefined
+    const overridden = keepLogin ? undefined : await overrideNote(ctx.io, hub, managementToken)
 
     const keepTarget = connect && otherTarget && !switching
     let claudeCode = null
@@ -344,11 +345,7 @@ const up: Command = {
           : [
               `Kept ${kept.join(' and ')}, which ${kept.length === 1 ? 'is' : 'are'} for another Hub. embertrail up --switch points ${kept.length === 1 ? 'it' : 'them'} here, backing up the old ${kept.length === 1 ? 'one' : 'ones'} beside ${kept.length === 1 ? 'it' : 'them'}.`,
             ]),
-        ...(overridden === undefined
-          ? []
-          : [
-              `EMBERTRAIL_HUB and EMBERTRAIL_TOKEN are set, so this CLI keeps using ${overridden} until you unset them.`,
-            ]),
+        ...(overridden === undefined ? [] : [overridden]),
         '',
         columns([
           ['  embertrail status', 'what is running, and where'],
@@ -357,6 +354,22 @@ const up: Command = {
       ].join('\n'),
     )
   },
+}
+
+/** What `up` tells the user when the environment keeps this CLI off the login it just stored. */
+async function overrideNote(io: Io, hub: string, token: string): Promise<string | undefined> {
+  let effective
+  try {
+    effective = await resolveTarget(io)
+  } catch (error) {
+    return `EMBERTRAIL_HUB is set but unusable (${error instanceof Error ? error.message : String(error)}), so this CLI will not reach this Hub until you fix or unset it.`
+  }
+  if (effective.hub !== undefined && effective.hub !== hub) {
+    return `EMBERTRAIL_HUB is set, so this CLI keeps using ${effective.hub} until you unset it${effective.token === undefined ? ', and it has no Token for that Hub (embertrail login --hub <url> --token <token>)' : ''}.`
+  }
+  return effective.token === token
+    ? undefined
+    : 'EMBERTRAIL_TOKEN is set, so this CLI uses it instead of the Token up just stored, until you unset it.'
 }
 
 interface ServiceState {
@@ -570,10 +583,7 @@ const reset: Command = {
       await rm(settingsBackup(settingsPath), { force: true })
     }
 
-    const config = await readConfig({
-      ...ctx.io,
-      env: { ...ctx.io.env, EMBERTRAIL_HUB: undefined, EMBERTRAIL_TOKEN: undefined },
-    }).catch(() => undefined)
+    const config = await readStoredConfig(ctx.io).catch(() => undefined)
     const loggedOut = config?.token === stack.state.managementToken
     const savedLogin = loggedOut && (await readIfThere(configBackup(ctx.io))) !== undefined
     if (loggedOut) {

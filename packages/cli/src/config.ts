@@ -14,7 +14,7 @@ export interface StoredConfig {
  * The config file: `$EMBERTRAIL_CONFIG_DIR/config.json`, else `$XDG_CONFIG_HOME/embertrail/`,
  * else `~/.config/embertrail/`.
  */
-export function configPath(io: Io): string {
+export function configPath(io: Pick<Io, 'env' | 'home'>): string {
   const dir =
     io.env.EMBERTRAIL_CONFIG_DIR ??
     join(io.env.XDG_CONFIG_HOME ?? join(io.home, '.config'), 'embertrail')
@@ -41,13 +41,10 @@ export async function writeConfig(io: Io, config: StoredConfig): Promise<string>
   return path
 }
 
-/**
- * The Hub and Token to use: `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` when both are set (for CI and
- * containers), else the stored config. Undefined when the user has not logged in.
- */
-export async function readConfig(io: Io): Promise<StoredConfig | undefined> {
-  const { EMBERTRAIL_HUB: hub, EMBERTRAIL_TOKEN: token } = io.env
-  if (hub !== undefined && hub !== '' && token !== undefined && token !== '') return { hub, token }
+/** The stored login, or undefined when there is none. Ignores the environment. */
+export async function readStoredConfig(
+  io: Pick<Io, 'env' | 'home'>,
+): Promise<StoredConfig | undefined> {
   const path = configPath(io)
   let text: string
   try {
@@ -75,6 +72,54 @@ export async function readConfig(io: Io): Promise<StoredConfig | undefined> {
   return { hub: parsed.hub, token: parsed.token }
 }
 
+/** The Hub and Token a tool uses; either is undefined when nothing supplies it. */
+export interface Target {
+  hub: string | undefined
+  token: string | undefined
+}
+
+const set = (value: string | undefined): string | undefined =>
+  value === undefined || value === '' ? undefined : value
+
+/**
+ * Which Hub and which Token a tool uses. This is the one rule every tool shares (the CLI, the
+ * Dashboard's dev proxy, `seed`):
+ *
+ * 1. `EMBERTRAIL_HUB` and `EMBERTRAIL_TOKEN` each override on their own (an empty value is unset).
+ * 2. The stored login supplies what they leave out, except that a stored Token is used only for the
+ *    Hub it was stored for: `EMBERTRAIL_HUB` naming another Hub gets no stored Token.
+ * 3. With no Hub from either, `options.defaultHub` (none by default).
+ *
+ * The Hub is normalised (`normaliseHub`), so callers never trim it. The stored file is not read
+ * when the environment already supplies both.
+ */
+export async function resolveTarget(
+  io: Pick<Io, 'env' | 'home'>,
+  options: { defaultHub?: string } = {},
+): Promise<Target> {
+  const hubEnv = set(io.env.EMBERTRAIL_HUB)
+  const tokenEnv = set(io.env.EMBERTRAIL_TOKEN)
+  const stored =
+    hubEnv !== undefined && tokenEnv !== undefined ? undefined : await readStoredConfig(io)
+  const hub = hubEnv ?? stored?.hub ?? options.defaultHub
+  const normalised = hub === undefined ? undefined : normaliseHub(hub)
+  const storedHub = stored === undefined ? undefined : normaliseHub(stored.hub)
+  const token =
+    tokenEnv ?? (stored !== undefined && storedHub === normalised ? stored.token : undefined)
+  return { hub: normalised, token }
+}
+
+/**
+ * The Hub and Token for a command, by `resolveTarget`'s rule. Undefined when either is missing,
+ * which is how a command knows the user has not logged in.
+ */
+export async function readConfig(io: Pick<Io, 'env' | 'home'>): Promise<StoredConfig | undefined> {
+  const { hub, token } = await resolveTarget(io)
+  return hub === undefined || token === undefined ? undefined : { hub, token }
+}
+
+const trimSlashes = (url: string): string => url.replace(/\/+$/, '')
+
 /** A Hub URL as stored: http or https, no trailing slash. */
 export function normaliseHub(input: string): string {
   let url: URL
@@ -88,7 +133,7 @@ export function normaliseHub(input: string): string {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new CliError(`"${input}" must start with http:// or https://`)
   }
-  return url.toString().replace(/\/+$/, '')
+  return trimSlashes(url.toString())
 }
 
 /** Is the Hub on this machine, where a plain-http Token stays off the network? */

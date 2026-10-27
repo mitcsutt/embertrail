@@ -51,11 +51,10 @@ const dataset = demoDataset({
 const config = await readConfig(processIo())
 if (config === undefined) {
   throw new Error(
-    'No Hub to talk to: run `embertrail login --hub <url> --token <token>`, or set EMBERTRAIL_HUB and EMBERTRAIL_TOKEN.',
+    'No Hub and Token to use: run `embertrail login --hub <url> --token <token>`, or set EMBERTRAIL_HUB and EMBERTRAIL_TOKEN. A stored Token is used only for the Hub it was stored for.',
   )
 }
-const hub = config.hub.replace(/\/+$/, '')
-const { token } = config
+const { hub, token } = config
 const manage = createClient({ baseUrl: hub, token })
 
 for (const source of (await manage.listSources()).items) {
